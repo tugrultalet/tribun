@@ -44,17 +44,10 @@ function TabsScreen() {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   if (NativeTab) {
-    // Yerel iOS sekme çubuğu ve büyük başlıklar.
+    // Yerel iOS sekme çubuğu. Başlığı ekranın kendisi çizer ki en üste otursun.
     return (
       <NativeTab.Navigator screenOptions={{
-        headerShown: true,
-        headerLargeTitleEnabled: true,
-        headerTransparent: true,
-        headerBlurEffect: BAR_BLUR,
-        headerShadowVisible: false,
-        headerTintColor: t.accent,
-        headerLargeTitleStyle: { color: t.fg, fontSize: 28, fontWeight: '700' },
-        headerTitleStyle: { color: t.fg },
+        headerShown: false,
         tabBarActiveTintColor: t.accent,
         tabBarMinimizeBehavior: 'onScrollDown',
       }}>

@@ -17,8 +17,8 @@ export function Backdrop({ team, league }: { team?: string; league?: number }) {
 }
 
 // Ortak ekran iskeleti.
-// iOS'ta başlık yerel gezinme çubuğudur (büyük başlık, Liquid Glass); içerik onun altından kayar.
-// Diğer platformlarda aynı başlık uygulama içinde çizilir.
+// iOS'ta yığın ekranlarının başlığı yerel gezinme çubuğudur (Liquid Glass); içerik onun altından kayar.
+// Sekme ekranlarında ve diğer platformlarda başlık uygulama içinde çizilir.
 export function Screen({ title, tab, right, team, league, children, onRefresh, refreshing, bottomInset }: {
   title?: string; tab?: boolean; right?: React.ReactNode; team?: string; league?: number; children: React.ReactNode; onRefresh?: () => void; refreshing?: boolean; bottomInset?: boolean;
 }) {
@@ -28,9 +28,9 @@ export function Screen({ title, tab, right, team, league, children, onRefresh, r
   rightRef.current = right;
   const hasRight = !!right;
   useLayoutEffect(() => {
-    if (!IOS) return;
-    // Sekme ekranlarının başlığı App.tsx'te sabittir; yığın ekranlarında başlık veriye göre değişir.
-    nav.setOptions({ ...(tab ? null : { title: title ?? '' }), headerRight: hasRight ? () => rightRef.current : undefined });
+    // Sekme ekranlarında yerel başlık yoktur; başlık içerikle birlikte, ekranın en üstünde çizilir.
+    if (!IOS || tab) return;
+    nav.setOptions({ title: title ?? '', headerRight: hasRight ? () => rightRef.current : undefined });
   }, [nav, tab, title, hasRight]);
 
   const refresh = onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={t.muted} /> : undefined;
@@ -40,9 +40,10 @@ export function Screen({ title, tab, right, team, league, children, onRefresh, r
         <Backdrop team={team} league={league} />
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 4, paddingBottom: 28 }}
+          contentContainerStyle={{ paddingHorizontal: 14, paddingTop: tab ? 0 : 4, paddingBottom: 28 }}
           keyboardShouldPersistTaps="handled"
           refreshControl={refresh}>
+          {tab && <View style={{ marginHorizontal: -14 }}><ScreenTitle title={title ?? ''} right={right} /></View>}
           {children}
         </ScrollView>
       </View>

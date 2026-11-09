@@ -258,7 +258,7 @@ export function StandingsTable({ data, highlight, onTeam }: { data: Standings; h
 export function ScreenTitle({ title, right }: { title: string; right?: React.ReactNode }) {
   const t = useTheme();
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10, minHeight: 52 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 2, paddingBottom: 8, minHeight: 44 }}>
       <Text style={{ fontWeight: '700', fontSize: 28, lineHeight: 34, letterSpacing: -0.4, color: t.fg }}>{title}</Text>
       {right}
     </View>
