@@ -3,6 +3,7 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { League } from '../api';
 import { useNav } from '../nav';
 import { useStore } from '../store';
+import { LEAGUE_GROUPS } from '../leagueGroups';
 import { useTheme } from '../theme';
 import { Card, Empty, Icon, LeagueBadge, Section, StarButton, HAIR } from '../ui';
 import { Screen } from './Screen';
@@ -39,11 +40,10 @@ export default function Leagues() {
   );
   const group = (title: string, list: League[]) => list.length > 0 && <Section eyebrow={title}><Card>{list.map(row)}</Card></Section>;
   return (
-    <Screen tab title="Ligler">
-      <SearchBox value={q} onChange={setQ} placeholder="Lig veya ülke ara" />
+    <Screen tab title="Turnuvalar">
+      <SearchBox value={q} onChange={setQ} placeholder="Lig, kupa veya ülke ara" />
       {group('Takip ettiklerin', all.filter((l) => store.followsLeague(l.id)))}
-      {group('Ana ligler', all.filter((l) => l.type === 'main'))}
-      {group('Avrupa kupaları', all.filter((l) => l.type === 'cup'))}
+      {LEAGUE_GROUPS.map(([type, title]) => <React.Fragment key={type}>{group(title, all.filter((l) => l.type === type))}</React.Fragment>)}
       {!all.length && <Empty>Eşleşen lig yok.</Empty>}
     </Screen>
   );

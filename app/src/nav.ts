@@ -1,10 +1,10 @@
-import { useNavigation } from '@react-navigation/native';
+import { NavigatorScreenParams, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { Team } from './api';
 
 export type RootParams = {
   Onboarding: undefined;
-  Tabs: undefined;
+  Tabs: NavigatorScreenParams<TabParams> | undefined;
   Match: { id: number };
   League: { id: number };
   Team: { team: Team };

@@ -5,17 +5,35 @@ import { dayLabel } from '../dates';
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { Button, Card, Crest, Empty, Icon, statusText, HAIR } from '../ui';
+import { Button, Card, Crest, Empty, Icon, LeagueBadge, Section, StarButton, statusText, HAIR } from '../ui';
 import { Screen } from './Screen';
 
 export default function MyTeams() {
   const nav = useNav();
-  const { teams } = useStore();
+  const { teams, leagues, league, toggleLeague } = useStore();
+  const t = useTheme();
   return (
     <Screen title="Takımlarım">
       {teams.length ? <Card style={{ marginTop: 4 }}>{teams.map((team, i) => <Row key={team.id} team={team} first={i === 0} />)}</Card> : <Empty>Henüz takım takip etmiyorsun.</Empty>}
-      <View style={{ marginTop: 20 }}><Button kind="sec" label="+ Takım ekle" onPress={() => nav.navigate('Picker')} /></View>
-      <Empty>Maçlarım sekmesinde yalnızca burada takip ettiğin takımların maçları görünür.</Empty>
+      <View style={{ marginTop: 20 }}><Button kind="sec" label="+ Takım ekle (kulüp ya da milli takım)" onPress={() => nav.navigate('Picker')} /></View>
+      <Section eyebrow="Takip ettiğin turnuvalar">
+        {leagues.length ? (
+          <Card>
+            {leagues.map((id, i) => {
+              const l = league(id);
+              return (
+                <View key={id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingLeft: 14, paddingRight: 8, borderTopWidth: i ? HAIR : 0, borderColor: t.line }}>
+                  <LeagueBadge id={id} size={34} />
+                  <Text style={{ flex: 1, fontWeight: '600', fontSize: 15, color: t.fg }}>{l?.name ?? 'Turnuva'}</Text>
+                  <StarButton on onPress={() => toggleLeague(id)} label={`${l?.name} takibi bırak`} />
+                </View>
+              );
+            })}
+          </Card>
+        ) : <Text style={{ color: t.muted, fontSize: 13, lineHeight: 19, paddingHorizontal: 2 }}>Henüz turnuva takip etmiyorsun. Turnuva sekmesinde yıldıza dokunursan o turnuvanın yakın tarihli tüm maçları ana ekranda görünür.</Text>}
+        <View style={{ marginTop: 12 }}><Button kind="sec" label="+ Turnuva ekle" onPress={() => nav.navigate('Tabs', { screen: 'Leagues' })} /></View>
+      </Section>
+      <Empty>Maçlarım sekmesinde takip ettiğin takımların bütün yarışmalardaki maçları ve takip ettiğin turnuvaların yakın maçları görünür.</Empty>
     </Screen>
   );
 }

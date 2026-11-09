@@ -11,14 +11,15 @@ import { Screen } from './Screen';
 const UPCOMING_LIMIT = 20;
 const RESULTS_LIMIT = 5;
 
-// Ana ekran: yalnızca takip edilen takımların maçları.
+// Ana ekran: takip edilen takımların maçları (katıldıkları tüm yarışmalarda) ve takip edilen turnuvaların yakın maçları.
 // En üstte canlı maç (yoksa sıradaki maç) büyük kartta; altında fikstür, en altta son sonuçlar.
 export default function Home() {
   const t = useTheme();
   const nav = useNav();
   const store = useStore();
   const ids = store.teams.map((x) => x.id).join(',');
-  const state = useApi<Mine>(ids ? `/api/mine?teams=${ids}` : null, 60000);
+  const leagueIds = store.leagues.join(',');
+  const state = useApi<Mine>(ids || leagueIds ? `/api/mine?teams=${ids}&leagues=${leagueIds}` : null, 60000);
   const openMatch = (f: Fixture) => nav.navigate('Match', { id: f.id });
   const addButton = (
     <Pressable onPress={() => nav.navigate('Picker')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Takım ekle" style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
@@ -26,10 +27,10 @@ export default function Home() {
     </Pressable>
   );
 
-  if (!ids) {
+  if (!ids && !leagueIds) {
     return (
       <Screen tab title="Maçlarım" right={addButton}>
-        <Empty>Henüz takım seçmedin. Takımını ekle, burada yalnızca onun maçlarını gör.</Empty>
+        <Empty>Henüz takım ya da turnuva seçmedin. Takımını (kulüp ya da milli takım) ekle, burada yalnızca onun maçlarını gör.</Empty>
         <Button label="+ Takım ekle" onPress={() => nav.navigate('Picker')} />
       </Screen>
     );
@@ -49,7 +50,7 @@ export default function Home() {
               <View style={{ gap: 12, marginTop: 4 }}>
                 {heroes.map((f) => <Hero key={f.id} f={f} today={d.today} onPress={() => openMatch(f)} />)}
               </View>
-              {!heroes.length && <Empty>Takip ettiğin takımların yaklaşan maçı yok.</Empty>}
+              {!heroes.length && <Empty>Takip ettiklerinin yaklaşan maçı yok.</Empty>}
               {rest.length > 0 && (
                 <MatchList title="Fikstür" fixtures={rest} onMatch={openMatch} showLeague dated />
               )}
@@ -94,7 +95,7 @@ function Hero({ f, today, onPress }: { f: Fixture; today: string; onPress: () =>
           </View>
           {side(f.a)}
         </View>
-        <Text style={{ textAlign: 'center', fontSize: 13, color: t.muted }}>{[league?.name, f.round, league?.tv && `Yayın: ${league.tv}`].filter(Boolean).join(' · ')}</Text>
+        <Text style={{ textAlign: 'center', fontSize: 13, color: t.muted }}>{[league?.name ?? f.lgName, f.round, league?.tv && `Yayın: ${league.tv}`].filter(Boolean).join(' · ')}</Text>
       </Card>
     </Pressable>
   );

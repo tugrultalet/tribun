@@ -2,6 +2,8 @@
 // Belgesine göre maç ve olay verisi dakikada bir, istatistikler 5 dakikada bir, ilk 11'ler 15 dakikada bir yenilenir.
 import { MIN, TZ, dayFmt, timeFmt, fail, pair, roundLabel } from '../lib/common.js';
 import { Throttle } from '../lib/throttle.js';
+import { fromCommon, toCommon } from '../lib/ids.js';
+import { isSeniorMen } from '../lib/national.js';
 
 // Kaynak bazı Türk takımlarını Türkçe karakter olmadan veriyor.
 const TEAM_NAMES = {
@@ -14,16 +16,19 @@ const DONE = { Finished: 'FT', 'Finished after penalties': 'PEN', 'Finished afte
 const OFF = { Postponed: 'PST', Cancelled: 'CANC', Abandoned: 'ABD', Awarded: 'AWD' };
 const POS = { Goalkeeper: 'G', Defender: 'D', Midfielder: 'M', Forward: 'F', Attacker: 'F' };
 
-const teamLogo = (id) => `https://highlightly.net/soccer/images/teams/${id}.png`;
-const team = (t) => ({ id: t.id, name: TEAM_NAMES[t.name] || t.name, logo: t.logo || teamLogo(t.id) });
+// Dışarıya verilen numaralar ortak numaralardır (bkz. lib/ids.js); kaynağın kendi numaraları yalnızca içeride kalır.
+const teamLogo = (hlId) => `https://highlightly.net/soccer/images/teams/${hlId}.png`;
+const team = (t) => ({ id: toCommon(t.id), name: TEAM_NAMES[t.name] || t.name, logo: t.logo || teamLogo(t.id) });
 
 export function fx(m) {
   const desc = m.state?.description || '';
   const st = LIVE[desc] ? 'live' : DONE[desc] ? 'ft' : OFF[desc] ? 'off' : 'ns';
   const when = new Date(m.date);
   return {
-    id: m.id,
-    lg: m.league.id,
+    id: toCommon(m.id),
+    lg: toCommon(m.league.id),
+    lgName: m.league.name || null,
+    lgLogo: m.league.logo || null,
     round: roundLabel(m.round),
     ts: Math.floor(when.getTime() / 1000),
     date: dayFmt.format(when),
@@ -59,7 +64,7 @@ export function lineup(side) {
   if (!side?.initialLineup?.length) return null;
   const player = (p, row, col) => ({ id: p.id, no: p.number ?? null, name: p.name, pos: POS[p.position] || null, row, col });
   return {
-    teamId: side.id,
+    teamId: toCommon(side.id),
     formation: side.formation || null,
     coach: null,
     color: null,
@@ -138,17 +143,18 @@ export function createHighlightly({ key, baseUrl, fetchImpl = fetch } = {}) {
   }
 
   return Object.assign(provider, {
-    leagueLogo: (id) => `https://highlightly.net/soccer/images/leagues/${id}.png`,
+    leagueLogo: (id) => `https://highlightly.net/soccer/images/leagues/${fromCommon(id)}.png`,
+    teamLogo: (id) => teamLogo(fromCommon(id)),
     configError: () => (key ? null : 'Sunucuda HIGHLIGHTLY_KEY tanımlı değil.'),
     // Canlı veriyi kaynak dakikada bir yeniler; ücretli planda daha sık sormak aynı yanıtı tekrar almaktır.
     liveTtl: (free) => (free ? 3 * MIN : MIN),
 
     async seasonFixtures(lg, season) {
-      return (await apiAll(`matches?leagueId=${lg}&season=${season}`)).map(fx);
+      return (await apiAll(`matches?leagueId=${fromCommon(lg)}&season=${season}`)).map(fx);
     },
     // Başlamış ya da başlamak üzere olan maçların güncel hali. Lig ve güne göre gruplanır.
     async refresh(fixtures) {
-      const groups = [...new Set(fixtures.map((f) => `${f.lg}|${f.date}`))];
+      const groups = [...new Set(fixtures.map((f) => `${fromCommon(f.lg)}|${f.date}`))];
       const out = [];
       for (const g of groups) {
         const [lg, date] = g.split('|');
@@ -158,7 +164,7 @@ export function createHighlightly({ key, baseUrl, fetchImpl = fetch } = {}) {
       return out;
     },
     async match(id) {
-      const body = await api(`matches/${id}`);
+      const body = await api(`matches/${fromCommon(id)}`);
       const m = Array.isArray(body) ? body[0] : body;
       if (!m?.id) throw fail('notfound', 'Maç bulunamadı.');
       return {
@@ -171,12 +177,12 @@ export function createHighlightly({ key, baseUrl, fetchImpl = fetch } = {}) {
     },
     // İlk 11'ler ayrı bir istektir.
     async lineups(id) {
-      const body = await api(`lineups/${id}`);
+      const body = await api(`lineups/${fromCommon(id)}`);
       return [lineup(body?.homeTeam), lineup(body?.awayTeam)].filter(Boolean);
     },
     // Puan durumunda form ve Avrupa/küme düşme bölgesi bilgisi yoktur.
     async standings(lg, season) {
-      const body = await api(`standings?leagueId=${lg}&season=${season}`);
+      const body = await api(`standings?leagueId=${fromCommon(lg)}&season=${season}`);
       return (body.groups || []).map((g) => ({
         name: g.name || '',
         rows: (g.standings || []).map((r) => {
@@ -191,9 +197,26 @@ export function createHighlightly({ key, baseUrl, fetchImpl = fetch } = {}) {
     },
     // Takımın sezon boyunca oynadığı tüm maçlar (ev sahibi ve deplasman ayrı sorulur).
     async teamSeason(id, season) {
-      const home = await apiAll(`matches?homeTeamId=${id}&season=${season}`);
-      const away = await apiAll(`matches?awayTeamId=${id}&season=${season}`);
+      const home = await apiAll(`matches?homeTeamId=${fromCommon(id)}&season=${season}`);
+      const away = await apiAll(`matches?awayTeamId=${fromCommon(id)}&season=${season}`);
       return [...home, ...away].map(fx);
+    },
+    // Turnuvanın en güncel sezonu: kaynağın bildirdiği sezonlardan, bugünkü sezonu aşmayan en büyüğü.
+    async seasonOf(lg, current) {
+      const body = await api(`leagues/${fromCommon(lg)}`);
+      const l = Array.isArray(body) ? body[0] : body;
+      const seasons = (l?.seasons || []).map((x) => x.season).filter((y) => y <= current);
+      return seasons.length ? Math.max(...seasons) : null;
+    },
+    // Tüm milli takımlar (İngilizce adlarıyla); kadın ve gençlik takımları çıkarılır.
+    async nationalTeams() {
+      const out = [];
+      for (let offset = 0; ; offset += 500) {
+        const body = await api(`teams?type=national&limit=500&offset=${offset}`);
+        for (const t of body.data || []) if (isSeniorMen(t.name)) out.push({ id: toCommon(t.id), name: t.name, logo: t.logo || teamLogo(t.id) });
+        const total = body.pagination?.totalCount ?? 0;
+        if (offset + 500 >= total || !(body.data || []).length) return out;
+      }
     },
     // Kaynakta kadro ucu yok; sunucu son maçın ilk 11'inden türetir.
     squad: null,
