@@ -17,4 +17,7 @@ export function dayLabel(date: string, today: string): string {
   const d = utc(date);
   return `${d.getUTCDate()} ${MON[d.getUTCMonth()]} ${DOW[d.getUTCDay()]}`;
 }
+const MON_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+export const shortDate = (date: string) => `${utc(date).getUTCDate()} ${MON_SHORT[utc(date).getUTCMonth()]}`;
+export const daysBetween = (from: string, to: string) => Math.round((utc(to).getTime() - utc(from).getTime()) / 86400000);
 export const seasonLabel = (season: number) => `${season}/${String((season + 1) % 100).padStart(2, '0')}`;

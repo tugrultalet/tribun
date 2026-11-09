@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Team } from '../api';
 import { useStore } from '../store';
 import { font, useTheme } from '../theme';
-import { Button, Card, Icon, LeagueBadge } from '../ui';
+import { Button, Card, Icon, LeagueBadge, HAIR } from '../ui';
 import { TeamGrid } from './Picker';
 
 export default function Onboarding() {
@@ -58,7 +58,7 @@ export default function Onboarding() {
                   const on = leagues.includes(l.id);
                   return (
                     <Pressable key={l.id} onPress={() => toggleLeague(l.id)} accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={l.name}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 14, borderTopWidth: i ? 1 : 0, borderColor: t.line }}>
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 14, borderTopWidth: i ? HAIR : 0, borderColor: t.line }}>
                       <LeagueBadge id={l.id} size={32} />
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontWeight: '600', fontSize: 15, color: t.fg }}>{l.name}</Text>

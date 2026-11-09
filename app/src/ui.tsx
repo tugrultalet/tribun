@@ -1,8 +1,9 @@
 import React from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleProp, Text, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { ApiError, Fixture, Standings, Zone } from './api';
-import { seasonLabel } from './dates';
+import { seasonLabel, shortDate } from './dates';
 import { useStore } from './store';
 import { font, useTheme, ZONE_NAMES } from './theme';
 
@@ -23,6 +24,7 @@ export const Icon = {
     <Svg width={16} height={16} viewBox="0 0 24 24"><Path d="M7 4v14M3 14l4 4 4-4" {...stroke('#16924B', 2.4)} /><Path d="M17 20V6M13 10l4-4 4 4" {...stroke('#D33A3A', 2.4)} /></Svg>
   ),
   search: ({ size = 18, color }: IconProps) => <Svg width={size} height={size} viewBox="0 0 24 24"><Circle cx={11} cy={11} r={7} {...stroke(color, 2.2)} /><Path d="M20 20l-3.5-3.5" {...stroke(color, 2.2)} /></Svg>,
+  plus: ({ size = 24, color }: IconProps) => <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="M12 5v14M5 12h14" {...stroke(color, 2.4)} /></Svg>,
   check: ({ size = 12, color }: IconProps) => <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="M5 12.5l4.5 4.5L19 7.5" {...stroke(color, 4)} /></Svg>,
   tabHome: ({ size = 24, color }: IconProps) => <Svg width={size} height={size} viewBox="0 0 24 24"><Rect x={3.5} y={5} width={17} height={15} rx={3} {...stroke(color)} /><Path d="M3.5 10h17M8 3v4M16 3v4" {...stroke(color)} /></Svg>,
   tabLeagues: ({ size = 24, color }: IconProps) => <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="M7 4h10v5a5 5 0 01-10 0z" {...stroke(color)} /><Path d="M7 6H4v1.5A3.5 3.5 0 007.5 11M17 6h3v1.5a3.5 3.5 0 01-3.5 3.5M12 14v3M8.5 20.5h7l-.8-3.5H9.3z" {...stroke(color)} /></Svg>,
@@ -45,7 +47,14 @@ export function LeagueBadge({ id, size = 22 }: { id: number; size?: number }) {
 }
 export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const t = useTheme();
-  return <View style={[{ backgroundColor: t.surface, borderRadius: 18, borderWidth: 1, borderColor: t.line, overflow: 'hidden' }, style]}>{children}</View>;
+  return <View style={[{ backgroundColor: t.surface, borderRadius: 22, borderCurve: 'continuous', overflow: 'hidden' }, style]}>{children}</View>;
+}
+export const HAIR = StyleSheet.hairlineWidth;
+const GLASS = Platform.OS === 'ios' && isLiquidGlassAvailable();
+// iOS 26'da gerçek Liquid Glass; diğer yerlerde yarı saydam bir yüzey.
+export function Glass({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  if (GLASS) return <GlassView glassEffectStyle="regular" style={style}>{children}</GlassView>;
+  return <View style={[{ backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: HAIR, borderColor: 'rgba(255,255,255,0.35)' }, style]}>{children}</View>;
 }
 export function Section({ title, eyebrow, left, right, children }: { title?: string; eyebrow?: string; left?: React.ReactNode; right?: React.ReactNode; children: React.ReactNode }) {
   const t = useTheme();
@@ -79,7 +88,7 @@ export function Seg<T extends string>({ options, value, onChange, style }: { opt
 export function Tabs<T extends string>({ options, value, onChange }: { options: [T, string][]; value: T; onChange: (v: T) => void }) {
   const t = useTheme();
   return (
-    <View style={{ borderBottomWidth: 1, borderColor: t.line, marginHorizontal: -16 }}>
+    <View style={{ borderBottomWidth: HAIR, borderColor: t.line, marginHorizontal: -16 }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 4 }}>
         {options.map(([key, label]) => {
           const on = key === value;
@@ -123,7 +132,7 @@ export function Loader<T>({ state, children }: { state: { data?: T; error: ApiEr
   return <ActivityIndicator style={{ marginTop: 40 }} color={t.muted} />;
 }
 export function errorText(e: ApiError): string {
-  if (e.kind === 'plan') return 'Bu veri kullandığın API-Football planında açık değil.';
+  if (e.kind === 'config') return 'Sunucuda veri kaynağı anahtarı eksik ya da geçersiz.';
   if (e.kind === 'quota') return 'Günlük API isteği limiti doldu. Veriler yarın yenilenecek.';
   return e.message;
 }
@@ -157,7 +166,7 @@ export function statusText(f: Fixture): string {
   if (f.st === 'off') return f.short === 'PST' ? 'Ert.' : 'İptal';
   return f.time;
 }
-export function MatchRow({ f, onPress, showLeague, first }: { f: Fixture; onPress: () => void; showLeague?: boolean; first?: boolean }) {
+export function MatchRow({ f, onPress, showLeague, first, dateLabel }: { f: Fixture; onPress: () => void; showLeague?: boolean; first?: boolean; dateLabel?: string }) {
   const t = useTheme();
   const { followsTeam } = useStore();
   const done = f.st === 'ft';
@@ -177,15 +186,18 @@ export function MatchRow({ f, onPress, showLeague, first }: { f: Fixture; onPres
   };
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${f.h.name} ${f.a.name}`}
-      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 14, borderTopWidth: first ? 0 : 1, borderColor: t.line, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
-      <Text style={{ width: 42, textAlign: 'center', fontSize: 12.5, fontWeight: '700', color: f.st === 'live' ? t.live : t.muted }}>{statusText(f)}</Text>
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: first ? 0 : HAIR, borderColor: t.line, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+      <View style={{ width: 46, alignItems: 'center', gap: 2 }}>
+        {dateLabel ? <Text style={{ fontSize: 11, fontWeight: '700', color: t.muted }}>{dateLabel}</Text> : null}
+        <Text style={{ fontSize: 12.5, fontWeight: '700', color: f.st === 'live' ? t.live : dateLabel ? t.fg : t.muted }}>{statusText(f)}</Text>
+      </View>
       <View style={{ flex: 1, gap: 7 }}>{line('h')}{line('a')}</View>
       {showLeague && <LeagueBadge id={f.lg} />}
     </Pressable>
   );
 }
-export function MatchList({ fixtures, onMatch, showLeague }: { fixtures: Fixture[]; onMatch: (f: Fixture) => void; showLeague?: boolean }) {
-  return <Card>{fixtures.map((f, i) => <MatchRow key={f.id} f={f} first={i === 0} showLeague={showLeague} onPress={() => onMatch(f)} />)}</Card>;
+export function MatchList({ fixtures, onMatch, showLeague, dated }: { fixtures: Fixture[]; onMatch: (f: Fixture) => void; showLeague?: boolean; dated?: boolean }) {
+  return <Card>{fixtures.map((f, i) => <MatchRow key={f.id} f={f} first={i === 0} showLeague={showLeague} dateLabel={dated ? shortDate(f.date) : undefined} onPress={() => onMatch(f)} />)}</Card>;
 }
 
 /* ---------- Puan durumu ---------- */
@@ -215,7 +227,7 @@ export function StandingsTable({ data, highlight, mode = 'short', onTeam }: { da
             const me = highlight.includes(r.team.id);
             return (
               <Pressable key={r.team.id} disabled={!onTeam} onPress={() => onTeam?.(r)}
-                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderTopWidth: 1, borderColor: t.line, backgroundColor: me ? t.accentSoft : 'transparent' }}>
+                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderTopWidth: HAIR, borderColor: t.line, backgroundColor: me ? t.accentSoft : 'transparent' }}>
                 <View style={{ width: 30, flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{ width: 3, height: 18, borderRadius: 2, backgroundColor: r.zone ? t.zone[r.zone] : 'transparent' }} />
                   <Text style={[cell, { flex: 1, fontWeight: '600', color: me ? t.accent : t.muted }]}>{r.rank}</Text>

@@ -4,7 +4,7 @@ import { League } from '../api';
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { Card, Empty, Icon, LeagueBadge, ScreenTitle, Section, StarButton } from '../ui';
+import { Card, Empty, Icon, LeagueBadge, Section, StarButton, HAIR } from '../ui';
 import { Screen } from './Screen';
 
 export function SearchBox({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
@@ -28,7 +28,7 @@ export default function Leagues() {
   const all = store.meta.leagues.filter(match);
   const row = (l: League, i: number) => (
     <Pressable key={l.id} onPress={() => nav.navigate('League', { id: l.id })} accessibilityRole="button" accessibilityLabel={l.name}
-      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingLeft: 14, paddingRight: 8, borderTopWidth: i ? 1 : 0, borderColor: t.line, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingLeft: 14, paddingRight: 8, borderTopWidth: i ? HAIR : 0, borderColor: t.line, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
       <LeagueBadge id={l.id} size={34} />
       <View style={{ flex: 1 }}>
         <Text style={{ fontWeight: '600', fontSize: 15, color: t.fg }}>{l.name}</Text>
@@ -39,7 +39,7 @@ export default function Leagues() {
   );
   const group = (title: string, list: League[]) => list.length > 0 && <Section eyebrow={title}><Card>{list.map(row)}</Card></Section>;
   return (
-    <Screen header={<ScreenTitle title="Ligler" />}>
+    <Screen tab title="Ligler">
       <SearchBox value={q} onChange={setQ} placeholder="Lig veya ülke ara" />
       {group('Takip ettiklerin', all.filter((l) => store.followsLeague(l.id)))}
       {group('Ana ligler', all.filter((l) => l.type === 'main'))}

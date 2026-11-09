@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Fixture, Lineup, Match as MatchData, MatchEvent, Standings, Team, useApi } from '../api';
+import { Fixture, Lineup, Lineups as LineupData, Match as MatchData, MatchEvent, Standings, Team, useApi } from '../api';
 import { dayLabel } from '../dates';
 import { RootParams, useNav } from '../nav';
 import { useStore } from '../store';
 import { font, useTheme } from '../theme';
-import { BackBar, Crest, Empty, Icon, LiveDot, Loader, Note, Section, Seg, StandingsTable, statusText, Tabs } from '../ui';
+import { Crest, Empty, Icon, LiveDot, Loader, Note, Section, Seg, StandingsTable, statusText, Tabs, HAIR } from '../ui';
 import { Screen } from './Screen';
 
 type Tab = 'sum' | 'line' | 'stat' | 'table';
@@ -19,10 +19,7 @@ export default function Match({ route }: NativeStackScreenProps<RootParams, 'Mat
   const f = state.data?.fixture;
   const league = f ? store.league(f.lg) : undefined;
   return (
-    <Screen
-      onRefresh={state.reload}
-      refreshing={state.loading && state.data !== undefined}
-      header={<BackBar onBack={nav.goBack} title={f ? `${league?.name ?? ''} · ${f.round}` : ''} />}>
+    <Screen onRefresh={state.reload} refreshing={state.loading && state.data !== undefined} title={f ? `${league?.name ?? ''} · ${f.round}` : ''}>
       <Loader state={state}>
         {(m) => (
           <>
@@ -118,8 +115,11 @@ function Lineups({ m }: { m: MatchData }) {
   const t = useTheme();
   const f = m.fixture;
   const [side, setSide] = useState<'h' | 'a'>('h');
-  if (!m.lineups.length) return <Empty>İlk 11'ler genellikle maçtan yaklaşık bir saat önce açıklanır.</Empty>;
-  const lu: Lineup | undefined = m.lineups.find((l) => l.teamId === f[side].id);
+  const state = useApi<LineupData>(`/api/match/${f.id}/lineups`, f.st === 'ft' ? undefined : 120000);
+  if (!state.data) return <Loader state={state}>{() => null}</Loader>;
+  const lineups = state.data.lineups;
+  if (!lineups.length) return <Empty>İlk 11'ler genellikle maçtan yaklaşık bir saat önce açıklanır.</Empty>;
+  const lu: Lineup | undefined = lineups.find((l) => l.teamId === f[side].id);
   if (!lu) return <Empty>Bu takımın kadrosu henüz açıklanmadı.</Empty>;
   const color = lu.color || t.accent;
   const ink = lu.numColor || (lightText(color) ? '#FFFFFF' : '#111111');
@@ -150,7 +150,7 @@ function Lineups({ m }: { m: MatchData }) {
         <Section title="Yedekler">
           <View>
             {lu.subs.map((p, i) => (
-              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderColor: t.line }}>
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: HAIR, borderColor: t.line }}>
                 <Text style={{ width: 26, textAlign: 'center', fontFamily: font.scoreMid, fontSize: 17, color: t.muted }}>{p.no ?? ''}</Text>
                 <Text style={{ flex: 1, fontSize: 14, color: t.fg }}>{p.name}</Text>
                 <Text style={{ fontSize: 12, color: t.muted }}>{POS[p.pos ?? ''] ?? ''}</Text>
@@ -177,7 +177,7 @@ function Stats({ m }: { m: MatchData }) {
       {m.stats.map((s) => {
         const total = s.h + s.a || 1;
         return (
-          <View key={s.label} style={{ gap: 6, paddingVertical: 12, borderBottomWidth: 1, borderColor: t.line }}>
+          <View key={s.label} style={{ gap: 6, paddingVertical: 12, borderBottomWidth: HAIR, borderColor: t.line }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: t.fg, width: 56 }}>{s.h}{s.unit}</Text>
               <Text style={{ fontSize: 13, color: t.muted }}>{s.label}</Text>

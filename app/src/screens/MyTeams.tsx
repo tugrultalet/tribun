@@ -5,17 +5,17 @@ import { dayLabel } from '../dates';
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { Button, Card, Crest, Empty, Icon, ScreenTitle, statusText } from '../ui';
+import { Button, Card, Crest, Empty, Icon, statusText, HAIR } from '../ui';
 import { Screen } from './Screen';
 
 export default function MyTeams() {
   const nav = useNav();
   const { teams } = useStore();
   return (
-    <Screen header={<ScreenTitle title="Takımlarım" />}>
+    <Screen tab title="Takımlarım">
       {teams.length ? <Card style={{ marginTop: 4 }}>{teams.map((team, i) => <Row key={team.id} team={team} first={i === 0} />)}</Card> : <Empty>Henüz takım takip etmiyorsun.</Empty>}
       <View style={{ marginTop: 20 }}><Button kind="sec" label="+ Takım ekle" onPress={() => nav.navigate('Picker')} /></View>
-      <Empty>Takip ettiğin takımların maçları Maçlar sekmesinde en üstte görünür.</Empty>
+      <Empty>Maçlarım sekmesinde yalnızca burada takip ettiğin takımların maçları görünür.</Empty>
     </Screen>
   );
 }
@@ -35,7 +35,7 @@ function Row({ team, first }: { team: Team; first: boolean }) {
   }
   return (
     <Pressable onPress={() => nav.navigate('Team', { team })} accessibilityRole="button" accessibilityLabel={team.name}
-      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: first ? 0 : 1, borderColor: t.line, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: first ? 0 : HAIR, borderColor: t.line, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
       <Crest uri={team.logo} size={40} />
       <View style={{ flex: 1 }}>
         <Text style={{ fontWeight: '600', fontSize: 15, color: t.fg }}>{team.name}</Text>
