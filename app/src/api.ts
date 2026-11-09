@@ -15,7 +15,7 @@ export type Meta = {
   plan: string | null; limitDay: number | null; used: number | null; remaining: number | null; error?: string;
   today: string; window: { from: number; to: number }; season: number; liveTtl: number; leagues: League[];
 };
-export type Day = { date: string; fixtures: Fixture[]; stale?: boolean };
+export type Mine = { today: string; fixtures: Fixture[] };
 export type MatchEvent = { min: number; extra: number | null; side: 'h' | 'a'; k: 'goal' | 'miss' | 'y' | 'r' | 'sub' | 'var' | 'other'; p: string; x: string | null };
 export type LineupPlayer = { no: number | null; name: string; pos: string | null; row: number | null; col: number | null };
 export type Lineup = { teamId: number; formation: string | null; coach: string | null; color: string | null; numColor: string | null; xi: LineupPlayer[]; subs: LineupPlayer[] };

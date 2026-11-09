@@ -36,7 +36,7 @@ function TabsScreen() {
       tabBarStyle: { backgroundColor: t.bg, borderTopColor: t.line, height: 58 + insets.bottom, paddingTop: 4 },
       tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
     }}>
-      <Tab.Screen name="Home" component={Home} options={{ title: 'Maçlar', tabBarIcon: ({ color }) => <Icon.tabHome color={color} /> }} />
+      <Tab.Screen name="Home" component={Home} options={{ title: 'Maçlarım', tabBarIcon: ({ color }) => <Icon.tabHome color={color} /> }} />
       <Tab.Screen name="Leagues" component={Leagues} options={{ title: 'Ligler', tabBarIcon: ({ color }) => <Icon.tabLeagues color={color} /> }} />
       <Tab.Screen name="MyTeams" component={MyTeams} options={{ title: 'Takımlarım', tabBarIcon: ({ color }) => <Icon.tabTeams color={color} /> }} />
       <Tab.Screen name="Settings" component={Settings} options={{ title: 'Ayarlar', tabBarIcon: ({ color }) => <Icon.tabSettings color={color} /> }} />

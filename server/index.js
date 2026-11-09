@@ -137,7 +137,7 @@ async function apiAll(pathAndQuery) {
 
 const isFree = () => (state.limitDay ?? 100) <= 100;
 // Canlı veri yenileme aralığı. Ücretsiz planda günlük 100 isteği korumak için seyrek.
-const liveTtl = () => (process.env.LIVE_TTL ? Number(process.env.LIVE_TTL) * 1000 : isFree() ? 10 * MIN : 30e3);
+const liveTtl = () => (process.env.LIVE_TTL ? Number(process.env.LIVE_TTL) * 1000 : isFree() ? 3 * MIN : 30e3);
 const slowTtl = () => (isFree() ? 24 * HOUR : 6 * HOUR); // sezon fikstürü
 const tableTtl = () => (isFree() ? 3 * HOUR : 15 * MIN);
 
@@ -383,6 +383,30 @@ async function getTeam(id) {
   const info = sample ? (sample.h.id === id ? sample.h : sample.a) : { id, name: teamIndex[id]?.name || '', logo: teamLogo(id) };
   return { team: info, league: teamIndex[id]?.lg ?? null, limited: false, stale: base.stale, fixtures };
 }
+// Ana ekran: takip edilen takımların tüm maçları, tek listede. Başlamış ama sonuçlanmamış maçlar tazelenir.
+async function getMine(teamIds) {
+  const byId = new Map();
+  for (const id of teamIds) {
+    const data = await getTeam(id).catch(() => null);
+    for (const f of data?.fixtures || []) byId.set(f.id, f);
+  }
+  const pending = [...byId.values()].filter(unsettled);
+  const days = [...new Set(pending.map((f) => `${f.lg}|${f.date}`))];
+  for (const key of days) {
+    const [lg, date] = key.split('|');
+    const fresh = await refreshDay(Number(lg), date).catch(() => null);
+    for (const f of fresh?.fixtures || []) if (byId.has(f.id)) byId.set(f.id, f);
+  }
+  if (days.length) {
+    // Tazelenen sonuçları takım önbelleğine de işle ki biten maç yeniden sorulmasın.
+    for (const id of teamIds) {
+      const entry = load(`teamfx:${id}`);
+      if (entry) persist(`teamfx:${id}`, { exp: entry.exp, data: { ...entry.data, fixtures: entry.data.fixtures.map((f) => byId.get(f.id) || f) } });
+    }
+  }
+  return { today: today(), fixtures: [...byId.values()].sort(byTime) };
+}
+
 // Kaynakta kadro ucu yok; takımın oynadığı son maçın ilk 11'i ve yedekleri gösterilir.
 async function getSquad(id) {
   const { team: info, fixtures } = await getTeam(id);
@@ -416,6 +440,7 @@ function leagueParam(q) {
   if (raw == null) return [...LEAGUE_IDS];
   return [...new Set(raw.split(',').map(Number).filter((id) => LEAGUE_IDS.has(id)))];
 }
+const teamParam = (q) => [...new Set((q.get('teams') || '').split(',').map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 12);
 const knownLeague = (m) => {
   const id = Number(m[1]);
   if (!LEAGUE_IDS.has(id)) throw fail('notfound', 'Bu lig desteklenmiyor.');
@@ -426,9 +451,9 @@ const routes = [
   [/^\/api\/fixtures$/, (m, q) => {
     const date = q.get('date') || today();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw fail('bad', 'Geçersiz tarih.');
-    const teams = (q.get('teams') || '').split(',').map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 12);
-    return getDay(date, leagueParam(q), teams);
+    return getDay(date, leagueParam(q), teamParam(q));
   }],
+  [/^\/api\/mine$/, (m, q) => getMine(teamParam(q))],
   [/^\/api\/match\/(\d+)$/, (m) => getMatch(Number(m[1]))],
   [/^\/api\/match\/(\d+)\/lineups$/, (m) => getLineups(Number(m[1]))],
   [/^\/api\/standings\/(\d+)$/, (m) => getStandings(knownLeague(m))],

@@ -15,7 +15,7 @@ export default function MyTeams() {
     <Screen header={<ScreenTitle title="Takımlarım" />}>
       {teams.length ? <Card style={{ marginTop: 4 }}>{teams.map((team, i) => <Row key={team.id} team={team} first={i === 0} />)}</Card> : <Empty>Henüz takım takip etmiyorsun.</Empty>}
       <View style={{ marginTop: 20 }}><Button kind="sec" label="+ Takım ekle" onPress={() => nav.navigate('Picker')} /></View>
-      <Empty>Takip ettiğin takımların maçları Maçlar sekmesinde en üstte görünür.</Empty>
+      <Empty>Maçlarım sekmesinde yalnızca burada takip ettiğin takımların maçları görünür.</Empty>
     </Screen>
   );
 }
