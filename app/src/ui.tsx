@@ -37,12 +37,13 @@ export const Icon = {
 export function Crest({ uri, size = 28 }: { uri: string; size?: number }) {
   return <Image source={{ uri }} style={{ width: size, height: size }} resizeMode="contain" accessibilityIgnoresInvertColors />;
 }
-export function LeagueBadge({ id, size = 22 }: { id: number; size?: number }) {
-  const t = useTheme();
+// `logo`: katalogda olmayan yarışmalar için maçın kendi verdiği logo.
+export function LeagueBadge({ id, size = 22, logo }: { id: number; size?: number; logo?: string | null }) {
   const league = useStore().league(id);
+  const uri = league?.logo ?? logo;
   return (
     <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' }}>
-      {league && <Image source={{ uri: league.logo }} style={{ width: size * 0.68, height: size * 0.68 }} resizeMode="contain" />}
+      {uri ? <Image source={{ uri }} style={{ width: size * 0.68, height: size * 0.68 }} resizeMode="contain" /> : null}
     </View>
   );
 }
@@ -197,7 +198,7 @@ export function MatchRow({ f, onPress, showLeague, first, dateLabel }: { f: Fixt
         <Text style={{ fontSize: 12.5, fontWeight: '700', color: f.st === 'live' ? t.live : dateLabel ? t.fg : t.muted }}>{statusText(f)}</Text>
       </View>
       <View style={{ flex: 1, gap: 4 }}>{line('h')}{line('a')}</View>
-      {showLeague && <LeagueBadge id={f.lg} />}
+      {showLeague && <LeagueBadge id={f.lg} logo={f.lgLogo} />}
     </Pressable>
   );
 }

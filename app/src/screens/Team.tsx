@@ -36,7 +36,7 @@ export default function Team({ route }: NativeStackScreenProps<RootParams, 'Team
           <Text style={{ fontWeight: '700', fontSize: 13, color: on ? t.accentInk : t.accent }}>{on ? '✓ Takip ediliyor' : '+ Takip et'}</Text>
         </Pressable>
       </View>
-      <Tabs value={tab} onChange={setTab} options={[['matches', 'Maçlar'], ['squad', 'Kadro'], ['table', 'Tablo']]} />
+      <Tabs value={tab} onChange={setTab} options={leagueId ? [['matches', 'Maçlar'], ['squad', 'Kadro'], ['table', 'Tablo']] : [['matches', 'Maçlar'], ['squad', 'Kadro']]} />
       {tab === 'matches' && (
         <Loader state={info}>
           {(d) => {

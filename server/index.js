@@ -44,6 +44,8 @@ function leagueParam(q) {
   if (raw == null) return [...core.leagueIds];
   return [...new Set(raw.split(',').map(Number).filter((id) => core.leagueIds.has(id)))];
 }
+// `leagues` verilmezse hiçbir lig kastedilmez (ana ekran yalnızca takip edilenleri ister).
+const followedLeagues = (q) => [...new Set((q.get('leagues') || '').split(',').map(Number).filter((id) => core.leagueIds.has(id)))];
 const teamParam = (q) => [...new Set((q.get('teams') || '').split(',').map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 12);
 const knownLeague = (m) => {
   const id = Number(m[1]);
@@ -57,7 +59,8 @@ const routes = [
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw fail('bad', 'Geçersiz tarih.');
     return core.day(date, leagueParam(q), teamParam(q));
   }],
-  [/^\/api\/mine$/, (m, q) => core.mine(teamParam(q))],
+  [/^\/api\/mine$/, (m, q) => core.mine(teamParam(q), followedLeagues(q))],
+  [/^\/api\/national$/, () => core.national()],
   [/^\/api\/match\/(\d+)$/, (m) => core.match(Number(m[1]))],
   [/^\/api\/match\/(\d+)\/lineups$/, (m) => core.lineups(Number(m[1]))],
   [/^\/api\/standings\/(\d+)$/, (m) => core.standings(knownLeague(m))],

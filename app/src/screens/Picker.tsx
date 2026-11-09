@@ -1,16 +1,38 @@
 import React, { useState } from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { LeagueTeams, Team, useApi } from '../api';
+import { LeagueTeams, National, Team, useApi } from '../api';
 import { seasonLabel } from '../dates';
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { Crest, Empty, Icon, Loader, Note } from '../ui';
+import { Crest, Empty, Icon, Loader, Note, Seg } from '../ui';
 import { SearchBox } from './Leagues';
 import { Screen } from './Screen';
 
-// Lig seçip takımları ızgarada gösterir. İlk açılışta ve "Takım ekle"de kullanılır.
-export function TeamGrid({ selected, onToggle }: { selected: (id: number) => boolean; onToggle: (team: Team, leagueId: number) => void }) {
+// Takım kutuları ızgarası.
+function Cells({ teams, selected, onToggle }: { teams: Team[]; selected: (id: number) => boolean; onToggle: (team: Team) => void }) {
+  const t = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, marginTop: 10 }}>
+      {teams.map((team) => {
+        const on = selected(team.id);
+        return (
+          <View key={team.id} style={{ width: '33.333%', padding: 5 }}>
+            <Pressable onPress={() => onToggle(team)} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={team.name}
+              style={{ alignItems: 'center', gap: 7, paddingTop: 12, paddingBottom: 10, paddingHorizontal: 4, borderRadius: 16, borderWidth: 1.5, borderColor: on ? t.accent : t.line, backgroundColor: on ? t.accentSoft : t.surface }}>
+              {on && <View style={{ position: 'absolute', top: 6, right: 6, width: 18, height: 18, borderRadius: 9, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center' }}><Icon.check color={t.accentInk} size={11} /></View>}
+              <Crest uri={team.logo} size={40} />
+              <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: '600', color: t.fg }}>{team.name}</Text>
+            </Pressable>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+// Kulüpler: lig seçip o ligin takımlarını gösterir.
+function Clubs({ selected, onToggle }: { selected: (id: number) => boolean; onToggle: (team: Team) => void }) {
   const t = useTheme();
   const { meta } = useStore();
   const leagues = meta.leagues.filter((l) => l.type === 'main');
@@ -38,26 +60,50 @@ export function TeamGrid({ selected, onToggle }: { selected: (id: number) => boo
           return (
             <>
               {!d.current && <Note>Ücretsiz API planı güncel sezonun takım listesini vermiyor; {seasonLabel(d.season)} listesi gösteriliyor. Listede olmayan bir takımı maç sayfasından takip edebilirsin.</Note>}
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5, marginTop: 10 }}>
-                {teams.map((team) => {
-                  const on = selected(team.id);
-                  return (
-                    <View key={team.id} style={{ width: '33.333%', padding: 5 }}>
-                      <Pressable onPress={() => onToggle(team, leagueId)} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={team.name}
-                        style={{ alignItems: 'center', gap: 7, paddingTop: 12, paddingBottom: 10, paddingHorizontal: 4, borderRadius: 16, borderWidth: 1.5, borderColor: on ? t.accent : t.line, backgroundColor: on ? t.accentSoft : t.surface }}>
-                        {on && <View style={{ position: 'absolute', top: 6, right: 6, width: 18, height: 18, borderRadius: 9, backgroundColor: t.accent, alignItems: 'center', justifyContent: 'center' }}><Icon.check color={t.accentInk} size={11} /></View>}
-                        <Crest uri={team.logo} size={40} />
-                        <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: '600', color: t.fg }}>{team.name}</Text>
-                      </Pressable>
-                    </View>
-                  );
-                })}
-              </View>
+              <Cells teams={teams} selected={selected} onToggle={onToggle} />
               {!teams.length && <Empty>Eşleşen takım yok.</Empty>}
             </>
           );
         }}
       </Loader>
+    </View>
+  );
+}
+
+const NATIONAL_PREVIEW = 60;
+
+// Milli takımlar: tek liste, arama kutusuyla. Aramadan önce ilk takımlar (Türkiye başta) gösterilir.
+function NationalTeams({ selected, onToggle }: { selected: (id: number) => boolean; onToggle: (team: Team) => void }) {
+  const [q, setQ] = useState('');
+  const state = useApi<National>('/api/national');
+  const needle = q.trim().toLocaleLowerCase('tr');
+  return (
+    <View>
+      <SearchBox value={q} onChange={setQ} placeholder="Milli takım ara (ör. Türkiye)" />
+      <Loader state={state}>
+        {(d) => {
+          const all = d.teams.filter((x) => !needle || x.name.toLocaleLowerCase('tr').includes(needle));
+          const teams = needle ? all : all.slice(0, NATIONAL_PREVIEW);
+          return (
+            <>
+              <Cells teams={teams} selected={selected} onToggle={onToggle} />
+              {!needle && all.length > NATIONAL_PREVIEW && <Note>Listede {all.length} milli takım var. Diğerlerini bulmak için yukarıya adını yaz.</Note>}
+              {!teams.length && <Empty>Eşleşen milli takım yok.</Empty>}
+            </>
+          );
+        }}
+      </Loader>
+    </View>
+  );
+}
+
+// Kulüp ya da milli takım seçimi. İlk açılışta ve "Takım ekle"de kullanılır.
+export function TeamGrid({ selected, onToggle }: { selected: (id: number) => boolean; onToggle: (team: Team) => void }) {
+  const [kind, setKind] = useState<'club' | 'national'>('club');
+  return (
+    <View>
+      <Seg style={{ marginBottom: 12 }} value={kind} onChange={setKind} options={[['club', 'Kulüpler'], ['national', 'Milli takımlar']]} />
+      {kind === 'club' ? <Clubs selected={selected} onToggle={onToggle} /> : <NationalTeams selected={selected} onToggle={onToggle} />}
     </View>
   );
 }

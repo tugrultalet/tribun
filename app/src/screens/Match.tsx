@@ -19,7 +19,7 @@ export default function Match({ route }: NativeStackScreenProps<RootParams, 'Mat
   const f = state.data?.fixture;
   const league = f ? store.league(f.lg) : undefined;
   return (
-    <Screen league={f?.lg} onRefresh={state.reload} refreshing={state.loading && state.data !== undefined} title={f ? `${league?.name ?? ''} · ${f.round}` : ''}>
+    <Screen league={f?.lg} onRefresh={state.reload} refreshing={state.loading && state.data !== undefined} title={f ? `${league?.name ?? f.lgName ?? ''} · ${f.round}` : ''}>
       <Loader state={state}>
         {(m) => (
           <>

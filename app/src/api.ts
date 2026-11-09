@@ -1,21 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIsFocused } from '@react-navigation/native';
 
-// Tribün sunucusunun adresi. Telefonda denerken bilgisayarın yerel ağ IP'sini ya da yayındaki sunucuyu verin.
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8787').replace(/\/$/, '');
+// Tribün sunucusunun adresi. Geliştirmede `EXPO_PUBLIC_API_URL` ile bilgisayarın yerel ağ adresi verilir;
+// verilmezse yerel sunucuya gidilir. Yayın (TestFlight/App Store) sürümü ise varsayılan olarak Render'daki sunucuyu kullanır.
+const PRODUCTION_API_URL = 'https://tribun-api.onrender.com';
+export const API_URL = (process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? 'http://localhost:8787' : PRODUCTION_API_URL)).replace(/\/$/, '');
 
 export type Team = { id: number; name: string; logo: string };
 export type Fixture = {
   id: number; lg: number; round: string; ts: number; date: string; time: string;
   st: 'ns' | 'live' | 'ft' | 'off'; short: string; min: number | null; extra: number | null;
   h: Team; a: Team; s: [number, number] | null; pen: [number, number] | null;
+  // Maçın yarışması. Katalogda olmayan yarışmalar (ör. hazırlık maçları) için ad ve logo buradan gelir.
+  lgName?: string | null; lgLogo?: string | null;
 };
-export type League = { id: number; key: string; name: string; country: string; type: 'main' | 'cup'; logo: string; tv?: string };
+// type: main = ülke ligi, cup = UEFA kupaları, intl = milli takım turnuvaları, domcup = ülke kupaları.
+export type League = { id: number; key: string; name: string; country: string; type: 'main' | 'cup' | 'intl' | 'domcup'; logo: string; tv?: string };
 export type Meta = {
   provider: string; providerName: string; plan: string | null; limitDay: number | null; used: number | null; remaining: number | null; error?: string;
   today: string; window: { from: number; to: number }; season: number; liveTtl: number; leagues: League[];
 };
 export type Mine = { today: string; fixtures: Fixture[] };
+export type National = { teams: Team[] };
 export type MatchEvent = { min: number; extra: number | null; side: 'h' | 'a'; k: 'goal' | 'miss' | 'y' | 'r' | 'sub' | 'var' | 'other'; p: string; x: string | null };
 export type LineupPlayer = { no: number | null; name: string; pos: string | null; row: number | null; col: number | null };
 export type Lineup = { teamId: number; formation: string | null; coach: string | null; color: string | null; numColor: string | null; xi: LineupPlayer[]; subs: LineupPlayer[] };

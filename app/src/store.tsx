@@ -2,14 +2,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, Fixture, get, League, Meta, Team } from './api';
+import { toCommon } from './ids';
 import { rpc } from './social';
 
 // `me`: gruplar için kimlik. `secret` yalnızca bu cihazda durur; veritabanında özeti tutulur.
 type Me = { secret: string; name: string };
-// `provider`: takım, lig ve maç numaralarının hangi veri kaynağına ait olduğu. Kaynak değişirse numaralar geçersiz olur.
-type Saved = { teams: Team[]; leagues: number[]; onboarded: boolean; me?: Me; provider?: string };
+// `ids: 2`: numaralar API-Football'un ortak numaralarıdır (1. sürüm kayıtlarında Highlightly numaraları vardı ve
+// `provider` alanı tutuluyordu).
+type Saved = { teams: Team[]; leagues: number[]; onboarded: boolean; me?: Me; ids?: number; provider?: string };
 const EMPTY: Saved = { teams: [], leagues: [], onboarded: false };
 const STORAGE_KEY = 'tribun:v1';
+
+// Eski kayıtları bir kereliğine ortak numaralara çevirir. Takip edilen ligler de temizlenir: eski sürümde ilk açılışta
+// takımların ligleri kendiliğinden eklenirdi ve ana ekran onları kullanmazdı; artık takip edilen lig tüm maçlarıyla
+// görünür, bu yüzden eski kayıtlar ana ekranı doldurmasın.
+function migrate(raw: Saved): Saved {
+  const s: Saved = { ...EMPTY, ...raw };
+  if (s.ids === 2) return s;
+  const convert = s.provider === 'apifootball' ? (id: number) => id : toCommon;
+  return { ...s, teams: s.teams.map((t) => ({ ...t, id: convert(t.id) })), leagues: [], ids: 2, provider: undefined };
+}
 
 type Store = Saved & {
   meta: Meta;
@@ -34,29 +46,20 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => setSaved(raw ? { ...EMPTY, ...JSON.parse(raw) } : EMPTY))
-      .catch(() => setSaved(EMPTY));
+      .then((raw) => {
+        if (!raw) return setSaved({ ...EMPTY, ids: 2 });
+        const stored: Saved = JSON.parse(raw);
+        const migrated = migrate(stored);
+        if (stored.ids !== 2) AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated)).catch(() => {});
+        setSaved(migrated);
+      })
+      .catch(() => setSaved({ ...EMPTY, ids: 2 }));
   }, []);
   const reloadMeta = useCallback(() => {
     setError(null);
     get<Meta>('/api/meta').then(setMeta, setError);
   }, []);
   useEffect(reloadMeta, [reloadMeta]);
-
-  // Sunucu başka bir veri kaynağına geçtiyse kayıtlı takım ve lig numaraları geçersizdir; seçimler baştan yapılır.
-  // Eski sürümde kaynak kaydedilmediği için o zamanki kaynak Highlightly kabul edilir.
-  useEffect(() => {
-    if (!saved || !meta) return;
-    const current = saved.provider ?? 'highlightly';
-    if (current === meta.provider && saved.provider) return;
-    setSaved((prev) => {
-      if (!prev) return prev;
-      const changed = (prev.provider ?? 'highlightly') !== meta.provider;
-      const next: Saved = changed ? { teams: [], leagues: [], onboarded: false, me: prev.me, provider: meta.provider } : { ...prev, provider: meta.provider };
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
-      return next;
-    });
-  }, [saved, meta]);
 
   const update = useCallback((fn: (s: Saved) => Saved) => {
     setSaved((prev) => {

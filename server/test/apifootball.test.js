@@ -100,3 +100,24 @@ test('status kotadan düşmeyen çağrıdır ve planı okur', async () => {
   assert.deepEqual(await provider.status(), { plan: 'Pro', active: true });
   assert.equal(provider.state.limitDay, 7500);
 });
+
+test('maçlar turnuva adı ve logosunu taşır (katalogda olmayan yarışmalar için)', async () => {
+  const { provider } = make(() => ok(sample('af-fixtures').response));
+  const [f] = await provider.seasonFixtures(203, 2026);
+  assert.equal(f.lgName, 'Süper Lig');
+  assert.match(f.lgLogo, /^https:\/\/media\.api-sports\.io\//);
+});
+
+test('milli takımlar üç turnuva katılımcılarının birleşimidir, kadın takımları çıkarılır', async () => {
+  const t = (id, name, national = true) => ({ team: { id, name, national, logo: `l${id}` } });
+  const { provider, fetchImpl } = make((path) => ok(path.includes('league=1&') ? [t(777, 'Turkey'), t(25, 'Germany'), t(9, 'Spain Women')] : path.includes('league=5&') ? [t(777, 'Turkey'), t(2, 'France'), t(611, 'Fenerbahce', false)] : [t(25, 'Germany')]));
+  const teams = await provider.nationalTeams();
+  assert.deepEqual(teams.map((x) => x.id).sort((a, b) => a - b), [2, 25, 777]);
+  assert.equal(fetchImpl.calls.length, 3);
+});
+
+test('turnuvanın güncel sezonu bulunamazsa son sezona düşer', async () => {
+  let n = 0;
+  const { provider } = make(() => ok(++n === 1 ? [{ seasons: [] }] : [{ seasons: [{ year: 2022 }, { year: 2024 }] }]));
+  assert.equal(await provider.seasonOf(32), 2024);
+});

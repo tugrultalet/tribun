@@ -2,6 +2,7 @@
 // Veri kaynağına özgü her şey `provider` bağdaştırıcısındadır; burası kaynaktan bağımsızdır.
 import { CATALOG, DAY, HOUR, MIN, currentSeason, fail, today } from './lib/common.js';
 import { createCache } from './lib/cache.js';
+import { nationalName } from './lib/national.js';
 
 const byTime = (a, b) => a.ts - b.ts;
 // Önbelleğe göre hâlâ sonuçlanmamış ama başlamış (ya da başlamak üzere) olması gereken maç.
@@ -10,10 +11,7 @@ const unsettled = (f) => (f.st === 'live' || f.st === 'ns') && f.ts * 1000 <= Da
 export function createCore({ provider, cacheDir }) {
   const { load, persist, save, cached, keys } = createCache(cacheDir);
 
-  const leagues = CATALOG.map((c) => {
-    const id = c.ids[provider.id];
-    return { id, key: c.key, name: c.name, country: c.country, type: c.type, tv: c.tv, logo: provider.leagueLogo(id) };
-  });
+  const leagues = CATALOG.map((c) => ({ id: c.id, key: c.key, name: c.name, country: c.country, type: c.type, tv: c.tv, logo: provider.leagueLogo(c.id) }));
   const leagueIds = new Set(leagues.map((l) => l.id));
   const MAIN_IDS = new Set(leagues.filter((l) => l.type === 'main').map((l) => l.id));
 
@@ -40,23 +38,43 @@ export function createCore({ provider, cacheDir }) {
   setInterval(() => {
     if (indexDirty) { indexDirty = false; save('teams', teamIndex, 3650 * DAY); }
   }, 5000).unref();
+  // Milli takımların Türkçe adları (milli takım listesi yüklenince bilinir; önbellekte duruyorsa baştan bilinir).
+  const nationalNames = new Map();
+  const indexNational = (teams) => { for (const t of teams) nationalNames.set(t.id, t.name); };
+  indexNational(load('national')?.data.teams || []);
+  const localized = (t) => (nationalNames.has(t.id) ? { ...t, name: nationalNames.get(t.id) } : t);
   const norm = (list) => {
-    for (const f of list) { learn(f.h, f.lg); learn(f.a, f.lg); }
+    for (const f of list) {
+      f.h = localized(f.h);
+      f.a = localized(f.a);
+      learn(f.h, f.lg);
+      learn(f.a, f.lg);
+    }
     return list;
   };
+  // Kulüp hazırlık maçları takım ekranlarını doldurmasın; milli takım hazırlık maçları kalır.
+  const keepFixture = (f) => !/^(friendlies clubs?|club friendlies)$/i.test(f.lgName || '');
+
+  // Turnuvanın güncel sezonu. Ülke ligleri ve UEFA kupaları için takvim yılından bulunur; milli takım
+  // turnuvalarında sezon yılı değişken olduğundan kaynağa sorulur.
+  async function seasonFor(lg) {
+    if (!provider.seasonOf || leagues.find((l) => l.id === lg)?.type !== 'intl') return currentSeason();
+    const r = await cached(`seasonof:${lg}`, 12 * HOUR, async () => ({ season: await provider.seasonOf(lg, currentSeason()) }));
+    return r.season ?? currentSeason();
+  }
 
   /* ---------- Fikstür önbellekleri ---------- */
   // Bir ligin tüm sezon fikstürü. Günlük maç listeleri buradan süzülür; böylece tarih başına istek harcanmaz.
   function getSeason(lg) {
     return cached(`season:${lg}`, slowTtl, async () => ({
-      league: lg, updated: Date.now(), fixtures: norm(await provider.seasonFixtures(lg, currentSeason())).sort(byTime),
+      league: lg, updated: Date.now(), fixtures: norm(await provider.seasonFixtures(lg, await seasonFor(lg))).sort(byTime),
     }));
   }
-  // Takımın tüm yarışmalardaki sezon maçları (desteklenen liglerle sınırlı).
+  // Takımın katıldığı tüm yarışmalardaki sezon maçları (lig, kupalar, milli takımlarda turnuvalar ve hazırlıklar).
   function teamSeason(id) {
     return cached(`teamfx:${id}`, slowTtl, async () => ({
       updated: Date.now(),
-      fixtures: norm((await provider.teamSeason(id, currentSeason())).filter((f) => leagueIds.has(f.lg))).sort(byTime),
+      fixtures: norm((await provider.teamSeason(id, currentSeason())).filter(keepFixture)).sort(byTime),
     }));
   }
 
@@ -128,17 +146,37 @@ export function createCore({ provider, cacheDir }) {
     return { team: info, league: teamIndex[id]?.lg ?? null, limited: false, stale: base.stale, fixtures };
   }
 
-  // Ana ekran: takip edilen takımların tüm maçları, tek listede.
-  async function getMine(teamIds) {
+  // Ana ekran: takip edilen takımların tüm maçları (katıldıkları bütün yarışmalarda) ve takip edilen turnuvaların
+  // yakın tarihli maçları, tek listede.
+  async function getMine(teamIds, leagueList = []) {
     let failures = 0, lastError = null;
     for (const id of teamIds) {
       try { await teamSeason(id); } catch (e) { failures++; lastError = e; }
     }
-    if (teamIds.length && failures === teamIds.length) throw lastError;
+    for (const lg of leagueList) {
+      try { await getSeason(lg); } catch (e) { failures++; lastError = e; }
+    }
+    const sources = teamIds.length + leagueList.length;
+    if (sources && failures === sources) throw lastError;
     await refreshUnsettled();
     const byId = new Map();
     for (const id of teamIds) for (const f of load(`teamfx:${id}`)?.data.fixtures || []) byId.set(f.id, f);
+    const from = today(-3), to = today(14);
+    for (const lg of leagueList) for (const f of load(`season:${lg}`)?.data.fixtures || []) if (f.date >= from && f.date <= to) byId.set(f.id, f);
     return { today: today(), fixtures: [...byId.values()].sort(byTime) };
+  }
+
+  // Tüm milli takımlar, Türkçe adlarıyla (Türkiye başta). Haftada bir yenilenir.
+  function getNational() {
+    return cached('national', 7 * DAY, async () => {
+      const seen = new Map();
+      for (const t of await provider.nationalTeams()) if (!seen.has(t.id)) seen.set(t.id, { id: t.id, name: nationalName(t.name), logo: t.logo });
+      const teams = [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'tr'));
+      const turkey = teams.findIndex((t) => t.id === 777);
+      if (turkey > 0) teams.unshift(...teams.splice(turkey, 1));
+      indexNational(teams);
+      return { updated: Date.now(), teams };
+    });
   }
 
   function getMatch(id) {
@@ -168,7 +206,7 @@ export function createCore({ provider, cacheDir }) {
 
   function getStandings(lg) {
     return cached(`std:${lg}`, tableTtl, async () => {
-      const season = currentSeason();
+      const season = await seasonFor(lg);
       const groups = await provider.standings(lg, season);
       for (const g of groups) for (const r of g.rows) learn(r.team, lg);
       return { league: lg, season, current: true, updated: Date.now(), groups };
@@ -223,6 +261,7 @@ export function createCore({ provider, cacheDir }) {
     meta: getMeta,
     day: getDay,
     mine: getMine,
+    national: getNational,
     match: async (id) => { const { lineups, ...rest } = await getMatch(id); return rest; }, // ilk 11'ler ayrı uçtan gelir
     lineups: getLineups,
     standings: getStandings,

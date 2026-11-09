@@ -55,9 +55,18 @@ API-Football dakikalık istek limitini aşan hesapları askıya alabilir (ücret
 
 Anahtarı yalnızca kendi bilgisayarındaki `server/.env` dosyasına yaz. API-Football, bulut sunucuların paylaşımlı IP adreslerinden gelen istekleri engelleyebildiği için anahtarı bulut ya da CI ortamlarında kullanma. Sabit IP'li bir sunucuya taşırken de aynı kural geçerlidir.
 
-### Kaynak değişince
+### Numaralar kaynaktan bağımsızdır
 
-Takım, lig ve maç numaraları kaynağa göre farklıdır. Sunucu başka bir kaynağa geçerse uygulama bunu fark eder ve takip edilen takımları sıfırlayıp ilk açılış ekranını yeniden gösterir. Grupların takım ve maç bilgisi eski kaynağın numaralarıyla kayıtlı kalır, bu yüzden kaynak değişince mevcut gruplar yeniden kurulmalıdır.
+Highlightly'nin lig, takım ve maç numaraları API-Football'unkilerin düz bir dönüşümüdür (`hl = af × 851 + 784`; 1.000'den fazla kayıtta doğrulandı). Sunucu dışarıya her zaman API-Football numaralarını ("ortak numara") verir (`server/lib/ids.js`). Bu yüzden kaynak değişince takip edilen takımlar, gruplar ve tahminler bozulmaz. Dönüşüme uymayan bir numara gelirse çakışmasın diye negatif numarayla işlenir.
+
+Uygulamanın ilk sürümleri Highlightly numaralarını kaydetmişti; uygulama açılışta bunları bir kereliğine ortak numaraya çevirir (`app/src/store.tsx`).
+
+## Takımlar ve turnuvalar
+
+- **Kulüpler** liglerine göre listelenir. **Milli takımlar** ayrı sekmededir; adları Türkçeleştirilir (Türkiye başta), kadın ve gençlik takımları listelenmez.
+- Bir takımın maçları, **katıldığı bütün yarışmalardan** gelir: lig, UEFA kupaları, ülke kupaları, milli takımlarda turnuvalar, elemeler ve hazırlıklar. Yarışma kataloğunda olmasa da maçın kendi yarışma adı ve logosu gösterilir. Kulüp hazırlık maçları gösterilmez.
+- **Turnuvalar** (`server/lib/common.js` içindeki katalog) takım seçmeden de takip edilebilir; takip edilen turnuvanın yakın tarihli (3 gün önce – 14 gün sonra) tüm maçları ana ekrana gelir. Milli takım turnuvalarının sezon yılı değişken olduğundan sunucu bunu kaynağa sorar.
+- Ana ekran (`/api/mine?teams=..&leagues=..`) ikisini birleştirir.
 
 ### Highlightly ile istek tasarrufu
 
@@ -88,7 +97,7 @@ Maç kartında ve maç sayfasında görünen "Yayın: …" bilgisi `server/index
 
 ## Sunucu uçları
 
-`/api/meta`, `/api/mine?teams=..` (ana ekran: takip edilen takımların maçları), `/api/fixtures?date=YYYY-AA-GG[&leagues=..&teams=..]`, `/api/match/:id`, `/api/match/:id/lineups`, `/api/standings/:lig`, `/api/league/:lig/fixtures`, `/api/league/:lig/teams`, `/api/team/:id`, `/api/team/:id/squad`
+`/api/meta`, `/api/mine?teams=..&leagues=..` (ana ekran: takip edilen takımların ve turnuvaların maçları), `/api/national` (milli takımlar), `/api/fixtures?date=YYYY-AA-GG[&leagues=..&teams=..]`, `/api/match/:id`, `/api/match/:id/lineups`, `/api/standings/:lig`, `/api/league/:lig/fixtures`, `/api/league/:lig/teams`, `/api/team/:id`, `/api/team/:id/squad`
 
 ## Henüz yok
 

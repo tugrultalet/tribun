@@ -5,6 +5,7 @@
 // alındığı bildirilirse bir saat boyunca hiç istek gönderilmez.
 import { HOUR, MIN, TZ, dayFmt, timeFmt, fail, roundLabel, sleep } from '../lib/common.js';
 import { Throttle } from '../lib/throttle.js';
+import { isSeniorMen } from '../lib/national.js';
 
 const LIVE = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P', 'SUSP', 'INT', 'LIVE']);
 const DONE = new Set(['FT', 'AET', 'PEN']);
@@ -32,6 +33,8 @@ export function fx(f) {
   return {
     id: f.fixture.id,
     lg: f.league.id,
+    lgName: f.league.name || null,
+    lgLogo: f.league.logo || null,
     round: roundLabel(f.league.round),
     ts: f.fixture.timestamp,
     date: dayFmt.format(when),
@@ -163,6 +166,7 @@ export function createApiFootball({ key, baseUrl, fetchImpl = fetch, sleepImpl =
 
   return Object.assign(provider, {
     leagueLogo: (id) => `https://media.api-sports.io/football/leagues/${id}.png`,
+    teamLogo: (id) => `https://media.api-sports.io/football/teams/${id}.png`,
     configError: () => (key ? null : 'Sunucuda API_FOOTBALL_KEY tanımlı değil.'),
     // Kaynak canlı veriyi 15 saniyede bir yeniler; belgesi canlı maç için dakikada bir sorgu önerir.
     liveTtl: (free) => (free ? 3 * MIN : 15e3),
@@ -216,6 +220,23 @@ export function createApiFootball({ key, baseUrl, fetchImpl = fetch, sleepImpl =
     // Takımın tüm yarışmalardaki sezon maçları tek istekte gelir.
     async teamSeason(id, season) {
       return (await request(`fixtures?team=${id}&season=${season}&timezone=${TZ}`)).map(fx);
+    },
+    // Turnuvanın en güncel sezonu (milli takım turnuvalarında sezon yılı değişkendir).
+    async seasonOf(lg) {
+      const current = (await request(`leagues?id=${lg}&current=true`))[0]?.seasons?.[0]?.year;
+      if (current) return current;
+      const years = ((await request(`leagues?id=${lg}`))[0]?.seasons || []).map((x) => x.year);
+      return years.length ? Math.max(...years) : null;
+    },
+    // Milli takımlar: Dünya Kupası, Avrupa Şampiyonası ve Uluslar Ligi katılımcılarının birleşimi (tek istekte lig başına).
+    async nationalTeams() {
+      const seen = new Map();
+      for (const [league, season] of [[1, 2026], [5, 2024], [4, 2024]]) {
+        for (const x of await request(`teams?league=${league}&season=${season}`)) {
+          if (x.team.national && isSeniorMen(x.team.name) && !seen.has(x.team.id)) seen.set(x.team.id, team(x.team));
+        }
+      }
+      return [...seen.values()];
     },
     async squad(id) {
       const s = (await request(`players/squads?team=${id}`))[0];

@@ -15,7 +15,8 @@ export default function League({ route }: NativeStackScreenProps<RootParams, 'Le
   const store = useStore();
   const id = route.params.id;
   const league = store.league(id);
-  const [tab, setTab] = useState<'table' | 'fix'>('table');
+  // Milli takım turnuvalarında ve ülke kupalarında puan durumu yoktur ya da yeni başlamıştır; fikstürle açılır.
+  const [tab, setTab] = useState<'table' | 'fix'>(league && (league.type === 'intl' || league.type === 'domcup') ? 'fix' : 'table');
   const table = useApi<Standings>(tab === 'table' ? `/api/standings/${id}` : null);
   const fixtures = useApi<LeagueFixtures>(tab === 'fix' ? `/api/league/${id}/fixtures` : null, 60000);
   const openMatch = (f: Fixture) => nav.navigate('Match', { id: f.id });

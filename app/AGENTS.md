@@ -27,7 +27,7 @@ Run lint and typecheck before declaring any task done.
 
 - This app uses **React Navigation** directly (native stack + bottom tabs), wired in `App.tsx`. On iOS the tab bar is the native one from `@react-navigation/bottom-tabs/unstable` (Liquid Glass on iOS 26) and headers are native large-title headers; web and Android fall back to a JS tab bar and in-app headers drawn by `src/screens/Screen.tsx`. Native tabs must only be created when `Platform.OS === 'ios'`. Route params are typed in `src/nav.ts`; screens live in `src/screens/`.
 - Groups, predictions and chat talk to Supabase through `src/social.ts`, calling only the SECURITY DEFINER functions defined in `../supabase/migrations/`. Tables have RLS with no policies on purpose; do not add direct table access from the app.
-- The server (`../server`) hides which data provider is used (API-Football or Highlightly); team, league and match ids are provider-specific, and the app resets its followed teams when `/api/meta`'s `provider` changes. Never assume an id is stable across providers.
+- The server (`../server`) hides which data provider is used (API-Football or Highlightly) and always returns API-Football ids for leagues, teams and matches (`server/lib/ids.js` maps Highlightly's `hl = af * 851 + 784`). Ids are therefore stable across providers, including those stored on the device and in Supabase.
 - All match data comes from the Tribün server in `../server` through `src/api.ts`. Never call a data provider from the app or put its key in app code.
 
 ## Building with EAS
