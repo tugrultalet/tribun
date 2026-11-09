@@ -40,7 +40,7 @@ export default function Settings() {
       </Section>
       <Section eyebrow="Veri">
         <Card>
-          {row('Veri kaynağı (Highlightly)', quota, true)}
+          {row(`Veri kaynağı (${meta.providerName})`, quota, true)}
           {row('Canlı skor yenileme', refresh)}
           {row('Sunucu', API_URL)}
         </Card>

@@ -6,7 +6,8 @@ import { rpc } from './social';
 
 // `me`: gruplar için kimlik. `secret` yalnızca bu cihazda durur; veritabanında özeti tutulur.
 type Me = { secret: string; name: string };
-type Saved = { teams: Team[]; leagues: number[]; onboarded: boolean; me?: Me };
+// `provider`: takım, lig ve maç numaralarının hangi veri kaynağına ait olduğu. Kaynak değişirse numaralar geçersiz olur.
+type Saved = { teams: Team[]; leagues: number[]; onboarded: boolean; me?: Me; provider?: string };
 const EMPTY: Saved = { teams: [], leagues: [], onboarded: false };
 const STORAGE_KEY = 'tribun:v1';
 
@@ -41,6 +42,21 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
     get<Meta>('/api/meta').then(setMeta, setError);
   }, []);
   useEffect(reloadMeta, [reloadMeta]);
+
+  // Sunucu başka bir veri kaynağına geçtiyse kayıtlı takım ve lig numaraları geçersizdir; seçimler baştan yapılır.
+  // Eski sürümde kaynak kaydedilmediği için o zamanki kaynak Highlightly kabul edilir.
+  useEffect(() => {
+    if (!saved || !meta) return;
+    const current = saved.provider ?? 'highlightly';
+    if (current === meta.provider && saved.provider) return;
+    setSaved((prev) => {
+      if (!prev) return prev;
+      const changed = (prev.provider ?? 'highlightly') !== meta.provider;
+      const next: Saved = changed ? { teams: [], leagues: [], onboarded: false, me: prev.me, provider: meta.provider } : { ...prev, provider: meta.provider };
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, [saved, meta]);
 
   const update = useCallback((fn: (s: Saved) => Saved) => {
     setSaved((prev) => {
