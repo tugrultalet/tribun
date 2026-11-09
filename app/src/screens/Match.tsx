@@ -5,7 +5,7 @@ import { Fixture, Lineup, Lineups as LineupData, Match as MatchData, MatchEvent,
 import { dayLabel } from '../dates';
 import { RootParams, useNav } from '../nav';
 import { useStore } from '../store';
-import { font, useTheme } from '../theme';
+import { useTheme } from '../theme';
 import { Crest, Empty, Icon, LiveDot, Loader, Note, Section, Seg, StandingsTable, statusText, Tabs, HAIR } from '../ui';
 import { Screen } from './Screen';
 
@@ -19,13 +19,13 @@ export default function Match({ route }: NativeStackScreenProps<RootParams, 'Mat
   const f = state.data?.fixture;
   const league = f ? store.league(f.lg) : undefined;
   return (
-    <Screen onRefresh={state.reload} refreshing={state.loading && state.data !== undefined} title={f ? `${league?.name ?? ''} · ${f.round}` : ''}>
+    <Screen league={f?.lg} onRefresh={state.reload} refreshing={state.loading && state.data !== undefined} title={f ? `${league?.name ?? ''} · ${f.round}` : ''}>
       <Loader state={state}>
         {(m) => (
           <>
             <Head m={m} />
             {m.stale && <Note>Veri yenilenemedi; son alınan bilgiler gösteriliyor.</Note>}
-            <Tabs value={tab} onChange={setTab} options={[['sum', 'Özet'], ['line', 'Kadrolar'], ['stat', 'İstatistik'], ['table', 'Puan durumu']]} />
+            <Tabs value={tab} onChange={setTab} options={[['sum', 'Özet'], ['line', 'Kadrolar'], ['stat', 'İstatistik'], ['table', 'Tablo']]} />
             {tab === 'sum' && <Summary m={m} />}
             {tab === 'line' && <Lineups m={m} />}
             {tab === 'stat' && <Stats m={m} />}
@@ -62,7 +62,7 @@ function Head({ m }: { m: MatchData }) {
       </View>
       <View style={{ flexDirection: 'row', alignSelf: 'stretch', alignItems: 'flex-start', gap: 6, marginTop: 6 }}>
         {side(f.h)}
-        <Text style={{ fontFamily: font.score, fontSize: f.s ? 64 : 34, lineHeight: f.s ? 66 : 62, color: t.fg }}>{f.s ? `${f.s[0]} – ${f.s[1]}` : f.time}</Text>
+        <Text style={{ fontWeight: '700', fontSize: f.s ? 64 : 34, lineHeight: f.s ? 66 : 62, color: t.fg }}>{f.s ? `${f.s[0]} – ${f.s[1]}` : f.time}</Text>
         {side(f.a)}
       </View>
       {f.pen && <Text style={{ fontSize: 12, color: t.muted }}>Penaltılar: {f.pen[0]} – {f.pen[1]}</Text>}
@@ -96,7 +96,7 @@ function Summary({ m }: { m: MatchData }) {
       {[...m.events].reverse().map((e, i) => (
         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 50 }}>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 9 }}>{e.side === 'h' && <>{body(e, 'right')}{icon(e)}</>}</View>
-          <Text style={{ width: 52, textAlign: 'center', fontFamily: font.scoreMid, fontSize: 17, color: t.muted }}>{minute(e)}</Text>
+          <Text style={{ width: 52, textAlign: 'center', fontWeight: '600', fontSize: 17, color: t.muted }}>{minute(e)}</Text>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 }}>{e.side === 'a' && <>{icon(e)}{body(e, 'left')}</>}</View>
         </View>
       ))}
@@ -140,7 +140,7 @@ function Lineups({ m }: { m: MatchData }) {
             {row.map((p, j) => (
               <View key={j} style={{ width: 70, alignItems: 'center', gap: 4 }}>
                 <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: color, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)' }}>
-                  <Text style={{ fontFamily: font.score, fontSize: 16, lineHeight: 18, color: ink }}>{p.no ?? ''}</Text>
+                  <Text style={{ fontWeight: '700', fontSize: 16, lineHeight: 18, color: ink }}>{p.no ?? ''}</Text>
                 </View>
                 <Text numberOfLines={2} style={{ fontSize: 11.5, fontWeight: '600', color: '#fff', textAlign: 'center' }}>{p.name}</Text>
               </View>
@@ -153,7 +153,7 @@ function Lineups({ m }: { m: MatchData }) {
           <View>
             {lu.subs.map((p, i) => (
               <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: HAIR, borderColor: t.line }}>
-                <Text style={{ width: 26, textAlign: 'center', fontFamily: font.scoreMid, fontSize: 17, color: t.muted }}>{p.no ?? ''}</Text>
+                <Text style={{ width: 26, textAlign: 'center', fontWeight: '600', fontSize: 17, color: t.muted }}>{p.no ?? ''}</Text>
                 <Text style={{ flex: 1, fontSize: 14, color: t.fg }}>{p.name}</Text>
                 <Text style={{ fontSize: 12, color: t.muted }}>{POS[p.pos ?? ''] ?? ''}</Text>
               </View>

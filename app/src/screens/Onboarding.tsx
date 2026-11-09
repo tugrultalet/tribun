@@ -3,9 +3,10 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Team } from '../api';
 import { useStore } from '../store';
-import { font, useTheme } from '../theme';
+import { useTheme } from '../theme';
 import { Button, Card, Icon, LeagueBadge, HAIR } from '../ui';
 import { TeamGrid } from './Picker';
+import { Backdrop } from './Screen';
 
 export default function Onboarding() {
   const t = useTheme();
@@ -19,7 +20,7 @@ export default function Onboarding() {
     setTeams((list) => (adding ? [...list, team] : list.filter((x) => x.id !== team.id)));
     if (adding) setLeagues((l) => (l.includes(leagueId) ? l : [...l, leagueId])); // takımın ligi otomatik eklenir
   };
-  const title = (text: string) => <Text style={{ fontFamily: font.score, fontSize: 44, lineHeight: 44, color: t.fg, marginTop: 6 }}>{text.toLocaleUpperCase('tr')}</Text>;
+  const title = (text: string) => <Text style={{ fontWeight: '800', fontSize: 32, lineHeight: 37, letterSpacing: -0.5, color: t.fg, marginTop: 6 }}>{text}</Text>;
   const lead = (text: string) => <Text style={{ color: t.muted, fontSize: 15, lineHeight: 22 }}>{text}</Text>;
   const progress = (
     <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -27,11 +28,13 @@ export default function Onboarding() {
     </View>
   );
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.bg }}>
+    <View style={{ flex: 1, backgroundColor: t.bg }}>
+    <Backdrop team={teams[0]?.name} />
+    <SafeAreaView style={{ flex: 1 }}>
       <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, gap: 16 }}>
         {step === 0 && (
           <View style={{ flex: 1, justifyContent: 'flex-end', gap: 14 }}>
-            <Text style={{ fontFamily: font.score, fontSize: 76, lineHeight: 70, color: t.fg }}>SADECE <Text style={{ color: t.accent }}>SENİN</Text> MAÇLARIN.</Text>
+            <Text style={{ fontWeight: '800', fontSize: 52, lineHeight: 56, letterSpacing: -1, color: t.fg }}>Sadece <Text style={{ color: t.accent }}>senin</Text> maçların.</Text>
             {lead('Takımını seç. Fikstür, canlı skor, kadro ve puan durumu tek yerde.')}
             <Button label="Başla" onPress={() => setStep(1)} />
           </View>
@@ -77,5 +80,6 @@ export default function Onboarding() {
         )}
       </View>
     </SafeAreaView>
+    </View>
   );
 }
