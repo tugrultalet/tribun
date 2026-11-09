@@ -28,8 +28,8 @@ export default function Team({ route }: NativeStackScreenProps<RootParams, 'Team
   return (
     <Screen team={team.name}>
       <View style={{ alignItems: 'center', gap: 8, paddingTop: 4, paddingBottom: 18 }}>
-        <Crest uri={team.logo} size={76} />
-        <Text style={{ fontWeight: '700', fontSize: 34, lineHeight: 36, color: t.fg, textAlign: 'center' }}>{team.name}</Text>
+        <Crest uri={team.logo} size={64} />
+        <Text style={{ fontWeight: '700', fontSize: 26, lineHeight: 30, letterSpacing: -0.3, color: t.fg, textAlign: 'center' }}>{team.name}</Text>
         {league && <Text style={{ fontSize: 13, color: t.muted }}>{league.name}</Text>}
         <Pressable onPress={() => store.toggleTeam(team)} accessibilityRole="button" accessibilityState={{ selected: on }}
           style={{ marginTop: 6, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 99, backgroundColor: on ? t.accent : 'transparent', borderWidth: 1, borderColor: t.accent }}>

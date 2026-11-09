@@ -35,7 +35,8 @@ function mix(hex: string, towards: [number, number, number], amount: number): st
   return `#${rgb.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
 }
 
-const fade = (base: string): readonly [string, string, string] => [mix(base, [0, 0, 0], 0.15), mix(base, [6, 8, 26], 0.72), '#06070F'];
+// Rengin kendi tonu korunarak siyaha gider (araya başka renk karışmaz).
+const fade = (base: string): readonly [string, string, string] => [mix(base, [0, 0, 0], 0.12), mix(base, [0, 0, 0], 0.7), '#050505'];
 
 // Zemin geçişi: üstte lig ya da takım rengi, aşağıya doğru siyaha yakın. Lig verilmişse o önceliklidir.
 export function gradientFor(teamName?: string, leagueId?: number): readonly [string, string, string] {

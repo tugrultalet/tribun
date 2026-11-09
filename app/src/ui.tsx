@@ -57,7 +57,7 @@ export function Panel({ title, children, style }: { title?: string; children: Re
   const t = useTheme();
   return (
     <Card style={[{ marginTop: 16, paddingBottom: 6 }, style]}>
-      {title ? <Text style={{ textAlign: 'center', fontSize: 16, fontWeight: '600', color: t.fg, paddingTop: 18, paddingBottom: 8 }}>{title}</Text> : null}
+      {title ? <Text style={{ textAlign: 'center', fontSize: 15, fontWeight: '600', color: t.fg, paddingTop: 14, paddingBottom: 6 }}>{title}</Text> : null}
       {children}
     </Card>
   );
@@ -184,18 +184,18 @@ export function MatchRow({ f, onPress, showLeague, first, dateLabel }: { f: Fixt
         <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 14.5, fontWeight: weight, color }}>{team.name}</Text>
         {followsTeam(team.id) && <Icon.star size={12} color={t.accent} filled />}
         <View style={{ flex: 1 }} />
-        <Text style={{ fontWeight: '600', fontSize: 20, lineHeight: 22, minWidth: 16, textAlign: 'right', color: f.st === 'live' ? t.live : color }}>{f.s ? f.s[i] : ''}</Text>
+        <Text style={{ fontWeight: '600', fontSize: 17, lineHeight: 20, minWidth: 16, textAlign: 'right', color: f.st === 'live' ? t.live : color }}>{f.s ? f.s[i] : ''}</Text>
       </View>
     );
   };
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${f.h.name} ${f.a.name}`}
-      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, paddingHorizontal: 16, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
       <View style={{ width: 46, alignItems: 'center', gap: 2 }}>
         {dateLabel ? <Text style={{ fontSize: 11, fontWeight: '700', color: t.muted }}>{dateLabel}</Text> : null}
         <Text style={{ fontSize: 12.5, fontWeight: '700', color: f.st === 'live' ? t.live : dateLabel ? t.fg : t.muted }}>{statusText(f)}</Text>
       </View>
-      <View style={{ flex: 1, gap: 7 }}>{line('h')}{line('a')}</View>
+      <View style={{ flex: 1, gap: 4 }}>{line('h')}{line('a')}</View>
       {showLeague && <LeagueBadge id={f.lg} />}
     </Pressable>
   );
@@ -216,8 +216,8 @@ export function StandingsTable({ data, highlight, onTeam }: { data: Standings; h
     <>
       {!data.current && <Note>Gösterilen: {seasonLabel(data.season)} sezonu.</Note>}
       {data.groups.map((g, gi) => (
-        <Panel key={gi} title={data.groups.length > 1 ? g.name : 'Tablo'}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12 }}>
+        <Panel key={gi} title={data.groups.length > 1 ? g.name : undefined} style={data.groups.length > 1 ? undefined : { paddingTop: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12 }}>
             <Text style={[head, { width: 26 }]} />
             <Text style={[head, { flex: 1, textAlign: 'left', paddingLeft: 34 }]}>Takım</Text>
             {cols.map(([label, w]) => <Text key={label} style={[head, { width: w }]}>{label}</Text>)}
@@ -226,7 +226,7 @@ export function StandingsTable({ data, highlight, onTeam }: { data: Standings; h
             const me = highlight.includes(r.team.id);
             return (
               <Pressable key={r.team.id} disabled={!onTeam} onPress={() => onTeam?.(r)} accessibilityRole={onTeam ? 'button' : undefined} accessibilityLabel={r.team.name}
-                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 12, backgroundColor: me ? t.accentSoft : 'transparent' }}>
+                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 7, paddingHorizontal: 12, backgroundColor: me ? t.accentSoft : 'transparent' }}>
                 <Text style={[cell, { width: 26, color: r.zone ? t.zone[r.zone] : t.fg }]}>{r.rank}</Text>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 6 }}>
                   <Crest uri={r.team.logo} size={24} />
@@ -258,7 +258,7 @@ export function ScreenTitle({ title, right }: { title: string; right?: React.Rea
   const t = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10, minHeight: 52 }}>
-      <Text style={{ fontWeight: '800', fontSize: 34, lineHeight: 40, letterSpacing: -0.5, color: t.fg }}>{title}</Text>
+      <Text style={{ fontWeight: '700', fontSize: 28, lineHeight: 34, letterSpacing: -0.4, color: t.fg }}>{title}</Text>
       {right}
     </View>
   );

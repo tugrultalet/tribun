@@ -22,9 +22,9 @@ export default function League({ route }: NativeStackScreenProps<RootParams, 'Le
   return (
     <Screen league={id}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 4, paddingBottom: 16 }}>
-        <LeagueBadge id={id} size={56} />
+        <LeagueBadge id={id} size={46} />
         <View style={{ flex: 1 }}>
-          <Text style={{ fontWeight: '700', fontSize: 30, lineHeight: 32, color: t.fg }}>{league?.name ?? ''}</Text>
+          <Text style={{ fontWeight: '700', fontSize: 24, lineHeight: 28, letterSpacing: -0.3, color: t.fg }}>{league?.name ?? ''}</Text>
           <Text style={{ color: t.muted, fontSize: 13, marginTop: 4 }}>{league?.country} · {seasonLabel(store.meta.season)}</Text>
         </View>
         <StarButton on={store.followsLeague(id)} onPress={() => store.toggleLeague(id)} label={`${league?.name} takip et`} />
