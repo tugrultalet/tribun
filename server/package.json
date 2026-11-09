@@ -1,0 +1,7 @@
+{
+  "name": "tribun-server",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20.12" },
+  "scripts": { "start": "node index.js" }
+}
