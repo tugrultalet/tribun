@@ -12,7 +12,7 @@ export default function MyTeams() {
   const nav = useNav();
   const { teams } = useStore();
   return (
-    <Screen tab title="Takımlarım">
+    <Screen title="Takımlarım">
       {teams.length ? <Card style={{ marginTop: 4 }}>{teams.map((team, i) => <Row key={team.id} team={team} first={i === 0} />)}</Card> : <Empty>Henüz takım takip etmiyorsun.</Empty>}
       <View style={{ marginTop: 20 }}><Button kind="sec" label="+ Takım ekle" onPress={() => nav.navigate('Picker')} /></View>
       <Empty>Maçlarım sekmesinde yalnızca burada takip ettiğin takımların maçları görünür.</Empty>

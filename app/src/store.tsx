@@ -1,8 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Crypto from 'expo-crypto';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, Fixture, get, League, Meta, Team } from './api';
+import { rpc } from './social';
 
-type Saved = { teams: Team[]; leagues: number[]; onboarded: boolean };
+// `me`: gruplar için kimlik. `secret` yalnızca bu cihazda durur; veritabanında özeti tutulur.
+type Me = { secret: string; name: string };
+type Saved = { teams: Team[]; leagues: number[]; onboarded: boolean; me?: Me };
 const EMPTY: Saved = { teams: [], leagues: [], onboarded: false };
 const STORAGE_KEY = 'tribun:v1';
 
@@ -16,6 +20,7 @@ type Store = Saved & {
   toggleLeague: (id: number) => void;
   finishOnboarding: (teams: Team[], leagues: number[]) => void;
   restartOnboarding: () => void;
+  setName: (name: string) => Promise<void>;
   reloadMeta: () => void;
 };
 const Ctx = createContext<Store | null>(null);
@@ -60,6 +65,11 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
       toggleLeague: (id) => update((s) => ({ ...s, leagues: s.leagues.includes(id) ? s.leagues.filter((l) => l !== id) : [...s.leagues, id] })),
       finishOnboarding: (teams, leagues) => update(() => ({ teams, leagues, onboarded: true })),
       restartOnboarding: () => update((s) => ({ ...s, onboarded: false })),
+      setName: async (name) => {
+        const secret = saved.me?.secret ?? Crypto.randomUUID() + Crypto.randomUUID();
+        const profile = await rpc<{ name: string }>('register', { p_secret: secret, p_name: name });
+        update((s) => ({ ...s, me: { secret, name: profile.name } }));
+      },
       reloadMeta,
     };
   }, [saved, meta, update, reloadMeta]);
