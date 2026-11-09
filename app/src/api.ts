@@ -10,7 +10,7 @@ export type Fixture = {
   st: 'ns' | 'live' | 'ft' | 'off'; short: string; min: number | null; extra: number | null;
   h: Team; a: Team; s: [number, number] | null; pen: [number, number] | null;
 };
-export type League = { id: number; name: string; country: string; type: 'main' | 'cup'; logo: string };
+export type League = { id: number; name: string; country: string; type: 'main' | 'cup'; logo: string; tv?: string };
 export type Meta = {
   plan: string | null; limitDay: number | null; used: number | null; remaining: number | null; error?: string;
   today: string; window: { from: number; to: number }; season: number; liveTtl: number; leagues: League[];

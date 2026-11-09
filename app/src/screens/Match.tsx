@@ -42,9 +42,10 @@ const minute = (e: MatchEvent) => `${e.min}${e.extra ? `+${e.extra}` : ''}'`;
 function Head({ m }: { m: MatchData }) {
   const t = useTheme();
   const nav = useNav();
-  const { meta } = useStore();
+  const { meta, league } = useStore();
   const f = m.fixture;
   const live = f.st === 'live';
+  const tv = f.st === 'ns' || live ? league(f.lg)?.tv : undefined;
   const chip = live ? statusText(f) : f.st === 'ft' ? (f.short === 'PEN' ? 'Penaltılarla bitti' : f.short === 'AET' ? 'Uzatmalarda bitti' : 'Maç sonu') : f.st === 'off' ? (f.short === 'PST' ? 'Ertelendi' : 'İptal') : `${dayLabel(f.date, meta.today)} · ${f.time}`;
   const side = (team: Team) => (
     <Pressable onPress={() => nav.navigate('Team', { team })} accessibilityRole="button" accessibilityLabel={team.name} style={{ flex: 1, alignItems: 'center', gap: 8 }}>
@@ -65,6 +66,7 @@ function Head({ m }: { m: MatchData }) {
         {side(f.a)}
       </View>
       {f.pen && <Text style={{ fontSize: 12, color: t.muted }}>Penaltılar: {f.pen[0]} – {f.pen[1]}</Text>}
+      {tv && <Text style={{ fontSize: 12.5, fontWeight: '600', color: t.muted }}>Yayın: {tv}</Text>}
       {m.events.some((e) => e.k === 'goal') && (
         <View style={{ flexDirection: 'row', alignSelf: 'stretch', gap: 16, marginTop: 4 }}>
           <Text style={{ flex: 1, textAlign: 'right', fontSize: 12, lineHeight: 17, color: t.muted }}>{scorers('h')}</Text>
