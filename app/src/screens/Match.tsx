@@ -49,7 +49,7 @@ function Head({ m }: { m: MatchData }) {
   const chip = live ? statusText(f) : f.st === 'ft' ? (f.short === 'PEN' ? 'Penaltılarla bitti' : f.short === 'AET' ? 'Uzatmalarda bitti' : 'Maç sonu') : f.st === 'off' ? (f.short === 'PST' ? 'Ertelendi' : 'İptal') : `${dayLabel(f.date, meta.today)} · ${f.time}`;
   const side = (team: Team) => (
     <Pressable onPress={() => nav.navigate('Team', { team })} accessibilityRole="button" accessibilityLabel={team.name} style={{ flex: 1, alignItems: 'center', gap: 8 }}>
-      <Crest uri={team.logo} size={58} />
+      <Crest uri={team.logo} size={52} />
       <Text numberOfLines={2} style={{ fontWeight: '700', fontSize: 14, textAlign: 'center', color: t.fg }}>{team.name}</Text>
     </Pressable>
   );
@@ -62,7 +62,7 @@ function Head({ m }: { m: MatchData }) {
       </View>
       <View style={{ flexDirection: 'row', alignSelf: 'stretch', alignItems: 'flex-start', gap: 6, marginTop: 6 }}>
         {side(f.h)}
-        <Text style={{ fontWeight: '700', fontSize: f.s ? 64 : 34, lineHeight: f.s ? 66 : 62, color: t.fg }}>{f.s ? `${f.s[0]} – ${f.s[1]}` : f.time}</Text>
+        <Text style={{ fontWeight: '600', fontSize: f.s ? 48 : 34, lineHeight: 56, letterSpacing: -0.8, color: t.fg }}>{f.s ? `${f.s[0]} – ${f.s[1]}` : f.time}</Text>
         {side(f.a)}
       </View>
       {f.pen && <Text style={{ fontSize: 12, color: t.muted }}>Penaltılar: {f.pen[0]} – {f.pen[1]}</Text>}

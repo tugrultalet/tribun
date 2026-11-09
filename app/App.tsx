@@ -50,7 +50,7 @@ function TabsScreen() {
         headerBlurEffect: BAR_BLUR,
         headerShadowVisible: false,
         headerTintColor: t.accent,
-        headerLargeTitleStyle: { color: t.fg },
+        headerLargeTitleStyle: { color: t.fg, fontSize: 28, fontWeight: '700' },
         headerTitleStyle: { color: t.fg },
         tabBarActiveTintColor: t.accent,
         tabBarMinimizeBehavior: 'onScrollDown',

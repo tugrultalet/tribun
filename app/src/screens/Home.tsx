@@ -75,7 +75,7 @@ function Hero({ f, today, onPress }: { f: Fixture; today: string; onPress: () =>
   const live = f.st === 'live';
   const side = (team: Fixture['h']) => (
     <View style={{ flex: 1, alignItems: 'center', gap: 10 }}>
-      <Crest uri={team.logo} size={64} />
+      <Crest uri={team.logo} size={56} />
       <Text numberOfLines={2} style={{ fontWeight: '600', fontSize: 15, textAlign: 'center', color: t.fg }}>{team.name}</Text>
     </View>
   );
@@ -89,7 +89,7 @@ function Hero({ f, today, onPress }: { f: Fixture; today: string; onPress: () =>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           {side(f.h)}
           <View style={{ alignItems: 'center', minWidth: 104, gap: 2 }}>
-            <Text style={{ fontWeight: '700', fontSize: 46, lineHeight: 52, letterSpacing: -1, color: t.fg, fontVariant: ['tabular-nums'] }}>{live && f.s ? `${f.s[0]} – ${f.s[1]}` : f.time}</Text>
+            <Text style={{ fontWeight: '600', fontSize: 38, lineHeight: 44, letterSpacing: -0.8, color: t.fg, fontVariant: ['tabular-nums'] }}>{live && f.s ? `${f.s[0]} – ${f.s[1]}` : f.time}</Text>
             {!live && <Text style={{ fontSize: 13, color: t.muted }}>{dayLabel(f.date, today)}</Text>}
           </View>
           {side(f.a)}
