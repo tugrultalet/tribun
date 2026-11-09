@@ -8,10 +8,12 @@ import { useTheme } from '../theme';
 import { Button, Card, Crest, Empty, Icon, LiveDot, Loader, MatchList, statusText } from '../ui';
 import { Screen } from './Screen';
 
-const UPCOMING_LIMIT = 20;
-const RESULTS_LIMIT = 5;
+// Bir takımın sezon boyunca tüm yarışmalardaki maçları rahatça sığar.
+const UPCOMING_LIMIT = 100;
+const RESULTS_LIMIT = 10;
 
-// Ana ekran: takip edilen takımların maçları (katıldıkları tüm yarışmalarda) ve takip edilen turnuvaların yakın maçları.
+// Ana ekran. Takım seçiliyse yalnızca takımların maçları (katıldıkları tüm yarışmalarda); takip edilen turnuvalar ana ekranı
+// etkilemez. Takım seçilmediyse takip edilen turnuvaların yakın tarihli maçları.
 // En üstte canlı maç (yoksa sıradaki maç) büyük kartta; altında fikstür, en altta son sonuçlar.
 export default function Home() {
   const t = useTheme();
@@ -19,7 +21,8 @@ export default function Home() {
   const store = useStore();
   const ids = store.teams.map((x) => x.id).join(',');
   const leagueIds = store.leagues.join(',');
-  const state = useApi<Mine>(ids || leagueIds ? `/api/mine?teams=${ids}&leagues=${leagueIds}` : null, 60000);
+  const query = ids ? `/api/mine?teams=${ids}` : leagueIds ? `/api/mine?leagues=${leagueIds}` : null;
+  const state = useApi<Mine>(query, 60000);
   const openMatch = (f: Fixture) => nav.navigate('Match', { id: f.id });
   const addButton = (
     <Pressable onPress={() => nav.navigate('Picker')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Takım ekle" style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
