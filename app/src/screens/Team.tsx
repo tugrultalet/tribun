@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Fixture, Squad, Standings, TeamData, useApi } from '../api';
+import { dayLabel } from '../dates';
 import { RootParams, useNav } from '../nav';
 import { useStore } from '../store';
 import { font, useTheme } from '../theme';
-import { BackBar, Card, Crest, Empty, Loader, Section, StandingsTable, Tabs } from '../ui';
+import { BackBar, Card, Crest, Empty, Loader, Note, Section, StandingsTable, Tabs } from '../ui';
 import { FixtureDays } from './League';
 import { Screen } from './Screen';
 
@@ -36,11 +37,22 @@ export default function Team({ route }: NativeStackScreenProps<RootParams, 'Team
         </Pressable>
       </View>
       <Tabs value={tab} onChange={setTab} options={[['matches', 'Maçlar'], ['squad', 'Kadro'], ['table', 'Puan durumu']]} />
-      {tab === 'matches' && <Loader state={info}>{(d) => <FixtureDays data={d} today={store.meta.today} onMatch={openMatch} showLeague />}</Loader>}
+      {tab === 'matches' && (
+        <Loader state={info}>
+          {(d) => {
+            // Önce canlı ve yaklaşan maçlar (yakından uzağa), sonra oynananlar (yeniden eskiye).
+            const upcoming = d.fixtures.filter((f) => f.st === 'live' || f.st === 'ns');
+            const played = d.fixtures.filter((f) => f.st !== 'live' && f.st !== 'ns').reverse();
+            return <FixtureDays data={{ ...d, fixtures: [...upcoming, ...played] }} today={store.meta.today} onMatch={openMatch} showLeague />;
+          }}
+        </Loader>
+      )}
       {tab === 'squad' && (
         <Loader state={squad}>
           {(d) => (
             <>
+              {d.from && <Note>Son maç kadrosu: {dayLabel(d.from.date, store.meta.today)}, {d.from.rival} maçının ilk 11'i ve yedekleri.</Note>}
+              {!d.players.length && <Empty>Bu takım için henüz kadro bilgisi yok.</Empty>}
               {GROUPS.map(([key, label]) => {
                 const players = d.players.filter((p) => p.pos === key);
                 if (!players.length) return null;

@@ -13,7 +13,7 @@ Sunucu (Node 20.12+):
 
 ```bash
 cd server
-cp .env.example .env   # API_FOOTBALL_KEY değerini yaz
+cp .env.example .env   # HIGHLIGHTLY_KEY değerini yaz
 npm start
 ```
 
@@ -27,22 +27,19 @@ EXPO_PUBLIC_API_URL=http://BILGISAYARIN-YEREL-IP:8787 npx expo start
 
 Telefonda Expo Go ile QR kodu okut. Telefon ve bilgisayar aynı Wi-Fi'da olmalı. Tarayıcıda denemek için `npx expo start --web` (bu durumda adres `http://localhost:8787` olabilir).
 
-## API planı
+## Veri kaynağı
 
-Sunucu planı `/status` ile okur ve kendini ayarlar:
+Veriler [Highlightly Football API](https://highlightly.net/documentation/football/)'den gelir. Ücretsiz plan günde 100 istek verir; sunucu bunu korumak için:
 
-| | Free (100 istek/gün) | Ücretli |
-|---|---|---|
-| Canlı skor yenileme | 10 dakika | 30 saniye |
-| Tarihe göre maçlar | dün, bugün, yarın | −7 … +14 gün |
-| Puan durumu, takım listesi | izin verilen son sezon (uyarıyla) | güncel sezon |
-| Lig ve takım fikstürü | yalnızca üç günlük pencere | tam sezon |
+- Her ligin sezon fikstürünü bir kez çekip (lig başına 2–4 istek) günde bir yeniler; günlük maç listeleri buradan süzülür.
+- Yalnızca başlamış ama sonuçlanmamış maçı olan lig ve gün için taze veri ister (ücretsiz planda 10 dakikada bir, ücretli planda 30 saniyede bir; `LIVE_TTL` ile değiştirilebilir).
+- "Takiplerim" görünümünde yalnızca takip edilen ligler ve takımlar için istek yapar.
 
-`LIVE_TTL` (saniye) ile yenileme aralığı elle değiştirilebilir.
+Kaynağın kısıtları: lige göre takım listesi ve takım kadrosu ucu yok. Takım listesi puan durumundan, kadro takımın son maçının ilk 11'i ve yedeklerinden türetilir. Puan durumunda form ve Avrupa/küme düşme bölgeleri gelmez.
 
 ## Sunucu uçları
 
-`/api/meta`, `/api/fixtures?date=YYYY-AA-GG`, `/api/match/:id`, `/api/standings/:lig`, `/api/league/:lig/fixtures`, `/api/league/:lig/teams`, `/api/team/:id`, `/api/team/:id/squad`
+`/api/meta`, `/api/fixtures?date=YYYY-AA-GG[&leagues=..&teams=..]`, `/api/match/:id`, `/api/match/:id/lineups`, `/api/standings/:lig`, `/api/league/:lig/fixtures`, `/api/league/:lig/teams`, `/api/team/:id`, `/api/team/:id/squad`
 
 ## Henüz yok
 

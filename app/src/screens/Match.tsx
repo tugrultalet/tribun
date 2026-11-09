@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Fixture, Lineup, Match as MatchData, MatchEvent, Standings, Team, useApi } from '../api';
+import { Fixture, Lineup, Lineups as LineupData, Match as MatchData, MatchEvent, Standings, Team, useApi } from '../api';
 import { dayLabel } from '../dates';
 import { RootParams, useNav } from '../nav';
 import { useStore } from '../store';
@@ -118,8 +118,11 @@ function Lineups({ m }: { m: MatchData }) {
   const t = useTheme();
   const f = m.fixture;
   const [side, setSide] = useState<'h' | 'a'>('h');
-  if (!m.lineups.length) return <Empty>İlk 11'ler genellikle maçtan yaklaşık bir saat önce açıklanır.</Empty>;
-  const lu: Lineup | undefined = m.lineups.find((l) => l.teamId === f[side].id);
+  const state = useApi<LineupData>(`/api/match/${f.id}/lineups`, f.st === 'ft' ? undefined : 120000);
+  if (!state.data) return <Loader state={state}>{() => null}</Loader>;
+  const lineups = state.data.lineups;
+  if (!lineups.length) return <Empty>İlk 11'ler genellikle maçtan yaklaşık bir saat önce açıklanır.</Empty>;
+  const lu: Lineup | undefined = lineups.find((l) => l.teamId === f[side].id);
   if (!lu) return <Empty>Bu takımın kadrosu henüz açıklanmadı.</Empty>;
   const color = lu.color || t.accent;
   const ink = lu.numColor || (lightText(color) ? '#FFFFFF' : '#111111');

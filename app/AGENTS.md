@@ -26,7 +26,7 @@ Run lint and typecheck before declaring any task done.
 ## Navigation & Routing
 
 - This app uses **React Navigation** directly (native stack + bottom tabs), wired in `App.tsx`. Route params are typed in `src/nav.ts`; screens live in `src/screens/`.
-- All data comes from the Tribün server in `../server` through `src/api.ts`. Never call API-Football from the app or put its key in app code.
+- All data comes from the Tribün server in `../server` through `src/api.ts`. Never call the data provider (Highlightly) from the app or put its key in app code.
 
 ## Building with EAS
 

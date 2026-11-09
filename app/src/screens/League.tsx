@@ -20,6 +20,7 @@ export default function League({ route }: NativeStackScreenProps<RootParams, 'Le
   const table = useApi<Standings>(tab === 'table' ? `/api/standings/${id}` : null);
   const fixtures = useApi<LeagueFixtures>(tab === 'fix' ? `/api/league/${id}/fixtures` : null, 60000);
   const openMatch = (f: Fixture) => nav.navigate('Match', { id: f.id });
+  const hasForm = !!table.data?.groups.some((g) => g.rows.some((r) => r.form));
   return (
     <Screen header={<BackBar onBack={nav.goBack} />}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 4, paddingBottom: 16 }}>
@@ -33,7 +34,7 @@ export default function League({ route }: NativeStackScreenProps<RootParams, 'Le
       <Tabs value={tab} onChange={setTab} options={[['table', 'Puan durumu'], ['fix', 'Fikstür']]} />
       {tab === 'table' ? (
         <>
-          <Seg style={{ marginTop: 12 }} value={mode} onChange={setMode} options={[['short', 'Kısa'], ['full', 'Tam'], ['form', 'Form']]} />
+          <Seg style={{ marginTop: 12 }} value={mode} onChange={setMode} options={hasForm ? [['short', 'Kısa'], ['full', 'Tam'], ['form', 'Form']] : [['short', 'Kısa'], ['full', 'Tam']]} />
           <Loader state={table}>
             {(d) => d.groups.length ? <StandingsTable data={d} mode={mode} highlight={store.teams.map((x) => x.id)} onTeam={(r) => nav.navigate('Team', { team: r.team })} /> : <Empty>Bu lig için puan durumu yok.</Empty>}
           </Loader>

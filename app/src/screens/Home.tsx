@@ -16,7 +16,9 @@ export default function Home() {
   const [date, setDate] = useState(meta.today);
   const [filter, setFilter] = useState<'follow' | 'all'>('follow');
   const isToday = date === meta.today;
-  const state = useApi<Day>(`/api/fixtures?date=${date}`, isToday ? 60000 : undefined);
+  // Takiplerim'de yalnızca takip edilen ligler ve takımlar istenir; sunucu gereksiz lig için istek harcamaz.
+  const scope = filter === 'follow' ? `&leagues=${store.leagues.join(',')}&teams=${store.teams.map((x) => x.id).join(',')}` : '';
+  const state = useApi<Day>(`/api/fixtures?date=${date}${scope}`, isToday ? 60000 : undefined);
 
   const days = useMemo(() => {
     const list: string[] = [];

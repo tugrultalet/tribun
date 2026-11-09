@@ -37,7 +37,7 @@ export default function Settings() {
       </Section>
       <Section eyebrow="Veri">
         <Card>
-          {row('API-Football', quota, true)}
+          {row('Veri kaynağı (Highlightly)', quota, true)}
           {row('Canlı skor yenileme', refresh)}
           {row('Sunucu', API_URL)}
         </Card>

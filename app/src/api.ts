@@ -10,23 +10,24 @@ export type Fixture = {
   st: 'ns' | 'live' | 'ft' | 'off'; short: string; min: number | null; extra: number | null;
   h: Team; a: Team; s: [number, number] | null; pen: [number, number] | null;
 };
-export type League = { id: number; name: string; country: string; flag: string; type: 'main' | 'cup'; logo: string };
+export type League = { id: number; name: string; country: string; type: 'main' | 'cup'; logo: string };
 export type Meta = {
   plan: string | null; limitDay: number | null; used: number | null; remaining: number | null; error?: string;
-  today: string; window: { from: number; to: number }; season: number; seasonAvailable: boolean; liveTtl: number; leagues: League[];
+  today: string; window: { from: number; to: number }; season: number; liveTtl: number; leagues: League[];
 };
 export type Day = { date: string; fixtures: Fixture[]; stale?: boolean };
 export type MatchEvent = { min: number; extra: number | null; side: 'h' | 'a'; k: 'goal' | 'miss' | 'y' | 'r' | 'sub' | 'var' | 'other'; p: string; x: string | null };
 export type LineupPlayer = { no: number | null; name: string; pos: string | null; row: number | null; col: number | null };
 export type Lineup = { teamId: number; formation: string | null; coach: string | null; color: string | null; numColor: string | null; xi: LineupPlayer[]; subs: LineupPlayer[] };
 export type Stat = { label: string; unit: string; h: number; a: number };
-export type Match = { fixture: Fixture; venue: string | null; referee: string | null; events: MatchEvent[]; lineups: Lineup[]; stats: Stat[]; stale?: boolean };
+export type Match = { fixture: Fixture; venue: string | null; referee: string | null; events: MatchEvent[]; stats: Stat[]; stale?: boolean };
+export type Lineups = { lineups: Lineup[] };
 export type Zone = 'cl' | 'el' | 'ecl' | 'rel';
 export type StandingRow = { rank: number; team: Team; pts: number; gd: number; p: number; w: number; d: number; l: number; gf: number; ga: number; form: string; zone: Zone | null };
 export type Standings = { league: number; season: number; current: boolean; groups: { name: string; rows: StandingRow[] }[] };
 export type LeagueFixtures = { league: number; limited: boolean; fixtures: Fixture[] };
 export type TeamData = { team: Team; league: number | null; limited: boolean; fixtures: Fixture[] };
-export type Squad = { team: Team; players: { id: number; name: string; age: number | null; no: number | null; pos: string }[] };
+export type Squad = { team: Team; players: { id: number; name: string; age: number | null; no: number | null; pos: string }[]; from: { date: string; rival: string } | null };
 export type LeagueTeams = { league: number; season: number; current: boolean; teams: Team[] };
 
 export class ApiError extends Error {
