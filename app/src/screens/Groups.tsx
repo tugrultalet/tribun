@@ -96,7 +96,7 @@ function MyGroups({ secret }: { secret: string }) {
 
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
         <View style={{ flex: 1 }}><Button kind={form === 'create' ? 'pri' : 'sec'} label="Grup kur" onPress={() => open('create')} /></View>
-        <View style={{ flex: 1 }}><Button kind={form === 'join' ? 'pri' : 'sec'} label="Koda katıl" onPress={() => open('join')} /></View>
+        <View style={{ flex: 1 }}><Button kind={form === 'join' ? 'pri' : 'sec'} label="Kodla katıl" onPress={() => open('join')} /></View>
       </View>
 
       {form === 'create' && (
