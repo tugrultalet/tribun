@@ -44,19 +44,21 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
   useEffect(reloadMeta, [reloadMeta]);
 
   // Sunucu başka bir veri kaynağına geçtiyse kayıtlı takım ve lig numaraları geçersizdir; seçimler baştan yapılır.
-  // Eski sürümde kaynak kaydedilmediği için o zamanki kaynak Highlightly kabul edilir.
+  // `provider` alanı göndermeyen eski bir sunucu ve eski kayıtlar Highlightly sayılır. Güncelleme yalnızca kayıtlı
+  // kaynak sunucudakinden farklıysa yapılır ve sonrasında ikisi eşit olur; böylece bu etki kendini tekrar tetikleyemez.
+  const serverProvider = meta ? (meta.provider ?? 'highlightly') : null;
+  const savedProvider = saved ? (saved.provider ?? null) : null;
+  const ready = !!saved && !!meta;
   useEffect(() => {
-    if (!saved || !meta) return;
-    const current = saved.provider ?? 'highlightly';
-    if (current === meta.provider && saved.provider) return;
+    if (!ready || !serverProvider) return;
     setSaved((prev) => {
-      if (!prev) return prev;
-      const changed = (prev.provider ?? 'highlightly') !== meta.provider;
-      const next: Saved = changed ? { teams: [], leagues: [], onboarded: false, me: prev.me, provider: meta.provider } : { ...prev, provider: meta.provider };
+      if (!prev || prev.provider === serverProvider) return prev;
+      const changed = (prev.provider ?? 'highlightly') !== serverProvider;
+      const next: Saved = changed ? { teams: [], leagues: [], onboarded: false, me: prev.me, provider: serverProvider } : { ...prev, provider: serverProvider };
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
       return next;
     });
-  }, [saved, meta]);
+  }, [ready, serverProvider, savedProvider]);
 
   const update = useCallback((fn: (s: Saved) => Saved) => {
     setSaved((prev) => {
