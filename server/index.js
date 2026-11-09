@@ -138,8 +138,9 @@ async function apiAll(pathAndQuery) {
 }
 
 const isFree = () => (state.limitDay ?? 100) <= 100;
-// Canlı veri yenileme aralığı. Ücretsiz planda günlük 100 isteği korumak için seyrek.
-const liveTtl = () => (process.env.LIVE_TTL ? Number(process.env.LIVE_TTL) * 1000 : isFree() ? 3 * MIN : 30e3);
+// Canlı veri yenileme aralığı. Highlightly maç verisini dakikada bir yeniler, bu yüzden ücretli planda
+// daha sık sormanın faydası yok. Ücretsiz planda günlük 100 isteği korumak için daha seyrek.
+const liveTtl = () => (process.env.LIVE_TTL ? Number(process.env.LIVE_TTL) * 1000 : isFree() ? 3 * MIN : MIN);
 const slowTtl = () => (isFree() ? 24 * HOUR : 6 * HOUR); // sezon fikstürü
 const tableTtl = () => (isFree() ? 3 * HOUR : 15 * MIN);
 

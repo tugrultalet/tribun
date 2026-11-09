@@ -32,7 +32,7 @@ Telefonda Expo Go ile QR kodu okut. Telefon ve bilgisayar aynı Wi-Fi'da olmalı
 Veriler [Highlightly Football API](https://highlightly.net/documentation/football/)'den gelir. Ücretsiz plan günde 100 istek verir; sunucu bunu korumak için:
 
 - Her ligin sezon fikstürünü bir kez çekip (lig başına 2–4 istek) günde bir yeniler; günlük maç listeleri buradan süzülür.
-- Yalnızca başlamış ama sonuçlanmamış maçı olan lig ve gün için taze veri ister (ücretsiz planda 3 dakikada bir, ücretli planda 30 saniyede bir; `LIVE_TTL` ile değiştirilebilir).
+- Yalnızca başlamış ama sonuçlanmamış maçı olan lig ve gün için taze veri ister (ücretsiz planda 3 dakikada bir, ücretli planda dakikada bir (Highlightly maç verisini dakikada bir yeniler); `LIVE_TTL` ile değiştirilebilir).
 - "Takiplerim" görünümünde yalnızca takip edilen ligler ve takımlar için istek yapar.
 
 Kaynağın kısıtları: lige göre takım listesi ve takım kadrosu ucu yok. Takım listesi puan durumundan, kadro takımın son maçının ilk 11'i ve yedeklerinden türetilir. Puan durumunda form ve Avrupa/küme düşme bölgeleri gelmez.
