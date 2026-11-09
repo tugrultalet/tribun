@@ -104,6 +104,7 @@ function Hero({ f, today, onPress }: { f: Fixture; today: string; onPress: () =>
           </View>
           {side(f.a)}
         </View>
+        {league?.tv && <Text style={{ textAlign: 'center', fontSize: 12.5, fontWeight: '600', color: 'rgba(255,255,255,0.85)' }}>Yayın: {league.tv}</Text>}
       </LinearGradient>
     </Pressable>
   );

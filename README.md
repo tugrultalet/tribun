@@ -37,6 +37,10 @@ Veriler [Highlightly Football API](https://highlightly.net/documentation/footbal
 
 Kaynağın kısıtları: lige göre takım listesi ve takım kadrosu ucu yok. Takım listesi puan durumundan, kadro takımın son maçının ilk 11'i ve yedeklerinden türetilir. Puan durumunda form ve Avrupa/küme düşme bölgeleri gelmez.
 
+## Yayıncı bilgisi
+
+Maç kartında ve maç sayfasında görünen "Yayın: …" bilgisi `server/index.js` içindeki lig tablosundaki `tv` alanından gelir. Türkiye'de yayın hakları lig bazında satıldığı için elle tutulur ve her sezon başında güncellenmelidir. Maç bazında tam kanal bilgisi yoktur.
+
 ## Sunucu uçları
 
 `/api/meta`, `/api/mine?teams=..` (ana ekran: takip edilen takımların maçları), `/api/fixtures?date=YYYY-AA-GG[&leagues=..&teams=..]`, `/api/match/:id`, `/api/match/:id/lineups`, `/api/standings/:lig`, `/api/league/:lig/fixtures`, `/api/league/:lig/teams`, `/api/team/:id`, `/api/team/:id/squad`

@@ -17,18 +17,20 @@ const CACHE_DIR = process.env.CACHE_DIR || path.join(DIR, '.cache');
 const MIN = 60e3, HOUR = 60 * MIN, DAY = 24 * HOUR;
 
 // Lig kimlikleri Highlightly'nin kimlikleridir.
+// `tv`: ligin 2026/27 sezonundaki Türkiye yayıncısı. Yayın hakları lig bazında satıldığı için elle tutulur;
+// sezon başında güncellenmelidir. Maç bazında tam kanal (ör. beIN Sports 2) veri kaynağında yok.
 const LEAGUES = [
-  { id: 173537, name: 'Süper Lig', country: 'Türkiye', type: 'main' },
-  { id: 33973, name: 'Premier League', country: 'İngiltere', type: 'main' },
-  { id: 119924, name: 'La Liga', country: 'İspanya', type: 'main' },
-  { id: 115669, name: 'Serie A', country: 'İtalya', type: 'main' },
-  { id: 67162, name: 'Bundesliga', country: 'Almanya', type: 'main' },
-  { id: 52695, name: 'Ligue 1', country: 'Fransa', type: 'main' },
-  { id: 75672, name: 'Eredivisie', country: 'Hollanda', type: 'main' },
-  { id: 80778, name: 'Primeira Liga', country: 'Portekiz', type: 'main' },
-  { id: 2486, name: 'Şampiyonlar Ligi', country: 'UEFA', type: 'cup' },
-  { id: 3337, name: 'Avrupa Ligi', country: 'UEFA', type: 'cup' },
-  { id: 722432, name: 'Konferans Ligi', country: 'UEFA', type: 'cup' },
+  { id: 173537, name: 'Süper Lig', country: 'Türkiye', type: 'main', tv: 'beIN Sports' },
+  { id: 33973, name: 'Premier League', country: 'İngiltere', type: 'main', tv: 'beIN Sports' },
+  { id: 119924, name: 'La Liga', country: 'İspanya', type: 'main', tv: 'S Sport' },
+  { id: 115669, name: 'Serie A', country: 'İtalya', type: 'main', tv: 'S Sport' },
+  { id: 67162, name: 'Bundesliga', country: 'Almanya', type: 'main', tv: 'S Sport' },
+  { id: 52695, name: 'Ligue 1', country: 'Fransa', type: 'main', tv: 'beIN Sports' },
+  { id: 75672, name: 'Eredivisie', country: 'Hollanda', type: 'main', tv: 'S Sport' },
+  { id: 80778, name: 'Primeira Liga', country: 'Portekiz', type: 'main', tv: 'S Sport' },
+  { id: 2486, name: 'Şampiyonlar Ligi', country: 'UEFA', type: 'cup', tv: 'TRT' },
+  { id: 3337, name: 'Avrupa Ligi', country: 'UEFA', type: 'cup', tv: 'TRT' },
+  { id: 722432, name: 'Konferans Ligi', country: 'UEFA', type: 'cup', tv: 'TRT' },
 ].map((l) => ({ ...l, logo: `https://highlightly.net/soccer/images/leagues/${l.id}.png` }));
 const LEAGUE_IDS = new Set(LEAGUES.map((l) => l.id));
 const MAIN_IDS = new Set(LEAGUES.filter((l) => l.type === 'main').map((l) => l.id));
