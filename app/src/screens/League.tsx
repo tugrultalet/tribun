@@ -6,7 +6,7 @@ import { dayLabel, seasonLabel } from '../dates';
 import { RootParams, useNav } from '../nav';
 import { useStore } from '../store';
 import { font, useTheme } from '../theme';
-import { BackBar, Empty, LeagueBadge, Loader, MatchList, Note, Section, Seg, StandingsTable, StarButton, TableMode, Tabs } from '../ui';
+import { Empty, LeagueBadge, Loader, MatchList, Note, Section, Seg, StandingsTable, StarButton, TableMode, Tabs } from '../ui';
 import { Screen } from './Screen';
 
 export default function League({ route }: NativeStackScreenProps<RootParams, 'League'>) {
@@ -22,7 +22,7 @@ export default function League({ route }: NativeStackScreenProps<RootParams, 'Le
   const openMatch = (f: Fixture) => nav.navigate('Match', { id: f.id });
   const hasForm = !!table.data?.groups.some((g) => g.rows.some((r) => r.form));
   return (
-    <Screen header={<BackBar onBack={nav.goBack} />}>
+    <Screen>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 4, paddingBottom: 16 }}>
         <LeagueBadge id={id} size={56} />
         <View style={{ flex: 1 }}>

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { LeagueTeams, Team, useApi } from '../api';
 import { seasonLabel } from '../dates';
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { BackBar, Crest, Empty, Icon, Loader, Note } from '../ui';
+import { Crest, Empty, Icon, Loader, Note } from '../ui';
 import { SearchBox } from './Leagues';
 import { Screen } from './Screen';
 
@@ -63,10 +63,11 @@ export function TeamGrid({ selected, onToggle }: { selected: (id: number) => boo
 }
 
 export default function Picker() {
+  const t = useTheme();
   const nav = useNav();
   const store = useStore();
   return (
-    <Screen bottomInset header={<BackBar onBack={nav.goBack} title="Takım ekle" />}>
+    <Screen bottomInset title="Takım ekle" right={Platform.OS === 'ios' ? <Pressable onPress={nav.goBack} hitSlop={8} accessibilityRole="button"><Text style={{ fontSize: 17, fontWeight: '600', color: t.accent }}>Bitti</Text></Pressable> : undefined}>
       <TeamGrid selected={store.followsTeam} onToggle={(team) => store.toggleTeam(team)} />
     </Screen>
   );

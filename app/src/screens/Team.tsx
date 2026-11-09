@@ -6,7 +6,7 @@ import { dayLabel } from '../dates';
 import { RootParams, useNav } from '../nav';
 import { useStore } from '../store';
 import { font, useTheme } from '../theme';
-import { BackBar, Card, Crest, Empty, Loader, Note, Section, StandingsTable, Tabs } from '../ui';
+import { Card, Crest, Empty, Loader, Note, Section, StandingsTable, Tabs, HAIR } from '../ui';
 import { FixtureDays } from './League';
 import { Screen } from './Screen';
 
@@ -26,7 +26,7 @@ export default function Team({ route }: NativeStackScreenProps<RootParams, 'Team
   const on = store.followsTeam(team.id);
   const openMatch = (f: Fixture) => nav.navigate('Match', { id: f.id });
   return (
-    <Screen header={<BackBar onBack={nav.goBack} />}>
+    <Screen>
       <View style={{ alignItems: 'center', gap: 8, paddingTop: 4, paddingBottom: 18 }}>
         <Crest uri={team.logo} size={76} />
         <Text style={{ fontFamily: font.score, fontSize: 34, lineHeight: 36, color: t.fg, textAlign: 'center' }}>{team.name.toLocaleUpperCase('tr')}</Text>
@@ -60,7 +60,7 @@ export default function Team({ route }: NativeStackScreenProps<RootParams, 'Team
                   <Section key={key} eyebrow={label} right={<Text style={{ fontSize: 12.5, color: t.muted }}>{players.length} oyuncu</Text>}>
                     <Card>
                       {players.map((p, i) => (
-                        <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: i ? 1 : 0, borderColor: t.line }}>
+                        <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: i ? HAIR : 0, borderColor: t.line }}>
                           <Text style={{ width: 28, textAlign: 'center', fontFamily: font.scoreMid, fontSize: 19, color: t.muted }}>{p.no ?? '–'}</Text>
                           <Text style={{ flex: 1, fontWeight: '600', fontSize: 15, color: t.fg }}>{p.name}</Text>
                           {p.age != null && <Text style={{ fontSize: 12.5, color: t.muted }}>{p.age} yaş</Text>}

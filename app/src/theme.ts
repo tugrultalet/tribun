@@ -1,21 +1,24 @@
 import { useColorScheme } from 'react-native';
 
+// iOS'un gruplu liste görünümüne göre: gri zemin, beyaz kartlar, ince ayırıcılar.
 const light = {
   dark: false,
-  bg: '#F4F6FA', surface: '#FFFFFF', surface2: '#ECEFF5', line: '#DDE2EB',
-  fg: '#0E1424', muted: '#5D667D', accent: '#1F4FE0', accentInk: '#FFFFFF', accentSoft: '#E3E9FD',
-  live: '#E0262B', liveSoft: '#FDE5E5', win: '#16924B', draw: '#8C93A6', loss: '#D33A3A',
-  zone: { cl: '#1F4FE0', el: '#E8820C', ecl: '#16924B', rel: '#D33A3A' },
+  bg: '#F2F2F7', surface: '#FFFFFF', surface2: '#E9E9EE', line: 'rgba(60,60,67,0.2)',
+  fg: '#0B0B0F', muted: '#6E6E76', accent: '#1F4FE0', accentInk: '#FFFFFF', accentSoft: '#E4EAFD',
+  live: '#FF3B30', liveSoft: '#FFE5E3', win: '#1FA64A', draw: '#8E8E93', loss: '#E5342A',
+  zone: { cl: '#1F4FE0', el: '#E8820C', ecl: '#1FA64A', rel: '#E5342A' },
   pitch: '#2F7D4E', pitchLine: 'rgba(255,255,255,0.28)',
+  hero: ['#1B2350', '#4A2A66', '#B4553B'] as const,
 };
-export type Theme = typeof light;
+export type Theme = Omit<typeof light, 'hero'> & { hero: readonly [string, string, string] };
 const dark: Theme = {
   dark: true,
-  bg: '#0B0F19', surface: '#141A27', surface2: '#1B2232', line: '#252D40',
-  fg: '#EEF1F7', muted: '#8A93AB', accent: '#8BA3FF', accentInk: '#0B0F19', accentSoft: '#1D2849',
-  live: '#FF5A5E', liveSoft: '#3A1719', win: '#3CC77A', draw: '#7D869B', loss: '#FF6B6B',
-  zone: { cl: '#8BA3FF', el: '#FFA53D', ecl: '#3CC77A', rel: '#FF6B6B' },
+  bg: '#000000', surface: '#1C1C1E', surface2: '#2C2C2E', line: 'rgba(84,84,88,0.6)',
+  fg: '#FFFFFF', muted: '#98989F', accent: '#7C9BFF', accentInk: '#000000', accentSoft: '#1A2447',
+  live: '#FF453A', liveSoft: '#3A1512', win: '#30D158', draw: '#8E8E93', loss: '#FF453A',
+  zone: { cl: '#7C9BFF', el: '#FFA53D', ecl: '#30D158', rel: '#FF453A' },
   pitch: '#1E5A38', pitchLine: 'rgba(255,255,255,0.2)',
+  hero: ['#141B40', '#3B2152', '#8E4330'],
 };
 
 export function useTheme(): Theme {
