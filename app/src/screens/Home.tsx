@@ -55,10 +55,10 @@ export default function Home() {
               </View>
               {!heroes.length && <Empty>Takip ettiklerinin yaklaşan maçı yok.</Empty>}
               {rest.length > 0 && (
-                <MatchList title="Fikstür" fixtures={rest} onMatch={openMatch} showLeague dated />
+                <MatchList title="Fikstür" fixtures={rest} onMatch={openMatch} showLeague today={d.today} />
               )}
               {results.length > 0 && (
-                <MatchList title="Son sonuçlar" fixtures={results} onMatch={openMatch} showLeague dated />
+                <MatchList title="Son sonuçlar" fixtures={results} onMatch={openMatch} showLeague today={d.today} />
               )}
             </>
           );
