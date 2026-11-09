@@ -5,7 +5,7 @@ import { Fixture, Squad, Standings, TeamData, useApi } from '../api';
 import { dayLabel } from '../dates';
 import { RootParams, useNav } from '../nav';
 import { useStore } from '../store';
-import { font, useTheme } from '../theme';
+import { useTheme } from '../theme';
 import { Card, Crest, Empty, Loader, Note, Section, StandingsTable, Tabs, HAIR } from '../ui';
 import { FixtureDays } from './League';
 import { Screen } from './Screen';
@@ -26,17 +26,17 @@ export default function Team({ route }: NativeStackScreenProps<RootParams, 'Team
   const on = store.followsTeam(team.id);
   const openMatch = (f: Fixture) => nav.navigate('Match', { id: f.id });
   return (
-    <Screen>
+    <Screen team={team.name}>
       <View style={{ alignItems: 'center', gap: 8, paddingTop: 4, paddingBottom: 18 }}>
         <Crest uri={team.logo} size={76} />
-        <Text style={{ fontFamily: font.score, fontSize: 34, lineHeight: 36, color: t.fg, textAlign: 'center' }}>{team.name.toLocaleUpperCase('tr')}</Text>
+        <Text style={{ fontWeight: '700', fontSize: 34, lineHeight: 36, color: t.fg, textAlign: 'center' }}>{team.name}</Text>
         {league && <Text style={{ fontSize: 13, color: t.muted }}>{league.name}</Text>}
         <Pressable onPress={() => store.toggleTeam(team)} accessibilityRole="button" accessibilityState={{ selected: on }}
           style={{ marginTop: 6, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 99, backgroundColor: on ? t.accent : 'transparent', borderWidth: 1, borderColor: t.accent }}>
           <Text style={{ fontWeight: '700', fontSize: 13, color: on ? t.accentInk : t.accent }}>{on ? '✓ Takip ediliyor' : '+ Takip et'}</Text>
         </Pressable>
       </View>
-      <Tabs value={tab} onChange={setTab} options={[['matches', 'Maçlar'], ['squad', 'Kadro'], ['table', 'Puan durumu']]} />
+      <Tabs value={tab} onChange={setTab} options={[['matches', 'Maçlar'], ['squad', 'Kadro'], ['table', 'Tablo']]} />
       {tab === 'matches' && (
         <Loader state={info}>
           {(d) => {
@@ -61,7 +61,7 @@ export default function Team({ route }: NativeStackScreenProps<RootParams, 'Team
                     <Card>
                       {players.map((p, i) => (
                         <View key={p.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: i ? HAIR : 0, borderColor: t.line }}>
-                          <Text style={{ width: 28, textAlign: 'center', fontFamily: font.scoreMid, fontSize: 19, color: t.muted }}>{p.no ?? '–'}</Text>
+                          <Text style={{ width: 28, textAlign: 'center', fontWeight: '600', fontSize: 19, color: t.muted }}>{p.no ?? '–'}</Text>
                           <Text style={{ flex: 1, fontWeight: '600', fontSize: 15, color: t.fg }}>{p.name}</Text>
                           {p.age != null && <Text style={{ fontSize: 12.5, color: t.muted }}>{p.age} yaş</Text>}
                         </View>

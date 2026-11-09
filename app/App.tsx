@@ -2,9 +2,7 @@ import React from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { StatusBar } from 'expo-status-bar';
-import { useFonts } from 'expo-font';
-import { BarlowCondensed_600SemiBold, BarlowCondensed_700Bold } from '@expo-google-fonts/barlow-condensed';
-import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/unstable';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -12,7 +10,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { ApiError } from './src/api';
 import { RootParams, TabParams } from './src/nav';
 import { StoreProvider, useStore } from './src/store';
-import { font, useTheme } from './src/theme';
+import { useTheme } from './src/theme';
 import { Icon } from './src/ui';
 import Home from './src/screens/Home';
 import League from './src/screens/League';
@@ -52,14 +50,14 @@ function TabsScreen() {
         headerBlurEffect: BAR_BLUR,
         headerShadowVisible: false,
         headerTintColor: t.accent,
-        headerLargeTitleStyle: { fontFamily: font.score, fontSize: 38, color: t.fg },
+        headerLargeTitleStyle: { color: t.fg },
         headerTitleStyle: { color: t.fg },
         tabBarActiveTintColor: t.accent,
         tabBarMinimizeBehavior: 'onScrollDown',
       }}>
         {TABS.map((tab) => (
           <NativeTab.Screen key={tab.name} name={tab.name} component={tab.component}
-            options={{ title: tab.title, headerTitle: tab.title.toLocaleUpperCase('tr'), tabBarIcon: { type: 'sfSymbol', name: tab.symbol } }} />
+            options={{ title: tab.title, tabBarIcon: { type: 'sfSymbol', name: tab.symbol } }} />
         ))}
       </NativeTab.Navigator>
     );
@@ -74,7 +72,7 @@ function TabsScreen() {
       tabBarStyle: {
         position: 'absolute', left: 16, right: 16, bottom: Math.max(insets.bottom, 14), marginHorizontal: 16, height: 64, paddingTop: 6, paddingBottom: 6,
         borderRadius: 32, borderTopWidth: 0, borderWidth: 1, borderColor: t.line, overflow: 'hidden',
-        backgroundColor: t.dark ? 'rgba(28,28,30,0.78)' : 'rgba(255,255,255,0.78)',
+        backgroundColor: 'rgba(22,24,44,0.72)',
         ...(Platform.OS === 'web' ? ({ backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)' } as object) : null),
         shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 8,
       },
@@ -137,17 +135,13 @@ function Splash({ error, retry }: { error: ApiError | null; retry: () => void })
 
 export default function App() {
   const t = useTheme();
-  const [fontsLoaded] = useFonts({ BarlowCondensed_600SemiBold, BarlowCondensed_700Bold });
-  const base = t.dark ? DarkTheme : DefaultTheme;
-  const navTheme = { ...base, colors: { ...base.colors, background: t.bg, card: t.bg, text: t.fg, border: t.line, primary: t.accent } };
+  const navTheme = { ...DarkTheme, colors: { ...DarkTheme.colors, background: t.bg, card: t.bg, text: t.fg, border: t.line, primary: t.accent } };
   return (
     <SafeAreaProvider>
-      <StatusBar style={t.dark ? 'light' : 'dark'} />
-      {fontsLoaded ? (
-        <StoreProvider fallback={(error, retry) => <Splash error={error} retry={retry} />}>
-          <NavigationContainer theme={navTheme}><Root /></NavigationContainer>
-        </StoreProvider>
-      ) : <Splash error={null} retry={() => {}} />}
+      <StatusBar style="light" />
+      <StoreProvider fallback={(error, retry) => <Splash error={error} retry={retry} />}>
+        <NavigationContainer theme={navTheme}><Root /></NavigationContainer>
+      </StoreProvider>
     </SafeAreaProvider>
   );
 }

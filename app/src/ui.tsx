@@ -5,7 +5,7 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { ApiError, Fixture, Standings, Zone } from './api';
 import { seasonLabel, shortDate } from './dates';
 import { useStore } from './store';
-import { font, useTheme, ZONE_NAMES } from './theme';
+import { useTheme, ZONE_NAMES } from './theme';
 
 /* ---------- İkonlar ---------- */
 type IconProps = { size?: number; color: string };
@@ -40,22 +40,29 @@ export function LeagueBadge({ id, size = 22 }: { id: number; size?: number }) {
   const t = useTheme();
   const league = useStore().league(id);
   return (
-    <View style={{ width: size, height: size, borderRadius: size * 0.3, backgroundColor: t.dark ? '#E8ECF4' : t.surface2, alignItems: 'center', justifyContent: 'center' }}>
-      {league && <Image source={{ uri: league.logo }} style={{ width: size * 0.74, height: size * 0.74 }} resizeMode="contain" />}
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' }}>
+      {league && <Image source={{ uri: league.logo }} style={{ width: size * 0.68, height: size * 0.68 }} resizeMode="contain" />}
     </View>
   );
 }
+const GLASS = Platform.OS === 'ios' && isLiquidGlassAvailable();
 export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const t = useTheme();
-  return <View style={[{ backgroundColor: t.surface, borderRadius: 22, borderCurve: 'continuous', overflow: 'hidden' }, style]}>{children}</View>;
+  // iOS 26'da gerçek Liquid Glass panel; diğer yerlerde yarı saydam yüzey.
+  if (GLASS) return <GlassView glassEffectStyle="regular" style={[{ borderRadius: 28, borderCurve: 'continuous', overflow: 'hidden' }, style]}>{children}</GlassView>;
+  return <View style={[{ backgroundColor: t.surface, borderRadius: 28, borderCurve: 'continuous', borderWidth: StyleSheet.hairlineWidth, borderColor: t.line, overflow: 'hidden' }, style]}>{children}</View>;
+}
+// Ortalanmış başlıklı büyük panel (ör. "Fikstür", "Tablo").
+export function Panel({ title, children, style }: { title?: string; children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  const t = useTheme();
+  return (
+    <Card style={[{ marginTop: 16, paddingBottom: 6 }, style]}>
+      {title ? <Text style={{ textAlign: 'center', fontSize: 16, fontWeight: '600', color: t.fg, paddingTop: 18, paddingBottom: 8 }}>{title}</Text> : null}
+      {children}
+    </Card>
+  );
 }
 export const HAIR = StyleSheet.hairlineWidth;
-const GLASS = Platform.OS === 'ios' && isLiquidGlassAvailable();
-// iOS 26'da gerçek Liquid Glass; diğer yerlerde yarı saydam bir yüzey.
-export function Glass({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
-  if (GLASS) return <GlassView glassEffectStyle="regular" style={style}>{children}</GlassView>;
-  return <View style={[{ backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: HAIR, borderColor: 'rgba(255,255,255,0.35)' }, style]}>{children}</View>;
-}
 export function Section({ title, eyebrow, left, right, children }: { title?: string; eyebrow?: string; left?: React.ReactNode; right?: React.ReactNode; children: React.ReactNode }) {
   const t = useTheme();
   return (
@@ -88,18 +95,15 @@ export function Seg<T extends string>({ options, value, onChange, style }: { opt
 export function Tabs<T extends string>({ options, value, onChange }: { options: [T, string][]; value: T; onChange: (v: T) => void }) {
   const t = useTheme();
   return (
-    <View style={{ borderBottomWidth: HAIR, borderColor: t.line, marginHorizontal: -16 }}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 4 }}>
-        {options.map(([key, label]) => {
-          const on = key === value;
-          return (
-            <Pressable key={key} onPress={() => onChange(key)} accessibilityRole="tab" accessibilityState={{ selected: on }}
-              style={{ paddingVertical: 11, paddingHorizontal: 10, borderBottomWidth: 2.5, borderColor: on ? t.accent : 'transparent' }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: on ? t.fg : t.muted }}>{label}</Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+    <View style={{ flexDirection: 'row', borderBottomWidth: HAIR, borderColor: t.line }}>
+      {options.map(([key, label]) => {
+        const on = key === value;
+        return (
+          <Pressable key={key} onPress={() => onChange(key)} accessibilityRole="tab" accessibilityState={{ selected: on }} style={{ flex: 1, paddingVertical: 14, alignItems: 'center' }}>
+            <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '600', color: on ? t.fg : t.muted }}>{label}</Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -180,13 +184,13 @@ export function MatchRow({ f, onPress, showLeague, first, dateLabel }: { f: Fixt
         <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 14.5, fontWeight: weight, color }}>{team.name}</Text>
         {followsTeam(team.id) && <Icon.star size={12} color={t.accent} filled />}
         <View style={{ flex: 1 }} />
-        <Text style={{ fontFamily: font.scoreMid, fontSize: 20, lineHeight: 22, minWidth: 16, textAlign: 'right', color: f.st === 'live' ? t.live : color }}>{f.s ? f.s[i] : ''}</Text>
+        <Text style={{ fontWeight: '600', fontSize: 20, lineHeight: 22, minWidth: 16, textAlign: 'right', color: f.st === 'live' ? t.live : color }}>{f.s ? f.s[i] : ''}</Text>
       </View>
     );
   };
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${f.h.name} ${f.a.name}`}
-      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: first ? 0 : HAIR, borderColor: t.line, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 16, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
       <View style={{ width: 46, alignItems: 'center', gap: 2 }}>
         {dateLabel ? <Text style={{ fontSize: 11, fontWeight: '700', color: t.muted }}>{dateLabel}</Text> : null}
         <Text style={{ fontSize: 12.5, fontWeight: '700', color: f.st === 'live' ? t.live : dateLabel ? t.fg : t.muted }}>{statusText(f)}</Text>
@@ -196,74 +200,56 @@ export function MatchRow({ f, onPress, showLeague, first, dateLabel }: { f: Fixt
     </Pressable>
   );
 }
-export function MatchList({ fixtures, onMatch, showLeague, dated }: { fixtures: Fixture[]; onMatch: (f: Fixture) => void; showLeague?: boolean; dated?: boolean }) {
-  return <Card>{fixtures.map((f, i) => <MatchRow key={f.id} f={f} first={i === 0} showLeague={showLeague} dateLabel={dated ? shortDate(f.date) : undefined} onPress={() => onMatch(f)} />)}</Card>;
+export function MatchList({ fixtures, onMatch, showLeague, dated, title }: { fixtures: Fixture[]; onMatch: (f: Fixture) => void; showLeague?: boolean; dated?: boolean; title?: string }) {
+  return <Panel title={title} style={title ? undefined : { marginTop: 0, paddingVertical: 6 }}>{fixtures.map((f, i) => <MatchRow key={f.id} f={f} first={i === 0} showLeague={showLeague} dateLabel={dated ? shortDate(f.date) : undefined} onPress={() => onMatch(f)} />)}</Panel>;
 }
 
 /* ---------- Puan durumu ---------- */
-export type TableMode = 'short' | 'full' | 'form';
-const FORM_TR: Record<string, string> = { W: 'G', D: 'B', L: 'M' };
-export function StandingsTable({ data, highlight, mode = 'short', onTeam }: { data: Standings; highlight: number[]; mode?: TableMode; onTeam?: (row: Standings['groups'][0]['rows'][0]) => void }) {
+export function StandingsTable({ data, highlight, onTeam }: { data: Standings; highlight: number[]; onTeam?: (row: Standings['groups'][0]['rows'][0]) => void }) {
   const t = useTheme();
-  const formColor: Record<string, string> = { W: t.win, D: t.draw, L: t.loss };
-  const cols: [string, number][] = mode === 'full' ? [['O', 26], ['G', 24], ['B', 24], ['M', 24], ['AV', 32]] : mode === 'form' ? [['Son 5', 104]] : [['O', 28], ['AV', 34]];
-  const head = { fontSize: 11, fontWeight: '700' as const, color: t.muted, textAlign: 'center' as const };
-  const cell = { fontSize: 13.5, color: t.muted, textAlign: 'center' as const, fontVariant: ['tabular-nums' as const] };
+  const cols: [string, number][] = [['OM', 28], ['G', 22], ['B', 22], ['M', 22], ['AV', 36], ['P', 30]];
+  const head = { fontSize: 13, color: t.muted, textAlign: 'center' as const };
+  const cell = { fontSize: 15, color: t.fg, textAlign: 'center' as const, fontVariant: ['tabular-nums' as const] };
   const zones = [...new Set(data.groups.flatMap((g) => g.rows.map((r) => r.zone)).filter(Boolean))] as Zone[];
   const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
   return (
-    <View style={{ marginTop: 10 }}>
-      {!data.current && <Note>Ücretsiz API planı güncel sezonun puan durumunu vermiyor. Gösterilen: {seasonLabel(data.season)} sezonu.</Note>}
+    <>
+      {!data.current && <Note>Gösterilen: {seasonLabel(data.season)} sezonu.</Note>}
       {data.groups.map((g, gi) => (
-        <View key={gi} style={{ marginTop: gi ? 18 : 6 }}>
-          {data.groups.length > 1 && <Text style={{ fontWeight: '700', color: t.fg, marginBottom: 4 }}>{g.name}</Text>}
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
-            <Text style={[head, { width: 30 }]}>#</Text>
-            <Text style={[head, { flex: 1, textAlign: 'left' }]}>Takım</Text>
+        <Panel key={gi} title={data.groups.length > 1 ? g.name : 'Tablo'}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12 }}>
+            <Text style={[head, { width: 26 }]} />
+            <Text style={[head, { flex: 1, textAlign: 'left', paddingLeft: 34 }]}>Takım</Text>
             {cols.map(([label, w]) => <Text key={label} style={[head, { width: w }]}>{label}</Text>)}
-            <Text style={[head, { width: 34 }]}>P</Text>
           </View>
           {g.rows.map((r) => {
             const me = highlight.includes(r.team.id);
             return (
-              <Pressable key={r.team.id} disabled={!onTeam} onPress={() => onTeam?.(r)}
-                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 9, borderTopWidth: HAIR, borderColor: t.line, backgroundColor: me ? t.accentSoft : 'transparent' }}>
-                <View style={{ width: 30, flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 3, height: 18, borderRadius: 2, backgroundColor: r.zone ? t.zone[r.zone] : 'transparent' }} />
-                  <Text style={[cell, { flex: 1, fontWeight: '600', color: me ? t.accent : t.muted }]}>{r.rank}</Text>
+              <Pressable key={r.team.id} disabled={!onTeam} onPress={() => onTeam?.(r)} accessibilityRole={onTeam ? 'button' : undefined} accessibilityLabel={r.team.name}
+                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 12, backgroundColor: me ? t.accentSoft : 'transparent' }}>
+                <Text style={[cell, { width: 26, color: r.zone ? t.zone[r.zone] : t.fg }]}>{r.rank}</Text>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 6 }}>
+                  <Crest uri={r.team.logo} size={24} />
+                  <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, fontWeight: me ? '700' : '400', color: t.fg }}>{r.team.name}</Text>
                 </View>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 }}>
-                  <Crest uri={r.team.logo} size={20} />
-                  <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 13.5, fontWeight: '600', color: t.fg }}>{r.team.name}</Text>
-                </View>
-                {mode === 'full' && [r.p, r.w, r.d, r.l, signed(r.gd)].map((v, i) => <Text key={i} style={[cell, { width: cols[i][1] }]}>{v}</Text>)}
-                {mode === 'short' && [r.p, signed(r.gd)].map((v, i) => <Text key={i} style={[cell, { width: cols[i][1] }]}>{v}</Text>)}
-                {mode === 'form' && (
-                  <View style={{ width: 104, flexDirection: 'row', gap: 3, justifyContent: 'center' }}>
-                    {r.form.split('').map((c, i) => (
-                      <View key={i} style={{ width: 17, height: 17, borderRadius: 5, alignItems: 'center', justifyContent: 'center', backgroundColor: formColor[c] || t.draw }}>
-                        <Text style={{ fontSize: 9.5, fontWeight: '800', color: '#fff' }}>{FORM_TR[c] || c}</Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-                <Text style={[cell, { width: 34, fontWeight: '800', color: t.fg }]}>{r.pts}</Text>
+                {[r.p, r.w, r.d, r.l, signed(r.gd)].map((v, i) => <Text key={i} style={[cell, { width: cols[i][1] }]}>{v}</Text>)}
+                <Text style={[cell, { width: 30, fontWeight: '700' }]}>{r.pts}</Text>
               </Pressable>
             );
           })}
-        </View>
+        </Panel>
       ))}
       {zones.length > 0 && (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 8, paddingVertical: 12, paddingHorizontal: 2 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, rowGap: 8, paddingVertical: 12, paddingHorizontal: 6 }}>
           {zones.map((z) => (
             <View key={z} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: t.zone[z] }} />
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: t.zone[z] }} />
               <Text style={{ fontSize: 12, color: t.muted }}>{ZONE_NAMES[z]}</Text>
             </View>
           ))}
         </View>
       )}
-    </View>
+    </>
   );
 }
 
@@ -272,7 +258,7 @@ export function ScreenTitle({ title, right }: { title: string; right?: React.Rea
   const t = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10, minHeight: 52 }}>
-      <Text style={{ fontFamily: font.score, fontSize: 34, lineHeight: 36, color: t.fg }}>{title.toLocaleUpperCase('tr')}</Text>
+      <Text style={{ fontWeight: '800', fontSize: 34, lineHeight: 40, letterSpacing: -0.5, color: t.fg }}>{title}</Text>
       {right}
     </View>
   );
