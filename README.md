@@ -2,10 +2,10 @@
 
 Sadece takip ettiğin takımların ve liglerin maçları: fikstür, canlı skor, kadro ve puan durumu.
 
-- `server/` — API-Football anahtarını tutan, yanıtları sadeleştirip önbelleğe alan küçük Node sunucusu (bağımlılık yok).
+- `server/` — veri kaynağının (Highlightly) anahtarını tutan, yanıtları sadeleştirip önbelleğe alan küçük Node sunucusu (bağımlılık yok).
 - `app/` — Expo (React Native) mobil uygulaması. Önce iOS, aynı kodla Android.
 
-Anahtar yalnızca sunucuda durur; uygulama API-Football'a doğrudan gitmez.
+Anahtar yalnızca sunucuda durur; uygulama veri kaynağına doğrudan gitmez.
 
 ## Çalıştırma
 

@@ -123,7 +123,7 @@ export function Loader<T>({ state, children }: { state: { data?: T; error: ApiEr
   return <ActivityIndicator style={{ marginTop: 40 }} color={t.muted} />;
 }
 export function errorText(e: ApiError): string {
-  if (e.kind === 'plan') return 'Bu veri kullandığın API-Football planında açık değil.';
+  if (e.kind === 'config') return 'Sunucuda veri kaynağı anahtarı eksik ya da geçersiz.';
   if (e.kind === 'quota') return 'Günlük API isteği limiti doldu. Veriler yarın yenilenecek.';
   return e.message;
 }
