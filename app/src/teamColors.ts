@@ -13,19 +13,19 @@ const COLORS: [string, string][] = [
   ['paris', '#004170'], ['psg', '#004170'], ['marseille', '#1F86B0'], ['ajax', '#A80E24'], ['psv', '#B0151B'],
   ['feyenoord', '#B00510'], ['benfica', '#B32424'], ['porto', '#00428C'], ['sporting', '#006646'],
 ];
-// Liglerin ana rengi (Highlightly lig kimliğine göre).
-const LEAGUE_COLORS: Record<number, string> = {
-  173537: '#B3131B', // Süper Lig
-  33973: '#4A1D6E', // Premier League
-  119924: '#B8321F', // La Liga
-  115669: '#0B2E7A', // Serie A
-  67162: '#B00014', // Bundesliga
-  52695: '#16306B', // Ligue 1
-  75672: '#A81226', // Eredivisie
-  80778: '#0F5A3C', // Primeira Liga
-  2486: '#18237A', // Şampiyonlar Ligi
-  3337: '#B5560A', // Avrupa Ligi
-  722432: '#0E7A3A', // Konferans Ligi
+// Liglerin ana rengi (sunucunun verdiği lig anahtarına göre; veri kaynağından bağımsızdır).
+const LEAGUE_COLORS: Record<string, string> = {
+  tr: '#B3131B', // Süper Lig
+  pl: '#4A1D6E', // Premier League
+  laliga: '#B8321F', // La Liga
+  seriea: '#0B2E7A', // Serie A
+  buli: '#B00014', // Bundesliga
+  ligue1: '#16306B', // Ligue 1
+  ere: '#A81226', // Eredivisie
+  por: '#0F5A3C', // Primeira Liga
+  cl: '#18237A', // Şampiyonlar Ligi
+  el: '#B5560A', // Avrupa Ligi
+  ecl: '#0E7A3A', // Konferans Ligi
 };
 export const DEFAULT_GRADIENT: readonly [string, string, string] = ['#18237A', '#0C1238', '#06081A'];
 
@@ -39,8 +39,8 @@ function mix(hex: string, towards: [number, number, number], amount: number): st
 const fade = (base: string): readonly [string, string, string] => [mix(base, [0, 0, 0], 0.12), mix(base, [0, 0, 0], 0.7), '#050505'];
 
 // Zemin geçişi: üstte lig ya da takım rengi, aşağıya doğru siyaha yakın. Lig verilmişse o önceliklidir.
-export function gradientFor(teamName?: string, leagueId?: number): readonly [string, string, string] {
-  if (leagueId && LEAGUE_COLORS[leagueId]) return fade(LEAGUE_COLORS[leagueId]);
+export function gradientFor(teamName?: string, leagueKey?: string): readonly [string, string, string] {
+  if (leagueKey && LEAGUE_COLORS[leagueKey]) return fade(LEAGUE_COLORS[leagueKey]);
   const name = (teamName || '').toLocaleLowerCase('tr');
   const hit = name ? COLORS.find(([key]) => name.includes(key)) : undefined;
   return hit ? fade(hit[1]) : DEFAULT_GRADIENT;

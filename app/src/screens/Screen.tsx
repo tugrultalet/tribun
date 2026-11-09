@@ -11,8 +11,8 @@ import { BackBar, ScreenTitle } from '../ui';
 const IOS = Platform.OS === 'ios';
 
 function useBackdropColors(team?: string, league?: number) {
-  const first = useStore().teams[0]?.name;
-  return gradientFor(team ?? first, league);
+  const store = useStore();
+  return gradientFor(team ?? store.teams[0]?.name, league ? store.league(league)?.key : undefined);
 }
 
 const TITLE_HEIGHT = 46;
