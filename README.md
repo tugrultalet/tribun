@@ -37,6 +37,17 @@ Veriler [Highlightly Football API](https://highlightly.net/documentation/footbal
 
 Kaynağın kısıtları: lige göre takım listesi ve takım kadrosu ucu yok. Takım listesi puan durumundan, kadro takımın son maçının ilk 11'i ve yedeklerinden türetilir. Puan durumunda form ve Avrupa/küme düşme bölgeleri gelmez.
 
+## Gruplar, tahminler ve sohbet
+
+Arkadaş grupları Supabase'de durur (proje: `tribun`, şema: `supabase/migrations/`). Uygulama veritabanına doğrudan, `app/src/config.ts` içindeki "publishable" anahtarla bağlanır; bu anahtar uygulamada durmak üzere tasarlanmıştır.
+
+- Tablolarda RLS açıktır ve hiçbir politika yoktur; her işlem `SECURITY DEFINER` fonksiyonlarından geçer (`register`, `create_group`, `join_group`, `set_prediction`, `send_message` …).
+- Kimlik, cihazda üretilen rastgele bir sırdır; veritabanında yalnızca SHA-256 özeti tutulur. Giriş, şifre ya da e-posta yoktur. Uygulama silinirse kimlik kaybolur.
+- Tahmin, veritabanı saatine göre maç başlamadan önce girildiyse geçerlidir. Bu kontrolü ve puanlamayı (tam skor 3, doğru sonuç 1) uygulama, maç verisine bakarak yapar; veritabanı maç saatlerini bilmez.
+- Sohbet anlık bağlantı kullanmaz; açıkken 4 saniyede bir yeni mesaj sorar.
+
+Bilinen sınırlar: başlamamış maçta başkalarının tahminini gizleyen şey arayüzdür (API'yi doğrudan çağıran bir grup üyesi görebilir); bildirim yoktur; herkese açık yorum yoktur.
+
 ## Yayıncı bilgisi
 
 Maç kartında ve maç sayfasında görünen "Yayın: …" bilgisi `server/index.js` içindeki lig tablosundaki `tv` alanından gelir. Türkiye'de yayın hakları lig bazında satıldığı için elle tutulur ve her sezon başında güncellenmelidir. Maç bazında tam kanal bilgisi yoktur.

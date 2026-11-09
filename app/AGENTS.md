@@ -26,7 +26,8 @@ Run lint and typecheck before declaring any task done.
 ## Navigation & Routing
 
 - This app uses **React Navigation** directly (native stack + bottom tabs), wired in `App.tsx`. On iOS the tab bar is the native one from `@react-navigation/bottom-tabs/unstable` (Liquid Glass on iOS 26) and headers are native large-title headers; web and Android fall back to a JS tab bar and in-app headers drawn by `src/screens/Screen.tsx`. Native tabs must only be created when `Platform.OS === 'ios'`. Route params are typed in `src/nav.ts`; screens live in `src/screens/`.
-- All data comes from the Tribün server in `../server` through `src/api.ts`. Never call the data provider (Highlightly) from the app or put its key in app code.
+- Groups, predictions and chat talk to Supabase through `src/social.ts`, calling only the SECURITY DEFINER functions defined in `../supabase/migrations/`. Tables have RLS with no policies on purpose; do not add direct table access from the app.
+- All match data comes from the Tribün server in `../server` through `src/api.ts`. Never call the data provider (Highlightly) from the app or put its key in app code.
 
 ## Building with EAS
 

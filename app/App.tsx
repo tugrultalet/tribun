@@ -17,6 +17,9 @@ import League from './src/screens/League';
 import Leagues from './src/screens/Leagues';
 import Match from './src/screens/Match';
 import MyTeams from './src/screens/MyTeams';
+import Chat from './src/screens/Chat';
+import Group from './src/screens/Group';
+import Groups from './src/screens/Groups';
 import Onboarding from './src/screens/Onboarding';
 import Picker from './src/screens/Picker';
 import Settings from './src/screens/Settings';
@@ -32,8 +35,8 @@ const BAR_BLUR = IOS && !isLiquidGlassAvailable() ? ('systemChromeMaterial' as c
 
 const TABS = [
   { name: 'Home', title: 'Maçlarım', component: Home, symbol: 'soccerball', icon: Icon.tabHome },
+  { name: 'Groups', title: 'Gruplar', component: Groups, symbol: 'person.3.fill', icon: Icon.tabGroups },
   { name: 'Leagues', title: 'Ligler', component: Leagues, symbol: 'trophy.fill', icon: Icon.tabLeagues },
-  { name: 'MyTeams', title: 'Takımlarım', component: MyTeams, symbol: 'tshirt.fill', icon: Icon.tabTeams },
   { name: 'Settings', title: 'Ayarlar', component: Settings, symbol: 'gearshape.fill', icon: Icon.tabSettings },
 ] as const;
 
@@ -107,6 +110,9 @@ function Root() {
           <Stack.Screen name="League" component={League} />
           <Stack.Screen name="Team" component={Team} />
           <Stack.Screen name="Picker" component={Picker} options={{ presentation: 'modal', title: 'Takım ekle' }} />
+          <Stack.Screen name="MyTeams" component={MyTeams} options={{ title: 'Takımlarım' }} />
+          <Stack.Screen name="Group" component={Group} />
+          <Stack.Screen name="Chat" component={Chat} />
         </>
       ) : (
         <Stack.Screen name="Onboarding" component={Onboarding} options={{ headerShown: false }} />

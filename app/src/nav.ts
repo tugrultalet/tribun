@@ -9,6 +9,9 @@ export type RootParams = {
   League: { id: number };
   Team: { team: Team };
   Picker: undefined;
+  MyTeams: undefined;
+  Group: { id: string };
+  Chat: { id: string; name: string };
 };
-export type TabParams = { Home: undefined; Leagues: undefined; MyTeams: undefined; Settings: undefined };
+export type TabParams = { Home: undefined; Groups: undefined; Leagues: undefined; Settings: undefined };
 export const useNav = () => useNavigation<NativeStackNavigationProp<RootParams>>();

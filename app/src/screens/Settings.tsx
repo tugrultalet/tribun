@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { API_URL } from '../api';
+import { useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { Card, Icon, Section, HAIR } from '../ui';
@@ -9,6 +10,7 @@ import { Screen } from './Screen';
 
 export default function Settings() {
   const t = useTheme();
+  const nav = useNav();
   const store = useStore();
   const { meta, reloadMeta } = store;
   useFocusEffect(React.useCallback(() => { reloadMeta(); }, [reloadMeta]));
@@ -31,7 +33,8 @@ export default function Settings() {
       </Section>
       <Section eyebrow="Uygulama">
         <Card>
-          {row('İlk açılış ekranını yeniden göster', undefined, true, store.restartOnboarding)}
+          {row('Takımlarım', store.teams.map((x) => x.name).join(', ') || 'Takım eklenmedi', true, () => nav.navigate('MyTeams'))}
+          {row('İlk açılış ekranını yeniden göster', undefined, false, store.restartOnboarding)}
           {row('Saat dilimi', 'Tüm maç saatleri Türkiye saatiyle (GMT+3)')}
         </Card>
       </Section>
