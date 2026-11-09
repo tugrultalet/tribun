@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useRef } from 'react';
 import { Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStore } from '../store';
 import { gradientFor } from '../teamColors';
 import { useTheme } from '../theme';
@@ -10,10 +10,17 @@ import { BackBar, ScreenTitle } from '../ui';
 
 const IOS = Platform.OS === 'ios';
 
+function useBackdropColors(team?: string, league?: number) {
+  const first = useStore().teams[0]?.name;
+  return gradientFor(team ?? first, league);
+}
+
+const TITLE_HEIGHT = 46;
+
 // Zemin: lig sayfalarında ligin, takım sayfasında takımın, diğer yerlerde takip edilen ilk takımın rengine göre geçiş.
 export function Backdrop({ team, league }: { team?: string; league?: number }) {
-  const first = useStore().teams[0]?.name;
-  return <LinearGradient colors={gradientFor(team ?? first, league)} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />;
+  const colors = useBackdropColors(team, league);
+  return <LinearGradient colors={colors} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} />;
 }
 
 // Ortak ekran iskeleti.
@@ -24,6 +31,8 @@ export function Screen({ title, tab, right, team, league, children, onRefresh, r
 }) {
   const t = useTheme();
   const nav = useNavigation();
+  const insets = useSafeAreaInsets();
+  const top = useBackdropColors(team, league)[0];
   const rightRef = useRef(right);
   rightRef.current = right;
   const hasRight = !!right;
@@ -40,12 +49,18 @@ export function Screen({ title, tab, right, team, league, children, onRefresh, r
         <Backdrop team={team} league={league} />
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={{ paddingHorizontal: 14, paddingTop: tab ? 0 : 4, paddingBottom: 28 }}
+          contentContainerStyle={{ paddingHorizontal: 14, paddingTop: tab ? TITLE_HEIGHT : 4, paddingBottom: 28 }}
           keyboardShouldPersistTaps="handled"
           refreshControl={refresh}>
-          {tab && <View style={{ marginHorizontal: -14 }}><ScreenTitle title={title ?? ''} right={right} /></View>}
           {children}
         </ScrollView>
+        {tab && (
+          // Sabit başlık: içerik altından kayar ve başlığın altında zemine doğru solar.
+          <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
+            <LinearGradient pointerEvents="none" colors={[top, top, `${top}00`]} locations={[0, 0.72, 1]} style={[StyleSheet.absoluteFill, { bottom: -14 }]} />
+            <View style={{ paddingTop: insets.top }}><ScreenTitle title={title ?? ''} right={right} /></View>
+          </View>
+        )}
       </View>
     );
   }
