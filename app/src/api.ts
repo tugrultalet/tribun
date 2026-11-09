@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIsFocused } from '@react-navigation/native';
 
-// Tribün sunucusunun adresi. Telefonda denerken bilgisayarın yerel ağ IP'sini ya da yayındaki sunucuyu verin.
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8787').replace(/\/$/, '');
+// Tribün sunucusunun adresi. Geliştirmede `EXPO_PUBLIC_API_URL` ile bilgisayarın yerel ağ adresi verilir;
+// verilmezse yerel sunucuya gidilir. Yayın (TestFlight/App Store) sürümü ise varsayılan olarak Render'daki sunucuyu kullanır.
+const PRODUCTION_API_URL = 'https://tribun-api.onrender.com';
+export const API_URL = (process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? 'http://localhost:8787' : PRODUCTION_API_URL)).replace(/\/$/, '');
 
 export type Team = { id: number; name: string; logo: string };
 export type Fixture = {
