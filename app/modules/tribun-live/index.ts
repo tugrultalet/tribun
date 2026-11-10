@@ -18,14 +18,19 @@ export type LiveAttributes = {
 };
 export type LiveState = { home: number; away: number; minute: string; status: 'ns' | 'live' | 'ht' | 'ft'; note?: string | null; clock?: number | null };
 
-export const liveSupported = (): boolean => { try { return !!native?.isSupported(); } catch { return false; } };
-export const liveMatches = (): number[] => { try { return native?.activeMatches() ?? []; } catch { return []; } };
+// Her fonksiyon ayrı denetlenir: telefondaki derleme daha eskiyse (ör. saveLogos yok) uygulama çökmez, o özellik atlanır.
+const has = <K extends keyof Native>(k: K): boolean => typeof native?.[k] === 'function';
+
+export const liveSupported = (): boolean => { try { return has('isSupported') && !!native!.isSupported(); } catch { return false; } };
+export const liveMatches = (): number[] => { try { return has('activeMatches') ? native!.activeMatches() : []; } catch { return []; } };
 export async function startLive(a: LiveAttributes, s: LiveState, channel: string | null): Promise<boolean> {
-  if (!native) return false;
-  await native.start(JSON.stringify(a), JSON.stringify(s), channel);
+  if (!has('start')) return false;
+  await native!.start(JSON.stringify(a), JSON.stringify(s), channel);
   return true;
 }
-export const updateLive = (matchId: number, s: LiveState) => native?.update(matchId, JSON.stringify(s)) ?? Promise.resolve();
-export const endLive = (matchId: number) => native?.end(matchId) ?? Promise.resolve();
+export const updateLive = (matchId: number, s: LiveState): Promise<void> =>
+  has('update') ? native!.update(matchId, JSON.stringify(s)).catch(() => {}) : Promise.resolve();
+export const endLive = (matchId: number): Promise<void> => (has('end') ? native!.end(matchId).catch(() => {}) : Promise.resolve());
 // Takım logolarını widget'ların okuyabileceği App Group klasörüne kaydeder ({ takımNo: adres }).
-export const saveLogos = (logos: Record<string, string>): Promise<number> => native?.saveLogos(logos).catch(() => 0) ?? Promise.resolve(0);
+export const saveLogos = (logos: Record<string, string>): Promise<number> =>
+  has('saveLogos') ? native!.saveLogos(logos).catch(() => 0) : Promise.resolve(0);
