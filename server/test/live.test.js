@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { apnsJwt, createApns } from '../lib/apns.js';
-import { createLive, liveState, nextUpdate, payloadFor } from '../lib/live.js';
+import { createLive, liveState, multiPayload, nextUpdate, payloadFor } from '../lib/live.js';
 
 const f = (o = {}) => ({ id: 7, st: 'live', s: [1, 0], min: 67, extra: null, short: '2H', time: '20:45', h: { name: 'GS' }, a: { name: 'FB' }, ...o });
 
@@ -59,4 +59,28 @@ test('createApns + createLive: kanal açılır, güncelleme yayınlanır', async
   assert.equal(pushes.length, 1); assert.equal(pushes[0].channel, 'CH1');
   assert.equal(calls[0].origin, 'https://api-manage-broadcast.sandbox.push.apple.com:2195');
   assert.ok(store.some(([fn]) => fn === 'server_set_live_channel'));
+});
+
+test('çoklu kart: cihaz anahtarına iki maçın durumu birlikte gider', async () => {
+  const calls = [];
+  const apns = { env: 'development', createChannel: async () => 'CH', broadcast: async () => {}, deleteChannel: async () => {},
+    toToken: async (token, payload, priority) => { calls.push({ token, payload, priority }); } };
+  const supa = { rpc: async (fn) => (fn === 'server_live_tokens' ? [{ token: 'T1', matches: [7, 8] }] : fn === 'server_live_channels' ? [] : null) };
+  const watched = [];
+  const live = createLive({ apns, supa, watch: (id) => watched.push(id) });
+  await live.onFixtures([f({ id: 7 }), f({ id: 8, s: [0, 0], min: 12 })], 1_000_000_000);
+  assert.deepEqual(watched.sort(), [7, 8]);
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].payload.aps['content-state'].slots.map((x) => [x.id, x.home, x.away]), [[7, 1, 0], [8, 0, 0]]);
+  // 8. maçta gol: kart uyarıyla ve hemen gider
+  await live.onFixtures([f({ id: 8, s: [1, 0], min: 13 })], 1_000_030_000);
+  assert.equal(calls[1].priority, 10);
+  assert.equal(calls[1].payload.aps.alert.title, '⚽ GOL! GS');
+  assert.equal(calls[1].payload.aps['content-state'].slots[1].note, '⚽ GOL! GS');
+});
+
+test('multiPayload: tüm maçlar bitince kart kapanır', () => {
+  const states = new Map([[1, { home: 1, away: 0, minute: 'Maç sonu', status: 'ft', clock: null }], [2, { home: 2, away: 2, minute: 'Maç sonu', status: 'ft', clock: null }]]);
+  const p = multiPayload([1, 2], states, new Map(), null, 1_000_000_000);
+  assert.equal(p.aps.event, 'end');
 });

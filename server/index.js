@@ -122,7 +122,7 @@ const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_pub
 const supa = createSupa({ url: SUPABASE_URL });
 let apnsCfg = null;
 try { apnsCfg = loadApnsConfig(process.env); } catch (e) { console.warn(`UYARI: APNs anahtarı okunamadı: ${e.message}`); }
-if (apnsCfg && supa) live = createLive({ apns: createApns(apnsCfg), supa });
+if (apnsCfg && supa) live = createLive({ apns: createApns(apnsCfg), supa, watch: (id) => core.watchMatch(id) });
 async function publicRpc(fn, args) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: 'POST', headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'content-type': 'application/json' },
