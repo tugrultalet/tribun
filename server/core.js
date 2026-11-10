@@ -305,7 +305,13 @@ export function createCore({ provider, cacheDir, notify = null, onRefresh = null
     });
   }
 
-  function getMatch(id) {
+  // Maç ayrıntısı. Adlar her okumada yeniden Türkçeleştirilir: milli takım listesi yüklenmeden önce önbelleğe
+  // giren maç ("Belgium") da sonradan doğru adla ("Belçika") gelir.
+  async function getMatch(id) {
+    const m = await getMatchRaw(id);
+    return { ...m, fixture: { ...m.fixture, h: localized(m.fixture.h), a: localized(m.fixture.a) } };
+  }
+  function getMatchRaw(id) {
     const ttl = (d) => {
       const f = d.fixture, age = Date.now() - f.ts * 1000;
       if (f.st === 'live') return liveTtl();
@@ -321,7 +327,7 @@ export function createCore({ provider, cacheDir, notify = null, onRefresh = null
         if (e.kind === 'notfound') save(`missing:${id}`, true, 6 * HOUR);
         throw e;
       }
-      norm([data.fixture]);
+      await withNationalNames([data.fixture]);
       return { updated: Date.now(), ...data };
     });
   }
