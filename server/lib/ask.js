@@ -6,9 +6,12 @@ export const validAskToken = (t) => TOKEN.test(String(t || '').toUpperCase());
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const TR = new Intl.DateTimeFormat('tr-TR', { timeZone: 'Europe/Istanbul', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 
-// Önizleme kartının başlığı kısa: asıl cümle ("… maçı 1-1 biter dedim. Senin skor tahminin ne?") mesajın kendisinde.
+// Önizleme kartının başlığı (WhatsApp'ta görselin altındaki kalın satır): gönderenin ağzından tek cümle.
+// Mesajın kendisi yalnızca bağlantı.
 export function askText(info) {
-  return `${info.home} - ${info.away} · Skor tahmini`;
+  return info.pick
+    ? `${info.home} - ${info.away} maçı ${info.pick.h}-${info.pick.a} biter dedim. Senin skor tahminin ne?`
+    : `${info.home} - ${info.away} maçı için tahminimi yaptım. Senin skor tahminin ne?`;
 }
 // Web sayfasındaki tam cümle (uygulaması olmayan kişi bunu okur).
 export function askLead(info) {
@@ -73,7 +76,7 @@ ${closed ? '<p class="lead">Maç başladı, tahminler kapandı.</p>' : `
     .catch(function(x){err.textContent=x.message;go.disabled=false;go.textContent='Tahminimi gönder';});};
 })();
 </script>`;
-  return shell(title, `${info.home}–${info.away} · Tribün`, body, script, image);
+  return shell(title, `${info.sender} · Tribün`, body, script, image);
 }
 
 function shell(title, desc, body, script, image) {
