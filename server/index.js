@@ -87,6 +87,7 @@ const routes = [
   [/^\/api\/results$/, (m, q, ctx) => core.results([...new Set((q.get('ids') || '').split(',').map(Number).filter(validId))].slice(0, 40), ctx)],
   [/^\/api\/match\/(-?\d{1,12})$/, (m, q, ctx) => core.match(Number(m[1]), ctx)],
   [/^\/api\/match\/(-?\d{1,12})\/lineups$/, (m, q, ctx) => core.lineups(Number(m[1]), ctx)],
+  [/^\/api\/match\/(-?\d{1,12})\/odds$/, (m, q, ctx) => core.odds(Number(m[1]), ctx)],
   [/^\/api\/standings\/(\d+)$/, (m) => core.standings(knownLeague(m))],
   [/^\/api\/league\/(\d+)\/fixtures$/, (m) => core.leagueFixtures(knownLeague(m))],
   [/^\/api\/league\/(\d+)\/teams$/, (m) => core.teams(knownLeague(m))],
@@ -109,7 +110,7 @@ setInterval(() => perIp.sweep(), 5 * 60000).unref();
 // Yanıt ne kadar süre önbellekte (telefon/ara sunucu) tutulabilir: canlı veri kısa, yavaş değişen veri uzun.
 const cacheFor = (p) =>
   /^\/api\/(match\/[^/]+|results|mine|fixtures)$/.test(p) ? 'public, max-age=10'
-  : /^\/api\/(league\/\d+\/fixtures|team\/[^/]+|match\/[^/]+\/lineups)$/.test(p) ? 'public, max-age=30'
+  : /^\/api\/(league\/\d+\/fixtures|team\/[^/]+|match\/[^/]+\/(lineups|odds))$/.test(p) ? 'public, max-age=30'
   : /^\/api\/(standings\/\d+|league\/\d+\/teams|team\/[^/]+\/squad|national|meta)$/.test(p) ? 'public, max-age=300'
   : 'no-store';
 // Universal Links: tribunapp.io/j/KOD bağlantısı uygulama kuruluysa doğrudan uygulamada açılır.

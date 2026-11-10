@@ -48,3 +48,9 @@ export function gradientFor(teamName?: string, leagueKey?: string): readonly [st
   const hit = name ? COLORS.find(([key]) => name.includes(key)) : undefined;
   return hit ? fade(hit[1]) : DEFAULT_GRADIENT;
 }
+
+// Takımın ana rengi (bilinmiyorsa undefined); ihtimal barı gibi küçük vurgular için.
+export function teamColor(teamName?: string): string | undefined {
+  const name = (teamName || '').toLocaleLowerCase('tr');
+  return name ? COLORS.find(([key]) => name.includes(key))?.[1] : undefined;
+}

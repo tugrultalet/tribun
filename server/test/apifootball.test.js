@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createApiFootball, fullName } from '../providers/apifootball.js';
+import { averageOdds, createApiFootball, fullName } from '../providers/apifootball.js';
 import { fakeFetch, sample } from './helpers.js';
 
 const ok = (response, headers = {}) => ({ headers: { 'x-ratelimit-limit': '300', 'x-ratelimit-requests-limit': '7500', 'x-ratelimit-requests-remaining': '7000', ...headers }, body: { errors: [], response } });
@@ -147,4 +147,15 @@ test('kırmızı kartlar takım başına sayılır (ikinci sarı dahil)', async 
   assert.deepEqual(x.rc, [0, 2]);
   const { provider: p2 } = make(() => ok([{ ...f, events: [] }]));
   assert.equal((await p2.refresh([{ id: 1 }]))[0].rc, undefined);
+});
+
+test('oranlar şirketler arası ortalanır, ihtimaller toplam 100', () => {
+  const r = averageOdds([{ bookmakers: [
+    { bets: [{ id: 1, name: 'Match Winner', values: [{ value: 'Home', odd: '1.90' }, { value: 'Draw', odd: '3.40' }, { value: 'Away', odd: '3.90' }] }] },
+    { bets: [{ id: 1, name: 'Match Winner', values: [{ value: 'Home', odd: '2.00' }, { value: 'Draw', odd: '3.40' }, { value: 'Away', odd: '3.70' }] }] },
+  ] }]);
+  assert.deepEqual(r.odds, [1.95, 3.4, 3.8]);
+  assert.equal(r.pct[0] + r.pct[1] + r.pct[2], 100);
+  assert.ok(r.pct[0] > r.pct[2]);
+  assert.equal(averageOdds([]), null);
 });

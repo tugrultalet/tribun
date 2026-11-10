@@ -9,6 +9,7 @@ import { Button, Panel } from '../ui';
 import { Field } from '../ui';
 import { Community, Dist, MatchPicks, setJoker, setPick, useMyPicks } from './hooks';
 import { Stepper } from './Stepper';
+import { useOdds } from './Preview';
 import { possessive } from './turkish';
 import { AskFriends } from './AskFriends';
 import { notePickSaved } from '../review';
@@ -89,6 +90,7 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
           <Text style={{ fontSize: 12.5, color: state === 'error' ? t.live : t.muted, textAlign: 'center' }}>
             {state === 'saving' ? 'Kaydediliyor…' : state === 'error' ? error : saved || state === 'saved' ? 'Kaydedildi · başlama düdüğüne kadar değiştirebilirsin' : 'Tam skor 3 puan, doğru sonuç 1 puan'}
           </Text>
+          <FavoriteHint f={f} h={h} a={a} picked={!!saved || touched.current} crowd={community.data} />
           {pending > 0 && <Text style={{ fontSize: 12.5, color: t.muted }}>{pending} arkadaşın tahmin girdi; maç başlayınca görürsün.</Text>}
           {saved && <Joker secret={secret} matchId={f.id} on={!!saved.joker} onChange={picks.reload} />}
           {saved && <AskFriends f={f} secret={secret} pick={{ h: saved.h, a: saved.a }} />}
@@ -173,6 +175,31 @@ function CommunityLine({ f, data }: { f: Fixture; data?: Community }) {
   return (
     <View style={{ gap: 3, marginTop: 2 }}>
       {lines.map((l) => <Text key={l} numberOfLines={1} style={{ fontSize: 12.5, color: t.muted, textAlign: 'center' }}>{l}</Text>)}
+    </View>
+  );
+}
+
+// Tahmin girerken ipucu: oranlara göre favori ve (Tribün'de yeterli tahmin varsa) seçtiğin sonucu %25'ten azı
+// seçtiyse "tutarsa sürpriz +2". Sürpriz bonusu oranlardan değil, topluluğun seçiminden hesaplanır.
+function FavoriteHint({ f, h, a, picked, crowd }: { f: Fixture; h: number; a: number; picked: boolean; crowd?: Community }) {
+  const t = useTheme();
+  const o = useOdds(f).data?.odds;
+  if (!o) return null;
+  const fav = o.pct[0] >= o.pct[2] ? 0 : 2;
+  const favName = fav === 0 ? f.h.name : f.a.name;
+  const side = h > a ? 0 : h === a ? 1 : 2;
+  const tr = crowd && !crowd.hidden ? crowd.tribun : null;
+  const share = tr ? [tr.h, tr.d, tr.a][side] / tr.n : null;
+  const surprise = picked && share !== null && share < 0.25;
+  const against = picked && side !== fav;
+  return (
+    <View style={{ alignSelf: 'stretch', backgroundColor: t.accentSoft, borderRadius: 12, paddingVertical: 9, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+      <Text style={{ fontSize: 13, color: t.fg, lineHeight: 18 }}>
+        Favori <Text style={{ fontWeight: '700', color: t.accent }}>{favName} %{o.pct[fav]}</Text>.
+        {picked ? (against ? ' Tahminin favoriye karşı.' : ' Tahminin favoriyle aynı yönde.') : ''}
+        {surprise ? ' Tutarsa sürpriz bonusu ' : ''}
+      </Text>
+      {surprise && <View style={{ backgroundColor: '#FFA53D', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}><Text style={{ fontSize: 11.5, fontWeight: '800', color: '#0B1030' }}>+2</Text></View>}
     </View>
   );
 }

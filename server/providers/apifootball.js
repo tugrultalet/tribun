@@ -132,6 +132,28 @@ export function fullName(name, firstname) {
   return `${given} ${m[2]}`;
 }
 
+// "Match Winner" oranlarının ortalaması ve bunlardan çıkan ihtimaller (bahis payı ayıklanmış, toplam 100).
+export function averageOdds(response) {
+  const sums = [0, 0, 0], counts = [0, 0, 0];
+  const KEYS = { Home: 0, Draw: 1, Away: 2 };
+  for (const r of Array.isArray(response) ? response : []) {
+    for (const b of r.bookmakers || []) {
+      const bet = (b.bets || []).find((x) => x.id === 1 || x.name === 'Match Winner');
+      for (const v of bet?.values || []) {
+        const i = KEYS[v.value], o = Number(v.odd);
+        if (i == null || !(o > 1)) continue;
+        sums[i] += o; counts[i] += 1;
+      }
+    }
+  }
+  if (counts.some((c) => !c)) return null;
+  const odds = sums.map((x, i) => Math.round((x / counts[i]) * 100) / 100);
+  const inv = odds.map((o) => 1 / o), total = inv[0] + inv[1] + inv[2];
+  const pct = inv.map((x) => Math.round((x / total) * 100));
+  pct[1] = 100 - pct[0] - pct[2]; // yuvarlama farkı beraberliğe
+  return { odds, pct, books: Math.min(...counts) };
+}
+
 export function createApiFootball({ key, baseUrl, fetchImpl = fetch, sleepImpl = sleep } = {}) {
   const base = baseUrl || 'https://v3.football.api-sports.io/';
   const state = { plan: null, limitDay: null, remaining: null };
@@ -264,7 +286,7 @@ export function createApiFootball({ key, baseUrl, fetchImpl = fetch, sleepImpl =
         rows: g.map((x) => ({
           rank: x.rank, team: team(x.team), pts: x.points, gd: x.goalsDiff,
           p: x.all.played, w: x.all.win, d: x.all.draw, l: x.all.lose, gf: x.all.goals.for, ga: x.all.goals.against,
-          form: (x.form || '').slice(-5), zone: zone(x.description),
+          form: (x.form || '').slice(0, 5) /* en yeni maç başta */, zone: zone(x.description),
         })),
       }));
     },
@@ -288,6 +310,10 @@ export function createApiFootball({ key, baseUrl, fetchImpl = fetch, sleepImpl =
         }
       }
       return [...seen.values()];
+    },
+    // Maç öncesi 1X2 oranları: tüm bahis şirketlerinin ortalaması (şirket adı tutulmaz).
+    async odds(id) {
+      return averageOdds(await request(`odds?fixture=${id}`));
     },
     async squad(id) {
       const s = (await request(`players/squads?team=${id}`))[0];
