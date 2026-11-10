@@ -22,6 +22,7 @@ export function matchRow(f) {
   return {
     id: f.id, kickoff: new Date(f.ts * 1000).toISOString(), status: f.st,
     h: f.s ? f.s[0] : null, a: f.s ? f.s[1] : null, home: f.h?.name ?? null, away: f.a?.name ?? null, league: f.lg ?? null,
+    home_id: f.h?.id ?? null, away_id: f.a?.id ?? null,
   };
 }
 

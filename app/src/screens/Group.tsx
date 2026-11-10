@@ -19,6 +19,7 @@ import { useRemote } from '../remoteConfig';
 import { InviteSheet } from './InviteSheet';
 import { Screen } from './Screen';
 import { MatchRooms } from './MatchRooms';
+import { LeagueTable } from './LeagueTable';
 
 // Grup sayfası: davet, sohbete giriş, haftanın maçlarına tahmin ve grup puan tablosu (hafta / sezon).
 export default function Group({ route }: NativeStackScreenProps<RootParams, 'Group'>) {
@@ -36,6 +37,7 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
   const [matchIds, setMatchIds] = useState<number[] | null>(null);
   const state = useRpc<GroupDetail>('group_detail', secret ? { p_secret: secret, p_group: id, ...(matchIds ? { p_matches: matchIds } : {}) } : null, 30000);
   const group = state.data?.group;
+  const open = group?.kind === 'open';
   const fixtures = useGroupFixtures(group);
   const idsKey = (fixtures.data ?? []).filter((f) => f.st !== 'off' && daysBetween(store.meta.today, f.date) <= 8).sort((x, y) => y.ts - x.ts).slice(0, 300).map((f) => f.id).join(',');
   useEffect(() => { if (idsKey) setMatchIds(idsKey.split(',').map(Number)); }, [idsKey]);
@@ -53,11 +55,13 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
           <>
             <View style={{ alignItems: 'center', gap: 6, paddingTop: 4, paddingBottom: 14 }}>
               <Crest uri={d.group.team.logo} size={56} />
-              <Text style={{ fontSize: 24, fontWeight: '700', letterSpacing: -0.3, color: t.fg, textAlign: 'center' }}>{d.group.name}</Text>
-              <Text style={{ fontSize: 13, color: t.muted }}>{d.members.length} üye · Davet kodu {d.group.code}</Text>
+              <Text style={{ fontSize: 24, fontWeight: '700', letterSpacing: -0.3, color: t.fg, textAlign: 'center' }}>{d.group.name}{d.group.verified ? ' ✓' : ''}</Text>
+              <Text style={{ fontSize: 13, color: t.muted }}>{open ? `Açık lig · ${d.group.members} üye` : `${d.members.length} üye`} · Davet kodu {d.group.code}</Text>
+              {d.group.verified && <Text style={{ fontSize: 12, color: t.accent }}>Doğrulanmış kurucu</Text>}
+              {d.owner && d.arrivals != null && open && <Text style={{ fontSize: 13, color: t.fg }}>Bu linkle gelen: {d.arrivals} kişi</Text>}
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              {chatOn && <View style={{ flex: 1 }}><Button label="Sohbet" onPress={() => nav.navigate('Chat', { id, name: d.group.name })} /></View>}
+              {chatOn && <View style={{ flex: 1 }}><Button label={open ? 'Duyurular' : 'Sohbet'} onPress={() => nav.navigate('Chat', { id, name: open ? `${d.group.name} · Duyurular` : d.group.name })} /></View>}
               <View style={{ flex: 1 }}><Button kind="sec" label="Davet et" onPress={() => setInviting(true)} /></View>
             </View>
             {chatOn && d.group.last_message && (
@@ -65,14 +69,14 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
                 <Text numberOfLines={1} style={{ textAlign: 'center', fontSize: 13, color: t.muted, marginTop: 10 }}>{d.group.last_message.name}: {d.group.last_message.body}</Text>
               </Pressable>
             )}
-            {chatOn && fixtures.data && <MatchRooms group={id} fixtures={fixtures.data} secret={secret} />}
+            {chatOn && !open && fixtures.data && <MatchRooms group={id} fixtures={fixtures.data} secret={secret} />}
             <View style={{ marginTop: 8 }}>
               <Tabs value={tab} onChange={setTab} options={[['predict', 'Tahmin'], ['table', 'Puan']]} />
             </View>
             <Loader state={fixtures}>
               {(list) => tab === 'predict'
                 ? <Predict detail={d} fixtures={list} today={store.meta.today} secret={secret} onSaved={state.reload} />
-                : <Table detail={d} fixtures={list} today={store.meta.today} />}
+                : open ? <LeagueTable group={id} secret={secret} /> : <Table detail={d} fixtures={list} today={store.meta.today} />}
             </Loader>
             {inviting && <InviteSheet group={d.group} onClose={() => setInviting(false)} />}
             <Pressable onPress={leave} accessibilityRole="button" style={{ alignSelf: 'center', padding: 14, marginTop: 10 }}>

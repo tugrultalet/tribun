@@ -9,10 +9,14 @@ export type Group = {
   // Kapsam: boşsa grubun takımının maçları; {type:'leagues'} ise seçilen turnuvaların maçları.
   scope?: { type: 'leagues'; ids: number[] } | null;
   last_message: { body: string; name: string; created_at: string } | null;
+  // open: açık lig (herkese açık bağlantı, sıralama sunucuda, yalnızca kurucu duyuru yazar). verified: doğrulanmış kurucu.
+  kind?: 'friends' | 'open';
+  verified?: boolean;
 };
 import type { Detail, Member, Prediction } from './groups/standings';
 export type { Member, Prediction };
-export type GroupDetail = Detail & { group: Group };
+// owner: ben kurucuysam. arrivals: (yalnızca kurucuya) bu grubun bağlantısıyla gelen cihaz sayısı.
+export type GroupDetail = Detail & { group: Group; owner?: boolean; arrivals?: number | null };
 export type Message = { id: number; profile_id: string; name: string; body: string; created_at: string };
 
 // Veritabanındaki izinli fonksiyonlardan birini çağırır (bkz. supabase/migrations).
