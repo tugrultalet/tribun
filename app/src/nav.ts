@@ -12,6 +12,7 @@ export type RootParams = {
   MyTeams: undefined;
   Group: { id: string };
   Chat: { id: string; name: string };
+  Feedback: undefined;
 };
 // Groups.code: davet bağlantısından (tribun://join/KOD) gelen kod; katılma formu bununla açılır.
 export type TabParams = { Home: undefined; Groups: { code?: string } | undefined; Leagues: undefined; Settings: undefined };

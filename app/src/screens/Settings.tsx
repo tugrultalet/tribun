@@ -1,7 +1,9 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { API_URL } from '../api';
+import { API_URL, PUBLIC_URL } from '../api';
+import { APP_VERSION } from '../config';
+import { track } from '../telemetry';
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
@@ -24,6 +26,15 @@ export default function Settings() {
       {onPress && <Icon.chevron color={t.fg} />}
     </Pressable>
   );
+  // Hesap silme: geri alınamaz olduğu için onay istenir.
+  const confirmDelete = () => {
+    const go = () => store.deleteAccount().then(() => track('account_deleted'), (e) => Alert.alert('Silinemedi', (e as Error).message));
+    if (Platform.OS === 'web') { if (globalThis.confirm?.('Hesabın ve tüm verilerin kalıcı olarak silinsin mi?')) go(); return; }
+    Alert.alert('Hesabımı sil', 'Takma adın, grup üyeliklerin, mesajların ve tahminlerin kalıcı olarak silinir. Kurduğun gruplar başka üye varsa ona devredilir. Bu işlem geri alınamaz.', [
+      { text: 'Vazgeç', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: go },
+    ]);
+  };
   const refresh = meta.liveTtl >= 60 ? `${Math.round(meta.liveTtl / 60)} dakikada bir` : `${meta.liveTtl} saniyede bir`;
   const quota = meta.error ? meta.error : `${meta.plan ?? '–'} plan · bugün ${meta.used ?? '–'} / ${meta.limitDay ?? '–'} istek kullanıldı`;
   return (
@@ -36,6 +47,14 @@ export default function Settings() {
           {row('Takımlarım', store.teams.map((x) => x.name).join(', ') || 'Takım eklenmedi', true, () => nav.navigate('MyTeams'))}
           {row('İlk açılış ekranını yeniden göster', undefined, false, store.restartOnboarding)}
           {row('Saat dilimi', 'Tüm maç saatleri Türkiye saatiyle (GMT+3)')}
+        </Card>
+      </Section>
+      <Section eyebrow="Destek ve gizlilik">
+        <Card>
+          {row('Geri bildirim gönder', 'Hata ya da öneri; e-posta gerekmez', true, () => nav.navigate('Feedback'))}
+          {row('Gizlilik ve KVKK', 'Hangi verileri neden işlediğimiz', false, () => Linking.openURL(`${PUBLIC_URL}/gizlilik`).catch(() => {}))}
+          {store.me ? row('Hesabımı sil', `Takma ad (${store.me.name}), gruplar, mesajlar ve tahminler kalıcı olarak silinir`, false, confirmDelete) : null}
+          {row('Sürüm', APP_VERSION)}
         </Card>
       </Section>
       <Section eyebrow="Veri">

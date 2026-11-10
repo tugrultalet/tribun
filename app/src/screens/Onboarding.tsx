@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { National, Team, useApi } from '../api';
 import type { FollowedTeam } from '../follow';
 import { useStore } from '../store';
+import { track } from '../telemetry';
 import { useTheme } from '../theme';
 import { Button, Crest } from '../ui';
 import { NationalTeams, TeamGrid } from './Picker';
@@ -32,7 +33,10 @@ export default function Onboarding() {
     </View>
   );
   const all = (): FollowedTeam[] => (main ? [main, ...nat.filter((x) => x.id !== main.id), ...others.filter((x) => x.id !== main.id && !nat.some((n) => n.id === x.id))] : [...nat, ...others]);
-  const finish = (tab?: 'Groups') => store.finishOnboarding(all(), main?.id, tab);
+  const finish = (tab?: 'Groups') => {
+    track('onboarding_complete', { teams: all().length, national: nat.length > 0, others: others.length, group: tab === 'Groups' });
+    store.finishOnboarding(all(), main?.id, tab);
+  };
   // Ana takım zaten milli takımsa milli takım adımı atlanır.
   const next = () => setStep(step === 1 && main?.kind === 'national' ? 3 : step + 1);
 

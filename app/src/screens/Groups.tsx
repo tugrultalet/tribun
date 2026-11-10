@@ -8,6 +8,7 @@ import { Group, rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { ScoreCard } from '../game/ScoreCard';
+import { track } from '../telemetry';
 import { MAX_SCOPE_LEAGUES } from '../groups/scope';
 import { Button, Card, Crest, Empty, Icon, Loader, Panel, Seg } from '../ui';
 import { Screen } from './Screen';
@@ -82,6 +83,7 @@ function MyGroups({ secret }: { secret: string }) {
       setForm('none'); setName(''); setCode('');
       nav.setParams({ code: undefined } as never);
       state.reload();
+      track(form === 'join' ? 'group_joined' : 'group_created', form === 'join' ? undefined : { scope: kind });
       nav.navigate('Group', { id: group.id });
     } catch (e) { setError((e as ApiError).message); } finally { setBusy(false); }
   };

@@ -12,6 +12,8 @@ import { useTheme } from '../theme';
 import { shortName } from '../names';
 import { setPick } from '../game/hooks';
 import { Stepper } from '../game/Stepper';
+import { notePickSaved } from '../review';
+import { track } from '../telemetry';
 import { Button, Card, Crest, Empty, Icon, Loader, Panel, Seg, Tabs } from '../ui';
 import { InviteSheet } from './InviteSheet';
 import { Screen } from './Screen';
@@ -98,6 +100,7 @@ function WeekMatch({ f, detail, today, secret, onSaved }: { f: Fixture; detail: 
     timer.current = setTimeout(async () => {
       try {
         await setPick(secret, f.id, nh, na, f.ts);
+        track('pick_saved', { source: 'group' }); notePickSaved();
         setState('saved'); onSaved();
       } catch (e) { setState('error'); setError((e as ApiError).message); }
     }, 600);

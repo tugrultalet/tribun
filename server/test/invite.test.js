@@ -16,3 +16,10 @@ test('sayfa: yalnızca https mağaza bağlantısı kabul edilir', () => {
   assert.ok(invitePage({ code: 'ABC234', storeUrl: 'https://apps.apple.com/app/x' }).includes('apps.apple.com'));
   assert.ok(!invitePage({ code: 'ABC234', storeUrl: 'javascript:alert(1)' }).includes('javascript:'));
 });
+
+import { privacyPage } from '../lib/privacy.js';
+test('gizlilik sayfası: hesap silme anlatılır, e-posta yalnızca geçerliyse ve kaçışlı gösterilir', () => {
+  assert.ok(privacyPage({}).includes('Hesabımı sil'));
+  assert.ok(privacyPage({ contact: 'destek@ornek.com' }).includes('mailto:destek@ornek.com'));
+  assert.ok(!privacyPage({ contact: '<script>@x.y' }).includes('<script>'));
+});
