@@ -117,6 +117,8 @@ const cacheFor = (p) =>
   : 'no-store';
 // Universal Links: tribunapp.io/j/KOD bağlantısı uygulama kuruluysa doğrudan uygulamada açılır.
 // Önizleme görseli: istek bilgisi + maç (logolar, lig, saat). Son 200 görsel bellekte tutulur.
+// Görsel tasarımı değişince artırılır: WhatsApp görseli adresine göre sakladığı için yeni tasarım yeni adresle gelir.
+const OG_DESIGN = 2;
 const ogCache = new Map();
 // Milli takım adları Türkçe (Belgium → Belçika); kulüp adları olduğu gibi kalır.
 const trName = (n) => { const t = nationalName(n); return t.toLowerCase() === String(n || '').replace(/-/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase() ? n : t; };
@@ -241,7 +243,7 @@ const server = http.createServer(async (req, res) => {
       'x-frame-options': 'DENY',
     });
     // Görsel adresinde tahmin de var: tahmin değişince WhatsApp eski görseli kullanmasın.
-    const image = info ? `https://${PUBLIC_HOST}/t/${ask[1].toUpperCase()}/og.png${info.pick ? `?p=${info.pick.h}-${info.pick.a}` : ''}` : null;
+    const image = info ? `https://${PUBLIC_HOST}/t/${ask[1].toUpperCase()}/og.png?d=${OG_DESIGN}${info.pick ? `&p=${info.pick.h}-${info.pick.a}` : ''}` : null;
     return res.end(askPage({ token: ask[1], info, supabaseUrl: SUPABASE_URL, supabaseKey: SUPABASE_PUBLISHABLE_KEY, storeUrl: process.env.APP_STORE_URL, image }));
   }
   for (const [re, handler] of routes) {
