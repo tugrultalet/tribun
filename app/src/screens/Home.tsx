@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Fixture, Mine, useApi } from '../api';
 import { dayLabel, daysBetween } from '../dates';
 import { euroIds, followedFixtures } from '../follow';
+import { inScope, scopeLeagues, useLeagueFixtures } from '../groups/scope';
 import { sameWeek } from '../groups/standings';
 import { useNav } from '../nav';
 import { Group, rpc, useRpc } from '../social';
@@ -37,12 +38,22 @@ export default function Home() {
   const day = useApi<{ date: string; fixtures: Fixture[] }>(scope === 'all' ? `/api/fixtures?date=${store.meta.today}` : null, 60000);
   const openMatch = (f: Fixture) => nav.navigate('Match', { id: f.id });
 
-  // Grup maçları: grup takımının, bugünden bir hafta içindeki başlamamış / canlı maçları.
+  // Turnuva kapsamlı gruplar ve "tüm maçlarını takip et" turnuvaları için turnuva fikstürleri (sunucu önbelleğinden).
+  const full = store.full ?? [];
+  const leagueIds = useMemo(() => [...new Set([...groups.flatMap((g) => scopeLeagues(g) ?? []), ...full])], [groups, full]);
+  const leagueFx = useLeagueFixtures(scope === 'mine' ? leagueIds : []);
+  const teamFx = state.data?.fixtures ?? [];
+
+  // Grup maçları: grubun kapsamındaki, bugünden bir hafta içindeki başlamamış / canlı maçlar (takım ya da turnuva kapsamı).
   const candidates = useMemo(() => {
-    const byTeam = new Set(groups.map((g) => g.team.id));
-    return (state.data?.fixtures ?? []).filter((f) => (f.st === 'ns' || f.st === 'live') && (byTeam.has(f.h.id) || byTeam.has(f.a.id))
-      && daysBetween(store.meta.today, f.date) <= GROUP_WINDOW_DAYS && (daysBetween(store.meta.today, f.date) >= 0 || sameWeek(f.date, store.meta.today)));
-  }, [groups, state.data, store.meta.today]);
+    const seen = new Set<number>();
+    return [...teamFx, ...(leagueFx.data ?? [])].filter((f) => {
+      if (seen.has(f.id)) return false;
+      seen.add(f.id);
+      const n = daysBetween(store.meta.today, f.date);
+      return (f.st === 'ns' || f.st === 'live') && n <= GROUP_WINDOW_DAYS && (n >= 0 || sameWeek(f.date, store.meta.today)) && groups.some((g) => inScope(g, f));
+    });
+  }, [groups, teamFx, leagueFx.data, store.meta.today]);
   const matchKey = candidates.map((f) => f.id).join(',');
   const [status, setStatus] = useState<Status[]>([]);
   useEffect(() => {
@@ -57,7 +68,7 @@ export default function Home() {
   const notes = useMemo(() => {
     const out = new Map<number, RowNote>();
     for (const f of candidates) {
-      const items = groups.filter((g) => g.team.id === f.h.id || g.team.id === f.a.id).map((g) => {
+      const items = groups.filter((g) => inScope(g, f)).map((g) => {
         const row = status.find((x) => x.group_id === g.id && x.match_id === f.id);
         const mine = row && row.h != null && row.a != null ? `${row.h}–${row.a}` : null;
         const wait = !mine && f.st === 'ns';
@@ -71,13 +82,17 @@ export default function Home() {
     return out;
   }, [candidates, groups, status]);
 
-  // Gösterilecekler: takip edilen takımların seçili turnuva maçları + takip edilmeyen ama grubun tahmin edeceği maçlar.
+  // Gösterilecekler: takip edilen takımların seçili turnuva maçları + "tüm maçlarını takip et" turnuvalarının yakın maçları
+  // + takip edilmeyen ama grubun tahmin edeceği maçlar.
   const shown = useMemo(() => {
-    const all = state.data?.fixtures ?? [];
-    const mine = followedFixtures(all, store.teams, store.main, euro);
-    const ids = new Set(mine.map((f) => f.id));
-    return [...mine, ...candidates.filter((f) => !ids.has(f.id))].sort((x, y) => x.ts - y.ts);
-  }, [state.data, store.teams, store.main, euro, candidates]);
+    const mine = followedFixtures(teamFx, store.teams, store.main, euro);
+    const from = store.meta.today, soon = (f: Fixture) => daysBetween(from, f.date) >= -3 && daysBetween(from, f.date) <= 14;
+    const fullFx = (leagueFx.data ?? []).filter((f) => full.includes(f.lg) && soon(f));
+    const ids = new Set<number>();
+    const out: Fixture[] = [];
+    for (const f of [...mine, ...fullFx, ...candidates]) if (!ids.has(f.id)) { ids.add(f.id); out.push(f); }
+    return out.sort((x, y) => x.ts - y.ts);
+  }, [teamFx, leagueFx.data, store.teams, store.main, store.meta.today, euro, candidates, full]);
 
   const addButton = (
     <Pressable onPress={() => nav.navigate('Picker')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Takım ekle" style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
@@ -88,7 +103,7 @@ export default function Home() {
   const dropped = (store.droppedLeagues ?? []).map((id) => store.league(id)?.name).filter(Boolean) as string[];
   const notice = dropped.length ? (
     <Card style={{ marginTop: 12, padding: 14, gap: 10 }}>
-      <Text style={{ fontSize: 14, lineHeight: 20, color: t.fg }}>Lig takibi kalktı ({dropped.join(', ')}). Artık takımlarının maçları gösteriliyor; ligleri Turnuvalar sekmesinde yine bulabilirsin.</Text>
+      <Text style={{ fontSize: 14, lineHeight: 20, color: t.fg }}>Lig takibi kalktı ({dropped.join(', ')}). Artık takımlarının maçları gösteriliyor; ligleri Keşfet sekmesinde yine bulabilirsin.</Text>
       <Button kind="sec" label="Tamam" onPress={store.dismissNotice} />
     </Card>
   ) : null;

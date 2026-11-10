@@ -13,7 +13,9 @@ type Me = { secret: string; name: string };
 // `v: 3`: takip modeli takım üzerinden kurulur (ana takım + her takım için turnuva seçimi); lig takibi yoktur.
 // `leagues` yalnızca eski kayıtları okumak içindir. `droppedLeagues`: taşınan kullanıcıya bir kez gösterilen bilgi notu için
 // kaldırılan liglerin numaraları.
-type Saved = { teams: FollowedTeam[]; main?: number; onboarded: boolean; me?: Me; ids?: number; provider?: string; v?: number; leagues?: number[]; droppedLeagues?: number[] };
+type Saved = { teams: FollowedTeam[]; main?: number; onboarded: boolean; me?: Me; ids?: number; provider?: string; v?: number; leagues?: number[]; droppedLeagues?: number[];
+  // Gelişmiş: "Tüm maçlarını takip et" işaretlenen turnuvalar (ana ekranda yakın tarihli tüm maçları görünür).
+  full?: number[] };
 const EMPTY: Saved = { teams: [], onboarded: false, v: 3 };
 const STORAGE_KEY = 'tribun:v1';
 
@@ -42,6 +44,8 @@ type Store = Saved & {
   followsTeam: (id: number) => boolean;
   toggleTeam: (team: Team, kind?: 'club' | 'national') => void;
   setMain: (id: number) => void;
+  followsFull: (id: number) => boolean;
+  toggleFull: (id: number) => void;
   setTeamSel: (id: number, sel: number[] | undefined) => void;
   // Ana ekranın ilk açılacağı sekme (kalıcı değil): ilk açılışta "grup kur" seçilirse Gruplar.
   startTab: 'Groups' | undefined;
@@ -104,6 +108,8 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
         return { ...s, teams: [...s.teams, added], main: s.main ?? team.id };
       }),
       setMain: (id) => update((s) => ({ ...s, main: id })),
+      followsFull: (id) => (saved.full ?? []).includes(id),
+      toggleFull: (id) => update((s) => ({ ...s, full: (s.full ?? []).includes(id) ? (s.full ?? []).filter((x) => x !== id) : [...(s.full ?? []), id] })),
       setTeamSel: (id, sel) => update((s) => ({ ...s, teams: s.teams.map((t) => (t.id === id ? { ...t, sel } : t)) })),
       startTab,
       finishOnboarding: (teams, main, tab) => { setStartTab(tab); update((s) => ({ ...s, teams, main: main ?? teams[0]?.id, onboarded: true })); },

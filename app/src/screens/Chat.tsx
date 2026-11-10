@@ -74,7 +74,8 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
   // Grubun takımının canlı ve son 12 saatte biten maçları: olayları sohbet akışına sistem mesajı olarak girer.
   // Sunucu yanıtları önbelleğe alır; burada yalnızca birkaç hafif istek atılır, hata olursa sohbet etkilenmez.
   useEffect(() => {
-    if (!focused || !team) return;
+    // Turnuva kapsamlı gruplarda tek bir takım yoktur (team.id 0): maç olayları sohbete girmez.
+    if (!focused || !team || team.id <= 0) return;
     let alive = true;
     const load = async () => {
       try {

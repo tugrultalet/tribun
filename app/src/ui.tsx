@@ -1,5 +1,5 @@
-import React from 'react';
-import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Image, PanResponder, Platform, Pressable, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { ApiError, Fixture, Standings, Zone } from './api';
@@ -152,6 +152,35 @@ export function Button({ label, onPress, kind = 'pri', disabled }: { label: stri
     </Pressable>
   );
 }
+// Sola kaydırınca sağda bir eylem düğmesi (ör. "Çıkar") açan satır. Düğme içerikle birlikte kayar, bu yüzden yarı saydam
+// panellerde de arkası görünmez. Erişilebilirlik için aynı eylem `accessibilityActions` ile de sunulur.
+const SWIPE_W = 92;
+export function SwipeRow({ children, label, onAction }: { children: React.ReactNode; label: string; onAction: () => void }) {
+  const t = useTheme();
+  const x = useRef(new Animated.Value(0)).current;
+  const open = useRef(false);
+  const [w, setW] = useState(0);
+  const settle = (to: number) => { open.current = to !== 0; Animated.spring(x, { toValue: to, useNativeDriver: false, bounciness: 0 }).start(); };
+  const pan = useRef(PanResponder.create({
+    onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dx) > 10 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+    onPanResponderMove: (_, g) => x.setValue(Math.max(-SWIPE_W, Math.min(0, (open.current ? -SWIPE_W : 0) + g.dx))),
+    onPanResponderRelease: (_, g) => settle((open.current ? -SWIPE_W : 0) + g.dx < -SWIPE_W / 2 ? -SWIPE_W : 0),
+    onPanResponderTerminate: () => settle(open.current ? -SWIPE_W : 0),
+  })).current;
+  return (
+    <View style={{ overflow: 'hidden' }} onLayout={(e) => setW(e.nativeEvent.layout.width)}
+      accessibilityActions={[{ name: 'delete', label }]} onAccessibilityAction={(e) => { if (e.nativeEvent.actionName === 'delete') onAction(); }}>
+      <Animated.View style={{ flexDirection: 'row', width: w ? w + SWIPE_W : undefined, transform: [{ translateX: x }] }} {...pan.panHandlers}>
+        <View style={{ width: w || '100%' }}>{children}</View>
+        <Pressable onPress={onAction} accessibilityRole="button" accessibilityLabel={label}
+          style={{ width: SWIPE_W, alignItems: 'center', justifyContent: 'center', backgroundColor: t.live }}>
+          <Text style={{ fontWeight: '700', fontSize: 14, color: '#fff' }}>{label}</Text>
+        </Pressable>
+      </Animated.View>
+    </View>
+  );
+}
+
 export function StarButton({ on, onPress, label }: { on: boolean; onPress: () => void; label: string }) {
   const t = useTheme();
   return (

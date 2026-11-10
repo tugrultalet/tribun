@@ -5,6 +5,8 @@ import { SUPABASE_KEY, SUPABASE_URL } from './config';
 
 export type Group = {
   id: string; name: string; code: string; team: Team; members: number;
+  // Kapsam: boşsa grubun takımının maçları; {type:'leagues'} ise seçilen turnuvaların maçları.
+  scope?: { type: 'leagues'; ids: number[] } | null;
   last_message: { body: string; name: string; created_at: string } | null;
 };
 import type { Detail, Member, Prediction } from './groups/standings';
