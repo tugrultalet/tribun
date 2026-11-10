@@ -38,9 +38,33 @@ export function payloadFor(u, f, now = Date.now()) {
   return { aps };
 }
 
-export function createLive({ apns, supa, log = console }) {
+// Çoklu maç kartının durumu: her maç için bir satır (uygulamadaki MultiMatchAttributes.ContentState ile aynı alanlar).
+export function multiPayload(matchIds, states, notes, kind, now = Date.now()) {
+  const slots = matchIds.map((id) => {
+    const st = states.get(id) || { home: 0, away: 0, minute: '', status: 'ns', clock: null };
+    return { id, ...st, note: notes.get(id) ?? null };
+  });
+  const allDone = slots.every((x) => x.status === 'ft');
+  const aps = { timestamp: Math.floor(now / 1000), event: allDone ? 'end' : 'update', 'content-state': { slots }, 'stale-date': Math.floor(now / 1000) + (allDone ? 3600 : 900) };
+  if (allDone) aps['dismissal-date'] = Math.floor(now / 1000) + 3600;
+  if (kind?.alert) aps.alert = kind.alert;
+  return { aps };
+}
+
+export function createLive({ apns, supa, log = console, watch = null }) {
   const channels = new Map(); // matchId -> { channel, env }
   const sent = new Map();     // matchId -> { state, at }
+  const states = new Map();   // matchId -> son durum (çoklu kart için)
+  const notes = new Map();    // matchId -> son olay ("⚽ GOL! …")
+  let tokens = [], tokensAt = 0;
+  async function loadTokens(now) {
+    if (now - tokensAt < 60000) return;
+    tokensAt = now;
+    try {
+      tokens = ((await supa.rpc('server_live_tokens')) || []).map((x) => ({ token: x.token, matches: (x.matches || []).map(Number) }));
+      if (watch) for (const id of new Set(tokens.flatMap((x) => x.matches))) Promise.resolve(watch(id)).catch(() => {});
+    } catch { /* sonraki turda yeniden */ }
+  }
   let loaded = false;
   async function load() {
     if (loaded) return;
@@ -62,11 +86,21 @@ export function createLive({ apns, supa, log = console }) {
     // Canlı yenilemeden sonra: kanalı olan maçlara güncelleme.
     async onFixtures(fixtures, now = Date.now()) {
       await load();
+      await loadTokens(now);
+      const multiIds = new Set(tokens.flatMap((x) => x.matches));
+      const changed = new Map(); // matchId -> güncelleme (çoklu kartlar için)
       for (const f of fixtures) {
         const channel = channels.get(f.id);
-        if (!channel) continue;
+        if (!channel && !multiIds.has(f.id)) continue;
         const u = nextUpdate(sent.get(f.id), f, now);
         if (!u) continue;
+        states.set(f.id, u.state);
+        if (u.kind === 'goal') {
+          const team = u.side === 'a' ? f.a.name : u.side === 'h' ? f.h.name : null;
+          notes.set(f.id, team ? `⚽ GOL! ${team}` : '⚽ GOL!');
+        }
+        changed.set(f.id, { u, f });
+        if (!channel) { sent.set(f.id, { state: u.state, at: now }); continue; }
         try {
           await apns.broadcast(channel, payloadFor(u, f, now), u.priority);
           sent.set(f.id, { state: u.state, at: now });
@@ -78,6 +112,20 @@ export function createLive({ apns, supa, log = console }) {
             channels.delete(f.id); sent.delete(f.id);
             supa.rpc('server_drop_live_channel', { p_match: f.id }).catch(() => {});
           }, 2 * 3600000).unref?.();
+        }
+      }
+      // Çoklu maç kartları: maçlarından biri değiştiyse kartın tamamı gönderilir (gol varsa uyarıyla, hemen).
+      for (const t of tokens) {
+        const hits = t.matches.map((id) => changed.get(id)).filter(Boolean);
+        if (!hits.length) continue;
+        const goal = hits.find((h) => h.u.kind === 'goal');
+        const priority = hits.some((h) => h.u.priority === 10) ? 10 : 5;
+        const alert = goal ? { title: notes.get(goal.f.id) || 'GOL!', body: `${goal.f.h.name} ${goal.u.state.home}–${goal.u.state.away} ${goal.f.a.name}` } : null;
+        try {
+          await apns.toToken(t.token, multiPayload(t.matches, states, notes, { alert }, now), priority);
+        } catch (e) {
+          if (e.status === 410 || e.status === 400) { supa.rpc('server_drop_live_token', { p_token: t.token }).catch(() => {}); tokens = tokens.filter((x) => x !== t); }
+          else log.warn?.(`Çoklu Live Activity güncellemesi gönderilemedi: ${e.message}`);
         }
       }
     },

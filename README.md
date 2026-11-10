@@ -167,7 +167,7 @@ Render ortam değişkenleri (anahtar repoya girmez):
 | `APNS_KEY` | `.p8` dosyasının base64 hali (ya da yerelde `APNS_KEY_FILE=~/.tribun/AuthKey_LRY59WK5A8.p8`) |
 | `APNS_KEY_ID` | `LRY59WK5A8` |
 | `APNS_TEAM_ID` | `M93BM8ZSQH` |
-| `APNS_ENV` | `development` (geliştirme derlemesi) · `production` (TestFlight / App Store) |
+| `APNS_ENV` | `production`: EAS geliştirme derlemesi Ad Hoc imzalandığı için o da Apple'ın canlı ortamını kullanır (TestFlight ve App Store da öyle). `development` yalnızca Xcode'dan doğrudan kurulan derlemeler için. |
 
 ## Yayıncı bilgisi
 

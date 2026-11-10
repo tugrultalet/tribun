@@ -70,6 +70,15 @@ export function createApns(cfg, { send = request } = {}) {
       const r = await send(hosts.manage, { ':method': 'DELETE', ':path': `/1/apps/${cfg.bundleId}/channels`, authorization: auth(), 'apns-channel-id': id });
       if (r.status !== 204 && r.status !== 200 && r.status !== 404) throw fail('kanal silme', r);
     },
+    // Tek bir Live Activity'ye (cihaza özel anahtar) güncelleme: çoklu maç kartı için.
+    async toToken(token, payload, priority = 10) {
+      const r = await send(hosts.push, {
+        ':method': 'POST', ':path': `/3/device/${token}`, authorization: auth(),
+        'apns-push-type': 'liveactivity', 'apns-topic': `${cfg.bundleId}.push-type.liveactivity`, 'apns-priority': String(priority),
+        'apns-expiration': String(Math.floor(Date.now() / 1000) + 3600), 'content-type': 'application/json',
+      }, JSON.stringify(payload));
+      if (r.status !== 200) throw fail('cihaz gönderimi', r);
+    },
     // Kanaldaki tüm Live Activity'lere güncelleme. priority 10: hemen (gol, maç sonu); 5: bütçe dostu (dakika).
     async broadcast(id, payload, priority = 10) {
       const r = await send(hosts.push, {

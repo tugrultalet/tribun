@@ -3,6 +3,19 @@ import ExpoModulesCore
 import Foundation
 import UIKit
 
+@available(iOS 18.0, *)
+extension TribunLiveModule {
+  func observeToken(_ activity: Activity<MultiMatchAttributes>) {
+    let ids = activity.attributes.matches.map { $0.id }
+    Task { [weak self] in
+      for await data in activity.pushTokenUpdates {
+        let token = data.map { String(format: "%02x", $0) }.joined()
+        self?.sendEvent("onLiveToken", ["token": token, "matches": ids])
+      }
+    }
+  }
+}
+
 final class LiveUnsupportedException: Exception {
   override var reason: String { "Canlı skor kilit ekranında yalnızca iOS 18 ve üzerinde, Live Activity izni açıkken gösterilir." }
 }
@@ -11,6 +24,16 @@ final class LiveUnsupportedException: Exception {
 public class TribunLiveModule: Module {
   public func definition() -> ModuleDefinition {
     Name("TribunLive")
+
+    // Çoklu maç kartının cihaza özel güncelleme anahtarı: { token, matches } (sunucuya kaydedilir).
+    Events("onLiveToken")
+
+    OnCreate {
+      // Uygulama yeniden açıldığında açık çoklu kartların anahtarları tekrar dinlenir.
+      if #available(iOS 18.0, *) {
+        for activity in Activity<MultiMatchAttributes>.activities { self.observeToken(activity) }
+      }
+    }
 
     Function("isSupported") { () -> Bool in
       if #available(iOS 18.0, *) {
@@ -71,6 +94,42 @@ public class TribunLiveModule: Module {
         if let png = small.pngData(), (try? png.write(to: file, options: .atomic)) != nil { saved += 1 }
       }
       return saved
+    }
+
+    Function("activeMulti") { () -> [[Int]] in
+      if #available(iOS 18.0, *) {
+        return Activity<MultiMatchAttributes>.activities.map { $0.attributes.matches.map { $0.id } }
+      }
+      return []
+    }
+
+    // Çoklu maç kartı: aynı anda birden fazla maç. Sunucu cihaza özel anahtarla günceller (yayın kanalı tek maç taşır).
+    AsyncFunction("startMulti") { (attributesJson: String, stateJson: String) throws -> String in
+      guard #available(iOS 18.0, *) else { throw LiveUnsupportedException() }
+      let decoder = JSONDecoder()
+      let attributes = try decoder.decode(MultiMatchAttributes.self, from: Data(attributesJson.utf8))
+      let state = try decoder.decode(MultiMatchAttributes.ContentState.self, from: Data(stateJson.utf8))
+      let ids = attributes.matches.map { $0.id }
+      if let existing = Activity<MultiMatchAttributes>.activities.first(where: { $0.attributes.matches.map { $0.id } == ids }) {
+        return existing.id
+      }
+      let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(4 * 3600))
+      let activity = try Activity.request(attributes: attributes, content: content, pushType: .token)
+      self.observeToken(activity)
+      return activity.id
+    }
+
+    AsyncFunction("updateMulti") { (stateJson: String) async throws in
+      guard #available(iOS 18.0, *) else { return }
+      let state = try JSONDecoder().decode(MultiMatchAttributes.ContentState.self, from: Data(stateJson.utf8))
+      for activity in Activity<MultiMatchAttributes>.activities {
+        await activity.update(ActivityContent(state: state, staleDate: Date().addingTimeInterval(4 * 3600)))
+      }
+    }
+
+    AsyncFunction("endMulti") { () async in
+      guard #available(iOS 18.0, *) else { return }
+      for activity in Activity<MultiMatchAttributes>.activities { await activity.end(nil, dismissalPolicy: .immediate) }
     }
 
     AsyncFunction("end") { (matchId: Int) async in
