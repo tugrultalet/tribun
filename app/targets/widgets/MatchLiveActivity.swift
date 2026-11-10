@@ -7,7 +7,7 @@ struct MatchLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: MatchActivityAttributes.self) { context in
       LockScreenMatchView(attributes: context.attributes, state: context.state)
-        .activityBackgroundTint(tribunNavy.opacity(0.92))
+        .activityBackgroundTint(Color(hex: context.attributes.homeColor, dim: 0.45))
         .activitySystemActionForegroundColor(.white)
         .widgetURL(URL(string: "tribun://match/\(context.attributes.matchId)"))
     } dynamicIsland: { context in
@@ -62,7 +62,7 @@ struct StatusLabel: View {
   var body: some View {
     HStack(spacing: 5) {
       if state.status == "live" { Circle().fill(tribunLive).frame(width: 7, height: 7) }
-      Text(state.minute).font(.subheadline.weight(.bold)).foregroundStyle(state.status == "live" ? tribunLive : Color.secondary).monospacedDigit()
+      Text(state.minute).font(.subheadline.weight(.bold)).foregroundStyle(state.status == "live" ? tribunLive : Color.white.opacity(0.85)).monospacedDigit()
     }
   }
 }
@@ -79,11 +79,20 @@ struct NoteRow: View {
   }
 }
 
-// Kilit ekranı (seçenek B): logolar yanda, kısa adlar, ortada büyük skor; üstte lig ve dakika, altta son olay ve tahmin.
+// Kilit ekranı (seçenek B): takım renklerinde zemin, logolar yanda, kısa adlar, ortada büyük skor; üstte lig ve dakika
+// (devre arası / maç sonu yazıyla), altta son olay ve tahmin, en altta kendiliğinden ilerleyen süre çubuğu.
 struct LockScreenMatchView: View {
   let attributes: MatchActivityAttributes
   let state: MatchActivityAttributes.ContentState
   var body: some View {
+    VStack(spacing: 0) {
+      content
+      MatchProgress(state: state)
+    }
+    .background(MatchBackground(homeColor: attributes.homeColor, awayColor: attributes.awayColor))
+  }
+
+  var content: some View {
     VStack(spacing: 10) {
       HStack {
         Text(attributes.league).font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
@@ -109,6 +118,7 @@ struct LockScreenMatchView: View {
     }
     .foregroundStyle(.white)
     .padding(.horizontal, 16)
-    .padding(.vertical, 14)
+    .padding(.top, 14)
+    .padding(.bottom, 12)
   }
 }

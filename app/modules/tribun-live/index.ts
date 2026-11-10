@@ -16,7 +16,7 @@ export type LiveAttributes = {
   matchId: number; homeId: number; awayId: number; homeName: string; awayName: string; homeAbbr: string; awayAbbr: string;
   homeColor: string; awayColor: string; league: string; pick?: string | null;
 };
-export type LiveState = { home: number; away: number; minute: string; status: 'ns' | 'live' | 'ht' | 'ft'; note?: string | null };
+export type LiveState = { home: number; away: number; minute: string; status: 'ns' | 'live' | 'ht' | 'ft'; note?: string | null; clock?: number | null };
 
 export const liveSupported = (): boolean => { try { return !!native?.isSupported(); } catch { return false; } };
 export const liveMatches = (): number[] => { try { return native?.activeMatches() ?? []; } catch { return []; } };

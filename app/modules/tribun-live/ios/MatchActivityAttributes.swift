@@ -10,6 +10,7 @@ struct MatchActivityAttributes: ActivityAttributes {
     var minute: String
     var status: String
     var note: String?
+    var clock: Double?   // maçın 0. dakikası sayılan an (unix sn); süre çubuğu buna göre kendiliğinden ilerler
   }
 
   var matchId: Int

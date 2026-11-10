@@ -3,6 +3,17 @@ import UIKit
 
 // Ortak görünüm yardımcıları (widget ve Live Activity).
 extension Color {
+  // Koyulaştırılmış takım rengi (dim 0…1): kart zemininde beyaz yazı her zaman okunsun.
+  init(hex: String, dim: Double) {
+    var t = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+    if t.hasPrefix("#") { t.removeFirst() }
+    var v: UInt64 = 0
+    Scanner(string: t).scanHexInt64(&v)
+    if t.count != 6 { v = 0x1B2A5A }
+    let k = 1 - min(max(dim, 0), 0.9)
+    self.init(red: Double((v >> 16) & 0xFF) / 255 * k, green: Double((v >> 8) & 0xFF) / 255 * k, blue: Double(v & 0xFF) / 255 * k)
+  }
+
   init(hex: String) {
     var s = hex.trimmingCharacters(in: .whitespacesAndNewlines)
     if s.hasPrefix("#") { s.removeFirst() }
@@ -48,5 +59,37 @@ struct TeamLogo: View {
     } else {
       TeamBadge(abbr: abbr, color: color, size: size)
     }
+  }
+}
+
+// Kart zemini: ev sahibinin renginden deplasmanın rengine, koyulaştırılmış geçiş.
+struct MatchBackground: View {
+  let homeColor: String
+  let awayColor: String
+  var body: some View {
+    LinearGradient(colors: [Color(hex: homeColor, dim: 0.3), Color(hex: homeColor, dim: 0.55), Color(hex: awayColor, dim: 0.6), Color(hex: awayColor, dim: 0.4)],
+                   startPoint: .leading, endPoint: .trailing)
+      .overlay(Color.black.opacity(0.15))
+  }
+}
+
+// Süre çubuğu: canlıyken iOS kendi saatiyle ilerletir (sunucu güncellemesi beklemez). Devre arasında yarıda, maç sonunda dolu.
+struct MatchProgress: View {
+  let state: MatchActivityAttributes.ContentState
+  var body: some View {
+    ZStack {
+      if state.status == "live", let clock = state.clock {
+        ProgressView(timerInterval: Date(timeIntervalSince1970: clock)...Date(timeIntervalSince1970: clock + 90 * 60), countsDown: false,
+                     label: { EmptyView() }, currentValueLabel: { EmptyView() })
+      } else {
+        ProgressView(value: state.status == "ft" ? 1.0 : state.status == "ht" ? 0.5 : 0.0)
+      }
+      GeometryReader { g in
+        Rectangle().fill(Color.black.opacity(0.45)).frame(width: 2, height: g.size.height).position(x: g.size.width / 2, y: g.size.height / 2)
+      }
+    }
+    .progressViewStyle(.linear)
+    .tint(.white)
+    .frame(height: 4)
   }
 }

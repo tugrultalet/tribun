@@ -7,10 +7,10 @@ import { createLive, liveState, nextUpdate, payloadFor } from '../lib/live.js';
 const f = (o = {}) => ({ id: 7, st: 'live', s: [1, 0], min: 67, extra: null, short: '2H', time: '20:45', h: { name: 'GS' }, a: { name: 'FB' }, ...o });
 
 test('liveState', () => {
-  assert.deepEqual(liveState(f()), { home: 1, away: 0, minute: "67'", status: 'live' });
-  assert.deepEqual(liveState(f({ short: 'HT' })).minute, 'DA');
-  assert.deepEqual(liveState(f({ st: 'ft' })), { home: 1, away: 0, minute: 'MS', status: 'ft' });
-  assert.deepEqual(liveState(f({ st: 'ns', s: null })), { home: 0, away: 0, minute: '20:45', status: 'ns' });
+  assert.deepEqual(liveState(f(), 1_000_000_000), { home: 1, away: 0, minute: "67'", status: 'live', clock: 1_000_000 - 67 * 60 });
+  assert.deepEqual(liveState(f({ short: 'HT' })).minute, 'Devre arası');
+  assert.deepEqual(liveState(f({ st: 'ft' })), { home: 1, away: 0, minute: 'Maç sonu', status: 'ft', clock: null });
+  assert.deepEqual(liveState(f({ st: 'ns', s: null })), { home: 0, away: 0, minute: '20:45', status: 'ns', clock: null });
 });
 
 test('nextUpdate: gol hemen, dakika en çok dakikada bir', () => {
@@ -27,7 +27,8 @@ test('nextUpdate: gol hemen, dakika en çok dakikada bir', () => {
 test('payloadFor: gol uyarısı, maç sonu kapanış', () => {
   const g = payloadFor({ kind: 'goal', side: 'h', state: { home: 2, away: 0, minute: "70'", status: 'live' } }, f(), 1_000_000_000);
   assert.equal(g.aps.event, 'update'); assert.equal(g.aps.alert.title, 'GOL! GS'); assert.equal(g.aps['content-state'].note, '⚽ GOL! GS');
-  const e = payloadFor({ kind: 'end', state: { home: 2, away: 0, minute: 'MS', status: 'ft' } }, f(), 1_000_000_000);
+  const e = payloadFor({ kind: 'end', state: { home: 2, away: 0, minute: 'Maç sonu', status: 'ft' } }, f(), 1_000_000_000);
+  assert.equal(e.aps['content-state'].note, null);
   assert.equal(e.aps.event, 'end'); assert.equal(e.aps['dismissal-date'], 1_000_000 + 3600);
 });
 
