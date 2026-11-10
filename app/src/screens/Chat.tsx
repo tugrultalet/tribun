@@ -132,6 +132,8 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
   const inverted = useMemo(() => [...items].reverse(), [items]);
   const liveGame = games.find((g) => g.f.st === 'live')?.f;
   // Oda kapandıysa (maç bitişinden 1 saat sonra) yazılamaz; mesajlar 30 gün okunur.
+  // Açık ligde yalnızca kurucu duyuru yazar.
+  const readOnly = detail?.group.kind === 'open' && !detail?.owner;
   const roomClosed = !!match && roomState(games[0]?.f ?? { st: 'ns', ts: kickoff ?? Date.now() / 1000 }) === 'closed';
 
   const send = async () => {
@@ -172,8 +174,8 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
           }}
         />
         {error ? <Text style={{ color: t.live, fontSize: 12, textAlign: 'center', paddingBottom: 4 }}>{error}</Text> : null}
-        {roomClosed ? (
-          <Text style={{ textAlign: 'center', color: t.muted, fontSize: 13, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12) }}>Oda arşivlendi · mesajlar 30 gün saklanır</Text>
+        {roomClosed || readOnly ? (
+          <Text style={{ textAlign: 'center', color: t.muted, fontSize: 13, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12) }}>{readOnly ? 'Açık ligde yalnızca kurucu duyuru yazar' : 'Oda arşivlendi · mesajlar 30 gün saklanır'}</Text>
         ) : (
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 12, paddingTop: 8, paddingBottom: kbOpen ? 8 : Math.max(insets.bottom, 10) }}>
           <TextInput value={text} onChangeText={setText} placeholder="Mesaj yaz" placeholderTextColor={t.muted} multiline maxLength={500} accessibilityLabel="Mesaj yaz"

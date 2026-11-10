@@ -69,6 +69,8 @@ function MyGroups({ secret }: { secret: string }) {
   const [team, setTeam] = useState<Team | undefined>(store.mainTeam ?? store.teams[0]);
   // Kapsam: "Bu grupta hangi maçları tahmin edeceksiniz?" Bir takımın maçları ya da seçilen turnuvalar.
   const [kind, setKind] = useState<'team' | 'leagues'>('team');
+  // Lig türü: arkadaş grubu (sohbet, herkes birbirini görür) ya da açık lig (herkese açık bağlantı, sıralama, kurucu duyurusu).
+  const [type, setType] = useState<'friends' | 'open'>('friends');
   const [picked, setPicked] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -96,10 +98,10 @@ function MyGroups({ secret }: { secret: string }) {
       if (!chosen.length) return;
       return run(() => rpc<Group>('create_group', {
         p_secret: secret, p_name: name.trim(), p_team_id: 0, p_team_name: chosen.map((l) => l.name).join(', ').slice(0, 80), p_team_logo: chosen[0].logo,
-        p_scope: { type: 'leagues', ids: picked },
+        p_scope: { type: 'leagues', ids: picked }, p_kind: type,
       }));
     }
-    return team && run(() => rpc<Group>('create_group', { p_secret: secret, p_name: name.trim(), p_team_id: team.id, p_team_name: team.name, p_team_logo: team.logo }));
+    return team && run(() => rpc<Group>('create_group', { p_secret: secret, p_name: name.trim(), p_team_id: team.id, p_team_name: team.name, p_team_logo: team.logo, p_kind: type }));
   };
   const canCreate = !!name.trim() && (kind === 'leagues' ? picked.length > 0 : !!team);
   const join = () => run(() => rpc<Group>('join_group', { p_secret: secret, p_code: code.trim() }));
@@ -115,8 +117,8 @@ function MyGroups({ secret }: { secret: string }) {
                 style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 16, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
                 <Crest uri={g.team.logo} size={36} />
                 <View style={{ flex: 1 }}>
-                  <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: '600', color: t.fg }}>{g.name}</Text>
-                  <Text numberOfLines={1} style={{ fontSize: 13, color: t.muted }}>{g.last_message ? `${g.last_message.name}: ${g.last_message.body}` : `${g.members} üye · ${g.team.name}`}</Text>
+                  <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: '600', color: t.fg }}>{g.name}{g.verified ? ' ✓' : ''}</Text>
+                  <Text numberOfLines={1} style={{ fontSize: 13, color: t.muted }}>{g.kind === 'open' ? `Açık lig · ${g.members} üye` : g.last_message ? `${g.last_message.name}: ${g.last_message.body}` : `${g.members} üye · ${g.team.name}`}</Text>
                 </View>
                 {unread[g.id] ? (
                   <View accessibilityLabel={`${unread[g.id]} okunmamış mesaj`} style={{ minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: t.live }}>
@@ -131,7 +133,7 @@ function MyGroups({ secret }: { secret: string }) {
       </Loader>
 
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-        <View style={{ flex: 1 }}><Button kind={form === 'create' ? 'pri' : 'sec'} label="Grup kur" onPress={() => open('create')} /></View>
+        <View style={{ flex: 1 }}><Button kind={form === 'create' ? 'pri' : 'sec'} label="Lig kur" onPress={() => open('create')} /></View>
         <View style={{ flex: 1 }}><Button kind={form === 'join' ? 'pri' : 'sec'} label="Kodla katıl" onPress={() => open('join')} /></View>
       </View>
 
@@ -144,8 +146,12 @@ function MyGroups({ secret }: { secret: string }) {
       )}
       {form === 'create' && !needsAccount && (
         <Card style={{ marginTop: GAP, padding: 16, gap: 12 }}>
-          <Field value={name} onChange={setName} placeholder="Grup adı" maxLength={40} />
-          <Text style={{ fontSize: 14, fontWeight: '600', color: t.fg }}>Bu grupta hangi maçları tahmin edeceksiniz?</Text>
+          <Seg value={type} onChange={setType} options={[['friends', 'Arkadaş grubu'], ['open', 'Açık lig']]} />
+          <Text style={{ fontSize: 12.5, color: t.muted, lineHeight: 18 }}>
+            {type === 'friends' ? 'En fazla 50 kişi; sohbet ve maç odaları var, herkes birbirinin tahminini görür.' : 'Bağlantıyı alan herkes katılır; ilk 10 ve herkesin kendi sırası görünür. Üyeler sohbet edemez, yalnızca sen duyuru yazarsın.'}
+          </Text>
+          <Field value={name} onChange={setName} placeholder={type === 'open' ? 'Lig adı' : 'Grup adı'} maxLength={40} />
+          <Text style={{ fontSize: 14, fontWeight: '600', color: t.fg }}>Bu {type === 'open' ? 'ligde' : 'grupta'} hangi maçları tahmin edeceksiniz?</Text>
           <Seg value={kind} onChange={setKind} options={[['team', 'Bir takımın maçları'], ['leagues', 'Turnuvalar']]} />
           {kind === 'leagues' ? (
             <>
