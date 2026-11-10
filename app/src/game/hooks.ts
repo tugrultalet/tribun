@@ -3,7 +3,7 @@ import { get } from '../api';
 import { rpc } from '../social';
 import { useRpc } from '../social';
 import { useStore } from '../store';
-import { MyPick, Result, needsResult } from './stats';
+import { MyPick, OpenMatch, Result, needsResult } from './stats';
 
 // Benim tüm tahminlerim (kişisel puan ve ana ekran etiketleri için).
 // Beklenmeyen (dizi olmayan) yanıt boş liste sayılır; ekranlar çökmesin.
@@ -45,3 +45,27 @@ export function useResults(picks: MyPick[] | undefined): Map<number, Result> {
 export type MatchPicks = { revealed: { profile_id: string; name: string; h: number; a: number; updated_at: string }[]; pending: number };
 export const setPick = (secret: string, matchId: number, h: number, a: number, kickoffTs: number) =>
   rpc('set_pick', { p_secret: secret, p_match: matchId, p_home: h, p_away: a, p_kickoff: new Date(kickoffTs * 1000).toISOString() });
+
+// Henüz bitmemiş tahminlerin maç bilgisi (takım adları, saat). Sunucu önbellekten verir; ekran her açıldığında bir kez sorulur.
+const openKnown = new Map<number, OpenMatch>();
+export function useOpenMatches(picks: MyPick[] | undefined): Map<number, OpenMatch> {
+  const [, bump] = useState(0);
+  const ids = useMemo(() => (picks ?? []).filter((p) => !known.has(p.match_id)).map((p) => p.match_id).slice(0, 80), [picks, known.size]);
+  const key = ids.join(',');
+  useEffect(() => {
+    if (!ids.length) return;
+    let alive = true;
+    (async () => {
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        try {
+          const r = await get<{ results: Result[]; open?: OpenMatch[] }>(`/api/results?ids=${ids.slice(i, i + CHUNK).join(',')}`);
+          for (const x of r.results) known.set(x.id, x);
+          for (const x of r.open ?? []) openKnown.set(x.id, x);
+        } catch { /* adlar sonra gelir */ }
+      }
+      if (alive) bump((n) => n + 1);
+    })();
+    return () => { alive = false; };
+  }, [key]);
+  return openKnown;
+}

@@ -59,6 +59,8 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
       const fresh = await rpc<Message[]>('get_messages', { p_secret: secret, p_group: id, p_after: last.current });
       if (fresh.length) {
         last.current = fresh[fresh.length - 1].id;
+        // Gruplar sekmesindeki okunmamış rozeti için: sohbette görülen son mesaj.
+        rpc('mark_read', { p_secret: secret, p_group: id, p_last: last.current }).catch(() => {});
         setMessages((prev) => [...prev, ...fresh.filter((m) => !prev.some((x) => x.id === m.id))]);
       }
       setError('');

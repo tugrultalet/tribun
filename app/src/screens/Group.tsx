@@ -178,6 +178,7 @@ function Predict({ detail, fixtures, today, secret, onSaved }: { detail: GroupDe
 }
 
 function Table({ detail, fixtures, today }: { detail: GroupDetail; fixtures: Fixture[]; today: string }) {
+  const nav = useNav();
   const t = useTheme();
   const [scope, setScope] = useState<'week' | 'season'>('week');
   const rows = useMemo(() => standings(detail, fixtures, scope === 'week' ? (f) => sameWeek(f.date, today) : undefined), [detail, fixtures, scope, today]);
@@ -199,13 +200,14 @@ function Table({ detail, fixtures, today }: { detail: GroupDetail; fixtures: Fix
         {rows.map((r, i) => {
           const me = r.member.id === detail.me;
           return (
-            <View key={r.member.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 7, paddingHorizontal: 12, backgroundColor: me ? t.accentSoft : 'transparent' }}>
+            <Pressable key={r.member.id} onPress={() => nav.navigate('Member', { id: r.member.id, name: r.member.name })} accessibilityRole="button" accessibilityLabel={`${r.member.name} profili`}
+              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', paddingVertical: 7, paddingHorizontal: 12, backgroundColor: pressed ? t.surface2 : me ? t.accentSoft : 'transparent' })}>
               <Text style={[cell, { width: 26 }]}>{place[i]}</Text>
               <Text numberOfLines={1} style={{ flex: 1, paddingLeft: 6, fontSize: 15, fontWeight: me ? '700' : '400', color: t.fg }}>{r.member.name}</Text>
               <Text style={[cell, { width: 56 }]}>{r.played}</Text>
               <Text style={[cell, { width: 44 }]}>{r.exact}</Text>
               <Text style={[cell, { width: 48, fontWeight: '700', color: r.live > 0 ? t.live : t.fg }]}>{r.total}</Text>
-            </View>
+            </Pressable>
           );
         })}
       </Card>

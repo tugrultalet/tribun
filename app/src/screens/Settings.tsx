@@ -39,7 +39,7 @@ export default function Settings() {
   const refresh = meta.liveTtl >= 60 ? `${Math.round(meta.liveTtl / 60)} dakikada bir` : `${meta.liveTtl} saniyede bir`;
   const quota = meta.error ? meta.error : `${meta.plan ?? '–'} plan · bugün ${meta.used ?? '–'} / ${meta.limitDay ?? '–'} istek kullanıldı`;
   return (
-    <Screen tab title="Ayarlar">
+    <Screen title="Ayarlar">
       <Section eyebrow="Bildirimler">
         <Card>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14 }}>
@@ -60,8 +60,7 @@ export default function Settings() {
       </Section>
       <Section eyebrow="Uygulama">
         <Card>
-          {row('Takımlarım', store.teams.map((x) => x.name).join(', ') || 'Takım eklenmedi', true, () => nav.navigate('MyTeams'))}
-          {row('İlk açılış ekranını yeniden göster', undefined, false, store.restartOnboarding)}
+          {row('İlk açılış ekranını yeniden göster', undefined, true, store.restartOnboarding)}
           {row('Saat dilimi', 'Tüm maç saatleri Türkiye saatiyle (GMT+3)')}
         </Card>
       </Section>
