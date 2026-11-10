@@ -28,10 +28,10 @@ export function matchSvg({ home, away, homeLogo, awayLogo, pick, sender, league,
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#A9B6F5"/><stop offset="0.5" stop-color="#B9ACEB"/><stop offset="1" stop-color="#E5B9D9"/></linearGradient>
     <linearGradient id="card" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1D2766"/><stop offset="1" stop-color="#0E1440"/></linearGradient>
-    <filter id="sh" x="-20%" y="-30%" width="140%" height="170%"><feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#2A2466" flood-opacity="0.35"/></filter>
   </defs>
   <rect width="1200" height="630" fill="url(#bg)"/>
-  <rect x="70" y="56" width="1060" height="500" rx="56" fill="url(#card)" filter="url(#sh)"/>
+  <rect x="70" y="72" width="1060" height="500" rx="56" fill="#2A2466" fill-opacity="0.18"/>
+  <rect x="70" y="56" width="1060" height="500" rx="56" fill="url(#card)"/>
   <rect x="70.5" y="56.5" width="1059" height="499" rx="56" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
   <text x="130" y="128" font-family="Inter" font-weight="600" font-size="28" fill="#A7ABC8">${esc(clip(league || 'Maç'))}</text>
   <text x="1070" y="128" text-anchor="end" font-family="Inter" font-weight="700" font-size="28" fill="#9DB1FF">${esc(when || '')}</text>
