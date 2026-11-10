@@ -11,6 +11,8 @@ import { fail, today } from './lib/common.js';
 import { createCore } from './core.js';
 import { invitePage, validCode } from './lib/invite.js';
 import { privacyPage } from './lib/privacy.js';
+import { createFcm, loadServiceAccount } from './lib/fcm.js';
+import { messageFor } from './lib/notify.js';
 import { Buckets, clientIp, dateInWindow } from './lib/limits.js';
 import { createApiFootball } from './providers/apifootball.js';
 import { createHighlightly } from './providers/highlightly.js';
@@ -40,7 +42,14 @@ async function chooseProvider() {
 
 const provider = await chooseProvider();
 // Takım ve maç numaraları kaynağa göre değiştiği için her kaynağın önbelleği ayrı klasörde tutulur.
-const core = createCore({ provider, cacheDir: path.join(CACHE_DIR, provider.id) });
+// Bildirimler: Firebase hizmet hesabı verildiyse açık (bkz. .env.example).
+let fcm = null;
+try {
+  const sa = loadServiceAccount(process.env);
+  if (sa) fcm = createFcm({ sa });
+} catch (e) { console.warn(`UYARI: Firebase hizmet hesabı okunamadı (${e.message}); bildirimler kapalı.`); }
+const notify = fcm ? (kind, f) => fcm.send(messageFor(kind, f)).catch((e) => console.warn(`Bildirim gönderilemedi: ${e.message}`)) : null;
+const core = createCore({ provider, cacheDir: path.join(CACHE_DIR, provider.id), notify });
 
 /* ---------- HTTP ---------- */
 function leagueParam(q) {
@@ -140,4 +149,5 @@ server.listen(PORT, () => {
   console.log(`Veri kaynağı: ${provider.name}${s.plan ? ` (plan ${s.plan}${s.limitDay ? `, günlük limit ${s.limitDay}` : ''})` : ''}`);
   const problem = provider.configError();
   if (problem) console.warn(`UYARI: ${problem} server/.env dosyasına ekleyin.`);
+  console.log(fcm ? `Bildirimler: açık (Firebase projesi ${fcm.projectId})` : 'Bildirimler: kapalı (FIREBASE_SERVICE_ACCOUNT tanımlı değil)');
 });

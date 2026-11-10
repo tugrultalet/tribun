@@ -2,6 +2,7 @@
 // Veri kaynağına özgü her şey `provider` bağdaştırıcısındadır; burası kaynaktan bağımsızdır.
 import { CATALOG, DAY, HOUR, MIN, currentSeason, fail, today } from './lib/common.js';
 import { Windows } from './lib/limits.js';
+import { eventKey, matchEvents } from './lib/notify.js';
 import { createCache } from './lib/cache.js';
 import { nationalName } from './lib/national.js';
 
@@ -9,7 +10,8 @@ const byTime = (a, b) => a.ts - b.ts;
 // Önbelleğe göre hâlâ sonuçlanmamış ama başlamış (ya da başlamak üzere) olması gereken maç.
 const unsettled = (f) => (f.st === 'live' || f.st === 'ns') && f.ts * 1000 <= Date.now() + 5 * MIN && f.ts * 1000 > Date.now() - 2 * DAY;
 
-export function createCore({ provider, cacheDir }) {
+// `notify(kind, fixture)`: canlı yenilemede yakalanan maç olayları (başladı, gol, bitti) için çağrılır (bildirim gönderimi).
+export function createCore({ provider, cacheDir, notify = null }) {
   const { load, persist, save, cached, keys } = createCache(cacheDir);
 
   const leagues = CATALOG.map((c) => ({ id: c.id, key: c.key, name: c.name, country: c.country, type: c.type, tv: c.tv, logo: provider.leagueLogo(c.id) }));
@@ -137,6 +139,21 @@ export function createCore({ provider, cacheDir }) {
     for (const k of fixtureCaches()) for (const f of load(k)?.data.fixtures || []) if (unsettled(f)) byId.set(f.id, f);
     return [...byId.values()];
   }
+  // Aynı olay iki kez bildirilmesin: gönderilen olay anahtarları (son 3000) diskte de tutulur.
+  const notified = new Set(load('notified')?.data || []);
+  function announce(pending, fresh) {
+    let changed = false;
+    for (const prev of pending) {
+      const next = fresh.get(prev.id);
+      for (const kind of matchEvents(prev, next)) {
+        const key = eventKey(kind, next);
+        if (notified.has(key)) continue;
+        notified.add(key); changed = true;
+        Promise.resolve().then(() => notify(kind, next)).catch(() => {});
+      }
+    }
+    if (changed) save('notified', [...notified].slice(-3000), 30 * DAY);
+  }
   function refreshUnsettled() {
     if (refreshing) return refreshing;
     // Önce zaman kontrolü: tarama (tüm önbellekteki maçlar) en çok liveTtl'de bir ve boşsa 15 sn'de bir yapılır.
@@ -148,6 +165,7 @@ export function createCore({ provider, cacheDir }) {
     refreshing = (async () => {
       try {
         const fresh = new Map(norm(await provider.refresh(pending)).map((f) => [f.id, f]));
+        if (notify) announce(pending, fresh);
         for (const k of fixtureCaches()) {
           const entry = load(k);
           if (!entry) continue;

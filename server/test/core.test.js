@@ -195,3 +195,15 @@ test('önbellek: bellek sınırı aşılınca en eski kayıt çıkar, diskten ge
   await new Promise((r) => setTimeout(r, 50)); // disk yazımı
   assert.equal(c.load('a').data, 1, 'diskten geri gelir');
 });
+
+test('bildirim: canlı yenilemede gol bir kez bildirilir', async () => {
+  const kickoff = Math.floor(Date.now() / 1000) - 1200;
+  const live = fx({ h: FB, a: GS, st: 'live', s: [0, 0], ts: kickoff });
+  const sent = [];
+  const c2 = createCore({ provider: { id: 's', name: 'S', state: {}, onState: null, leagueLogo: () => '', teamLogo: () => '', configError: () => null, liveTtl: () => 0,
+    seasonFixtures: async () => [], teamSeason: async () => [live], refresh: async (list) => list.map((f) => ({ ...f, s: [1, 0] })), nationalTeams: async () => [] },
+    cacheDir: fs.mkdtempSync(path.join(os.tmpdir(), 'tribun-n-')), notify: (kind, f) => sent.push([kind, f.s.join('-')]) });
+  await c2.mine([611]); await c2.mine([611]);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.deepEqual(sent, [['goal', '1-0']], 'ikinci yenilemede aynı gol tekrar gönderilmez');
+});
