@@ -43,15 +43,33 @@ export function AskFriends({ f, secret, pick }: { f: Fixture; secret: string; pi
   };
 
   if (!open) {
+    // Belirgin çağrı: tek dokunuşla WhatsApp (tahmin görünür, ilk gruba katılım). Seçenekler altta küçük bağlantıda.
     return (
-      <Pressable onPress={() => setOpen(true)} accessibilityRole="button" style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-        <Text style={{ color: t.accent, fontWeight: '600', fontSize: 14 }}>Arkadaşına sor</Text>
-      </Pressable>
+      <View style={{ alignSelf: 'stretch', gap: 6 }}>
+        <Pressable onPress={whatsapp} disabled={busy} accessibilityRole="button" accessibilityLabel="Arkadaşlarına WhatsApp'ta sor"
+          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 16,
+            backgroundColor: pressed ? '#1DA851' : '#25D366', opacity: busy ? 0.7 : 1 })}>
+          <Text style={{ fontSize: 24 }}>💬</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#05301A' }}>{busy ? 'Hazırlanıyor…' : 'Arkadaşlarına sor'}</Text>
+            <Text style={{ fontSize: 12.5, fontWeight: '600', color: '#0B4A28', marginTop: 1 }}>Sen {pick.h}–{pick.a} dedin. Onlar ne diyor?</Text>
+          </View>
+          <Text style={{ fontSize: 22, fontWeight: '700', color: '#05301A' }}>›</Text>
+        </Pressable>
+        {msg ? <Text style={{ fontSize: 12, color: t.fg, textAlign: 'center' }}>{msg}</Text> : (
+          <Pressable onPress={() => setOpen(true)} accessibilityRole="button" hitSlop={6} style={{ alignSelf: 'center', paddingVertical: 2 }}>
+            <Text style={{ fontSize: 12.5, color: t.muted }}>Seçenekler: tahminini gizle, gruplarına bildir</Text>
+          </Pressable>
+        )}
+      </View>
     );
   }
   return (
     <View style={{ alignSelf: 'stretch', gap: 10, marginTop: 4, padding: 12, borderRadius: 14, backgroundColor: t.surface }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <Pressable onPress={() => setOpen(false)} accessibilityRole="button" accessibilityLabel="Kapat" hitSlop={8} style={{ position: 'absolute', top: 8, right: 10, zIndex: 1 }}>
+        <Text style={{ fontSize: 16, color: t.muted }}>✕</Text>
+      </Pressable>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 22 }}>
         <Text style={{ flex: 1, fontSize: 14, color: t.fg }}>Tahminimi göster ({pick.h}–{pick.a})</Text>
         <Switch value={show} onValueChange={setShow} accessibilityLabel="Tahminimi göster" />
       </View>

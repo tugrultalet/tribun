@@ -81,49 +81,53 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
 
   if (!started) {
     const pending = friends.data?.pending ?? 0;
+    const locked = (saved || state === 'saved') && !editing;
+    if (locked) {
+      // Kayıtlı tahmin: tek satır (skor, onay, Düzenle) ve altında belirgin "Arkadaşlarına sor".
+      return (
+        <Panel title="Skor Tahminin" style={{ marginBottom: 12, paddingBottom: 14 }}>
+          <View style={{ gap: 12, paddingTop: 10, paddingHorizontal: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Text accessibilityLabel={`Tahminin ${h}–${a}`} style={{ fontSize: 34, fontWeight: '700', color: t.fg, fontVariant: ['tabular-nums'] }}>{h} – {a}</Text>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={{ fontSize: 13, color: t.win, fontWeight: '700' }}>✓ Kaydedildi</Text>
+                {saved?.joker ? <Text style={{ fontSize: 12.5, color: t.accent, fontWeight: '600' }}>🃏 Joker · ×2</Text>
+                  : pending > 0 ? <Text style={{ fontSize: 12.5, color: t.muted }}>{pending} arkadaşın da tahmin girdi</Text> : null}
+              </View>
+              <Pressable onPress={() => { setEditing(true); setState('idle'); }} accessibilityRole="button" hitSlop={8}
+                style={{ paddingVertical: 8, paddingHorizontal: 14, borderRadius: 99, backgroundColor: t.surface2 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: t.fg }}>Düzenle</Text>
+              </Pressable>
+            </View>
+            {saved && <AskFriends f={f} secret={secret} pick={{ h: saved.h, a: saved.a }} />}
+            <CommunityLine f={f} data={community.data} />
+          </View>
+        </Panel>
+      );
+    }
+    // Düzenleme: skor, joker, favori ipucu; Vazgeç / Onayla.
     return (
-      <Panel title="Skor Tahminin" style={{ marginBottom: 12, paddingBottom: 12 }}>
-        <View style={{ alignItems: 'center', gap: 10, paddingTop: 12, paddingHorizontal: 16 }}>
-          {(saved || state === 'saved') && !editing ? (
-            <>
-              <View accessibilityLabel={`Tahminin ${h}–${a}, kaydedildi`} style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
-                <Text style={{ fontSize: 44, fontWeight: '700', color: t.fg, fontVariant: ['tabular-nums'] }}>{h}</Text>
-                <Text style={{ fontSize: 26, color: t.muted }}>–</Text>
-                <Text style={{ fontSize: 44, fontWeight: '700', color: t.fg, fontVariant: ['tabular-nums'] }}>{a}</Text>
-              </View>
-              <Text style={{ fontSize: 12.5, color: t.win, fontWeight: '600' }}>✓ Tahminin kaydedildi</Text>
-              <View style={{ alignSelf: 'stretch' }}>
-                <Button kind="sec" label="Düzenle" onPress={() => { setEditing(true); setState('idle'); }} />
-              </View>
-              <Text style={{ fontSize: 12, color: t.muted, textAlign: 'center' }}>Başlama düdüğüne kadar değiştirebilirsin.</Text>
-            </>
-          ) : (
-            <>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Stepper value={h} onChange={(n) => change(n, a)} label={f.h.name} dim={!saved && !touched.current} />
-                <Text style={{ fontSize: 22, color: t.muted }}>–</Text>
-                <Stepper value={a} onChange={(n) => change(h, n)} label={f.a.name} dim={!saved && !touched.current} />
-              </View>
-              <View style={{ alignSelf: 'stretch', flexDirection: 'row', gap: 10 }}>
-                {saved && (
-                  <View style={{ flex: 1 }}>
-                    <Button kind="sec" label="Vazgeç" onPress={() => { setH(saved.h); setA(saved.a); setEditing(false); setState('idle'); setError(''); }} />
-                  </View>
-                )}
-                <View style={{ flex: 2 }}>
-                  <Button label={state === 'saving' ? 'Kaydediliyor…' : `Onayla · ${h}–${a}`} onPress={confirm} disabled={state === 'saving'} />
-                </View>
-              </View>
-              <Text style={{ fontSize: 12.5, color: state === 'error' ? t.live : t.muted, textAlign: 'center' }}>
-                {state === 'error' ? error : saved ? `Kayıtlı tahminin ${saved.h}–${saved.a}` : 'Tam skor 3 puan, doğru sonuç 1 puan'}
-              </Text>
-            </>
-          )}
+      <Panel title="Skor Tahminin" style={{ marginBottom: 12, paddingBottom: 14 }}>
+        <View style={{ alignItems: 'center', gap: 12, paddingTop: 12, paddingHorizontal: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Stepper value={h} onChange={(n) => change(n, a)} label={f.h.name} dim={!saved && !touched.current} />
+            <Text style={{ fontSize: 22, color: t.muted }}>–</Text>
+            <Stepper value={a} onChange={(n) => change(h, n)} label={f.a.name} dim={!saved && !touched.current} />
+          </View>
           <FavoriteHint f={f} h={h} a={a} picked={!!saved || touched.current} crowd={community.data} />
-          {pending > 0 && <Text style={{ fontSize: 12.5, color: t.muted }}>{pending} arkadaşın tahmin girdi; maç başlayınca görürsün.</Text>}
           {saved && <Joker secret={secret} matchId={f.id} on={!!saved.joker} onChange={picks.reload} />}
-          {saved && <AskFriends f={f} secret={secret} pick={{ h: saved.h, a: saved.a }} />}
-          <CommunityLine f={f} data={community.data} />
+          <View style={{ alignSelf: 'stretch', flexDirection: 'row', gap: 10 }}>
+            {saved && (
+              <View style={{ flex: 1 }}>
+                <Button kind="sec" label="Vazgeç" onPress={() => { setH(saved.h); setA(saved.a); setEditing(false); setState('idle'); setError(''); }} />
+              </View>
+            )}
+            <View style={{ flex: 2 }}>
+              <Button label={state === 'saving' ? 'Kaydediliyor…' : `Onayla · ${h}–${a}`} onPress={confirm} disabled={state === 'saving'} />
+            </View>
+          </View>
+          {state === 'error' ? <Text style={{ fontSize: 12.5, color: t.live, textAlign: 'center' }}>{error}</Text>
+            : !saved ? <Text style={{ fontSize: 12.5, color: t.muted, textAlign: 'center' }}>Tam skor 3 puan, doğru sonuç 1 puan</Text> : null}
         </View>
       </Panel>
     );
@@ -172,13 +176,13 @@ function Joker({ secret, matchId, on, onChange }: { secret: string; matchId: num
   };
   return (
     <View style={{ alignItems: 'center', gap: 4 }}>
-      <Pressable onPress={toggle} disabled={busy} accessibilityRole="switch" accessibilityState={{ checked: on }} accessibilityLabel="Joker"
+      <Pressable onPress={toggle} disabled={busy} accessibilityRole="switch" accessibilityState={{ checked: on }} accessibilityLabel="Joker, haftada bir maç puanı ikiye katlar"
         style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 14, borderRadius: 99, borderWidth: 1,
           borderColor: on ? t.accent : t.line, backgroundColor: on ? t.accentSoft : 'transparent', opacity: busy ? 0.6 : 1 }}>
         <Text style={{ fontSize: 14 }}>🃏</Text>
-        <Text style={{ fontSize: 13.5, fontWeight: '600', color: on ? t.fg : t.muted }}>{on ? 'Joker bu maçta · ×2' : 'Jokeri bu maçta kullan'}</Text>
+        <Text style={{ fontSize: 13.5, fontWeight: '600', color: on ? t.fg : t.muted }}>{on ? 'Joker bu maçta · ×2' : 'Joker kullan · ×2'}</Text>
       </Pressable>
-      <Text style={{ fontSize: 11.5, color: msg ? t.fg : t.muted, textAlign: 'center' }}>{msg || 'Haftada bir maç; puanın ikiye katlanır.'}</Text>
+      {!!msg && <Text style={{ fontSize: 11.5, color: t.fg, textAlign: 'center' }}>{msg}</Text>}
     </View>
   );
 }
