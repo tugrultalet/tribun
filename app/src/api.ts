@@ -17,6 +17,8 @@ export type Fixture = {
   h: Team; a: Team; s: [number, number] | null; pen: [number, number] | null;
   // Maçın yarışması. Katalogda olmayan yarışmalar (ör. hazırlık maçları) için ad ve logo buradan gelir.
   lgName?: string | null; lgLogo?: string | null;
+  // Kırmızı kart sayısı [ev, deplasman]; yalnızca kart varsa gelir.
+  rc?: [number, number];
 };
 // type: main = ülke ligi, cup = UEFA kupaları, intl = milli takım turnuvaları, domcup = ülke kupaları.
 export type League = { id: number; key: string; name: string; country: string; type: 'main' | 'cup' | 'intl' | 'domcup'; logo: string; tv?: string };

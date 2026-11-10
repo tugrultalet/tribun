@@ -47,7 +47,20 @@ export function fx(f) {
     a: team(f.teams.away),
     s: f.goals?.home == null ? null : [f.goals.home, f.goals.away],
     pen: pen && pen.home != null ? [pen.home, pen.away] : null,
+    ...redCards(f),
   };
+}
+
+// Kırmızı kart sayısı (ikinci sarıdan atılma dahil). Yalnızca olayları da içeren yanıtlarda (fixtures?ids, canlı yenileme)
+// hesaplanır; kart yoksa alan hiç eklenmez.
+function redCards(f) {
+  if (!Array.isArray(f.events)) return {};
+  const rc = [0, 0];
+  for (const e of f.events) {
+    if (e.type !== 'Card' || !/Red|Second/i.test(e.detail || '')) continue;
+    rc[e.team?.id === f.teams.home.id ? 0 : 1] += 1;
+  }
+  return rc[0] || rc[1] ? { rc } : {};
 }
 
 export function event(e, homeId) {

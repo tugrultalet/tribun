@@ -213,6 +213,17 @@ export function statusText(f: Fixture): string {
 // [arma] Ev sahibi ........ saat / skor ........ Deplasman [arma]. Armalar kenarlara dayalı, adlar armayla aynı hizada.
 // Ev sahibi hep solda olduğundan iç saha / deplasman satırın düzeninden okunur; takip edilen takım kalın yazılır.
 export type RowNote = { text: string; wait: boolean };
+// Takım adının yanında kırmızı kart işareti; birden fazlaysa sayısı da yazılır.
+export function RedCard({ n, size = 1 }: { n?: number; size?: number }) {
+  if (!n) return null;
+  return (
+    <View accessibilityLabel={`${n} kırmızı kart`} style={{ flexDirection: 'row', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+      <View style={{ width: 8 * size, height: 11 * size, borderRadius: 1.5, backgroundColor: '#E5322D' }} />
+      {n > 1 && <Text style={{ fontSize: 10.5 * size, fontWeight: '700', color: '#E5322D' }}>{n}</Text>}
+    </View>
+  );
+}
+
 export function MatchRow({ f, onPress, showLeague, note }: { f: Fixture; onPress: () => void; showLeague?: boolean; note?: RowNote }) {
   const t = useTheme();
   const { followsTeam, league } = useStore();
@@ -232,6 +243,7 @@ export function MatchRow({ f, onPress, showLeague, note }: { f: Fixture; onPress
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 }}>
           <Crest uri={f.h.logo} size={26} />
           <Text numberOfLines={1} style={nameStyle(0, homeMine)}>{shortName(f.h.name)}</Text>
+          <RedCard n={f.rc?.[0]} />
         </View>
         <View style={{ minWidth: 64, alignItems: 'center', paddingHorizontal: 6 }}>
           {f.s && f.st !== 'ns' ? (
@@ -242,6 +254,7 @@ export function MatchRow({ f, onPress, showLeague, note }: { f: Fixture; onPress
           {f.st === 'live' || f.st === 'ft' || f.st === 'off' ? <Text numberOfLines={1} style={{ fontSize: 10, lineHeight: 12, color: live ? t.live : t.muted, fontWeight: '600' }}>{statusText(f)}</Text> : null}
         </View>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, minWidth: 0 }}>
+          <RedCard n={f.rc?.[1]} />
           <Text numberOfLines={1} style={[nameStyle(1, awayMine), { textAlign: 'right' }]}>{shortName(f.a.name)}</Text>
           <Crest uri={f.a.logo} size={26} />
         </View>

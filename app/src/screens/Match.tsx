@@ -8,7 +8,7 @@ import { dayLabel } from '../dates';
 import { RootParams, useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { Crest, Empty, Icon, LiveDot, Loader, Note, Section, Seg, StandingsTable, statusText, Tabs, HAIR } from '../ui';
+import { Crest, Empty, Icon, LiveDot, Loader, RedCard, Note, Section, Seg, StandingsTable, statusText, Tabs, HAIR } from '../ui';
 import { PickCard } from '../game/PickCard';
 import { Screen } from './Screen';
 
@@ -54,10 +54,14 @@ function Head({ m }: { m: MatchData }) {
   const live = f.st === 'live';
   const tv = f.st === 'ns' || live ? league(f.lg)?.tv : undefined;
   const chip = live ? statusText(f) : f.st === 'ft' ? (f.short === 'PEN' ? 'Penaltılarla bitti' : f.short === 'AET' ? 'Uzatmalarda bitti' : 'Maç sonu') : f.st === 'off' ? (f.short === 'PST' ? 'Ertelendi' : 'İptal') : `${dayLabel(f.date, meta.today)} · ${f.time}`;
+  const reds = (k: 'h' | 'a') => m.events.filter((e) => e.k === 'r' && e.side === k).length || f.rc?.[k === 'h' ? 0 : 1];
   const side = (team: Team) => (
     <Pressable onPress={() => nav.navigate('Team', { team })} accessibilityRole="button" accessibilityLabel={team.name} style={{ flex: 1, alignItems: 'center', gap: 8 }}>
       <Crest uri={team.logo} size={52} />
-      <Text numberOfLines={2} style={{ fontWeight: '700', fontSize: 14, textAlign: 'center', color: t.fg }}>{team.name}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, maxWidth: '100%' }}>
+        <Text numberOfLines={2} style={{ fontWeight: '700', fontSize: 14, textAlign: 'center', color: t.fg, flexShrink: 1 }}>{team.name}</Text>
+        <RedCard n={reds(team.id === f.h.id ? 'h' : 'a')} />
+      </View>
     </Pressable>
   );
   const scorers = (s: 'h' | 'a') => m.events.filter((e) => e.k === 'goal' && e.side === s).map((e) => `${e.p} ${minute(e)}`).join('\n');

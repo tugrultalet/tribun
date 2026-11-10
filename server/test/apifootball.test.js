@@ -137,3 +137,14 @@ test('fullName yalnızca baş harf uyuşursa açar', () => {
   assert.equal(fullName('U. Çakır', 'Mert'), 'U. Çakır');
   assert.equal(fullName('U. Çakır', undefined), 'U. Çakır');
 });
+
+test('kırmızı kartlar takım başına sayılır (ikinci sarı dahil)', async () => {
+  const f = { fixture: { id: 1, timestamp: 1700000000, status: { short: '2H', elapsed: 70 } }, league: { id: 203, round: 'Regular Season - 1' },
+    teams: { home: { id: 10, name: 'A' }, away: { id: 20, name: 'B' } }, goals: { home: 1, away: 0 },
+    events: [{ type: 'Card', detail: 'Red Card', team: { id: 20 } }, { type: 'Card', detail: 'Second Yellow card', team: { id: 20 } }, { type: 'Card', detail: 'Yellow Card', team: { id: 10 } }] };
+  const { provider } = make(() => ok([f]));
+  const [x] = await provider.refresh([{ id: 1 }]);
+  assert.deepEqual(x.rc, [0, 2]);
+  const { provider: p2 } = make(() => ok([{ ...f, events: [] }]));
+  assert.equal((await p2.refresh([{ id: 1 }]))[0].rc, undefined);
+});
