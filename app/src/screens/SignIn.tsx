@@ -85,10 +85,10 @@ export function SignInButtons({ onDone }: { onDone?: () => void }) {
                 <Button kind="sec" label={busy ? 'Kontrol ediliyor…' : 'Kodla giriş yap'} disabled={busy || code.length < 6} onPress={verify} />
               </>
             ) : null}
-            <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 18 }}>
-              <Pressable onPress={send} disabled={busy} hitSlop={8}><Text style={{ color: t.accent, fontSize: 13.5, fontWeight: '600' }}>Tekrar gönder</Text></Pressable>
-              {!manual && <Pressable onPress={() => setManual(true)} hitSlop={8}><Text style={{ color: t.muted, fontSize: 13.5 }}>Kodla giriş yap</Text></Pressable>}
-              <Pressable onPress={() => { setEmail('form'); setError(''); }} hitSlop={8}><Text style={{ color: t.muted, fontSize: 13.5 }}>E-postayı değiştir</Text></Pressable>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }}>
+              <Chip label="↻  Tekrar gönder" onPress={send} disabled={busy} />
+              {!manual && <Chip label="🔢  Kodla giriş yap" onPress={() => setManual(true)} />}
+              <Chip label="✎  E-postayı değiştir" onPress={() => { setEmail('form'); setError(''); }} />
             </View>
           </>
         )}
@@ -141,5 +141,17 @@ export function KeepAccountCard() {
       <Text style={{ fontSize: 13, color: t.muted, lineHeight: 18 }}>Hesabını bağla; yeni telefonda aynı hesapla girince puanların, grupların ve tahminlerin geri gelir.</Text>
       <SignInButtons />
     </Card>
+  );
+}
+
+// E-posta adımındaki ikincil eylemler: çerçeveli, dolgulu düğme (yalnız yazı gibi görünmesin).
+function Chip({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+  const t = useTheme();
+  return (
+    <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label.replace(/^\S+\s+/, '')}
+      style={({ pressed }) => ({ paddingVertical: 9, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: t.line,
+        backgroundColor: pressed ? t.line : t.surface2, opacity: disabled ? 0.5 : 1 })}>
+      <Text style={{ fontSize: 13.5, fontWeight: '700', color: t.fg }}>{label}</Text>
+    </Pressable>
   );
 }
