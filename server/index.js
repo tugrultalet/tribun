@@ -18,7 +18,7 @@ import { Buckets, clientIp, dateInWindow } from './lib/limits.js';
 import { createSupa, syncMatches } from './lib/supa.js';
 import { askPage, validAskToken } from './lib/ask.js';
 import { loginPage } from './lib/login.js';
-import { logoUri, matchSvg, renderPng } from './lib/og.js';
+import { groupSvg, logoUri, matchSvg, renderPng } from './lib/og.js';
 import { nationalName } from './lib/national.js';
 import { sendPushes } from './lib/push.js';
 import { createApns, loadApnsConfig } from './lib/apns.js';
@@ -124,6 +124,32 @@ const ogCache = new Map();
 // Milli takım adları Türkçe (Belgium → Belçika); kulüp adları olduğu gibi kalır.
 const trName = (n) => { const t = nationalName(n); return t.toLowerCase() === String(n || '').replace(/-/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase() ? n : t; };
 const DAY_FMT = new Intl.DateTimeFormat('tr-TR', { timeZone: 'Europe/Istanbul', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+// Grup daveti görseli: maç grubunda iki takımın logosu ve maç saati, takım grubunda 1–3 takımın logosu.
+async function groupImage(code) {
+  const info = await publicRpc('invite_info', { p_code: code });
+  if (!info) throw new Error('yok');
+  const key = `g:${code}:${info.members}`;
+  if (ogCache.has(key)) return ogCache.get(key);
+  const scope = info.scope || null;
+  let logos = [], kicker = 'Tribün grubu', when = '';
+  if (scope?.type === 'match') {
+    kicker = 'Maç sohbeti';
+    try {
+      const f = (await core.match(Number(scope.ids[0]))).fixture;
+      logos = [await logoUri(f.h.logo), await logoUri(f.a.logo)];
+      when = DAY_FMT.format(f.ts * 1000).replace(/\s(\d{2}:\d{2})$/, ' · $1');
+    } catch { logos = [await logoUri(info.team_logo)]; }
+  } else {
+    const ids = scope?.type === 'teams' ? scope.ids : [info.team_id];
+    logos = await Promise.all(ids.slice(0, 3).map((id) => logoUri(`https://media.api-sports.io/football/teams/${id}.png`)));
+    if (scope?.type === 'leagues') logos = [await logoUri(info.team_logo)];
+  }
+  const png = renderPng(groupSvg({ name: info.name, logos, kicker, when, members: info.members }));
+  ogCache.set(key, png);
+  if (ogCache.size > 200) ogCache.delete(ogCache.keys().next().value);
+  return png;
+}
+
 async function askImage(token) {
   const info = await publicRpc('ask_info', { p_token: token });
   if (!info) throw new Error('yok');
@@ -218,6 +244,18 @@ const server = http.createServer(async (req, res) => {
     });
     return res.end(loginPage({ hash: url.searchParams.get('h') }));
   }
+  // Grup davetinin önizleme görseli: /j/KOD/og.png
+  const gog = /^\/j\/([A-Za-z0-9]{6})\/og\.png$/.exec(url.pathname);
+  if (gog && validCode(gog[1])) {
+    try {
+      const png = await groupImage(gog[1].toUpperCase());
+      res.writeHead(200, { 'content-type': 'image/png', 'content-length': png.length, 'cache-control': 'public, max-age=3600', ...SECURITY_HEADERS });
+      return res.end(png);
+    } catch {
+      res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8', ...SECURITY_HEADERS });
+      return res.end('Görsel yok');
+    }
+  }
   // Davet bağlantısı: /j/ABC123?n=Grup+adı  (WhatsApp'tan gelen kişi için karşılama sayfası)
   const invite = /^\/j\/([A-Za-z0-9]{6})$/.exec(url.pathname);
   if (invite && validCode(invite[1])) {
@@ -227,7 +265,10 @@ const server = http.createServer(async (req, res) => {
       'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
       'x-frame-options': 'DENY',
     });
-    return res.end(invitePage({ code: invite[1], name: url.searchParams.get('n'), storeUrl: process.env.APP_STORE_URL }));
+    let info = null;
+    try { info = await publicRpc('invite_info', { p_code: invite[1].toUpperCase() }); } catch { /* adı bağlantıdan */ }
+    const image = info ? `https://${PUBLIC_HOST}/j/${invite[1].toUpperCase()}/og.png?d=${OG_DESIGN}&m=${info.members}` : null;
+    return res.end(invitePage({ code: invite[1], name: info?.name || url.searchParams.get('n'), storeUrl: process.env.APP_STORE_URL, image }));
   }
   // Bağlantının önizleme görseli (WhatsApp vb.): /t/KOD8/og.png. Aynı istek için bellekte saklanır.
   const og = /^\/t\/([A-Za-z0-9]{8})\/og\.png$/.exec(url.pathname);

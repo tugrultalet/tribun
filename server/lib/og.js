@@ -48,6 +48,41 @@ export function matchSvg({ home, away, homeLogo, awayLogo, pick, sender, league,
 </svg>`;
 }
 
+// Grup daveti kartı: aynı tasarım; ortada grubun logoları (maç grubunda iki takım, takım grubunda 1–3 takım) ve adı,
+// altta "Gruba katıl". Maç grubunda sağ üstte maç saati.
+export function groupSvg({ name, logos, kicker, when, members }) {
+  const n = Math.max(1, Math.min(logos.length || 1, 3));
+  const size = n === 1 ? 170 : n === 2 ? 150 : 120;
+  const gap = n === 3 ? 50 : 140;
+  const total = n * size + (n - 1) * gap;
+  const x0 = 600 - total / 2;
+  const imgs = (logos.length ? logos : [null]).slice(0, 3).map((uri, i) => {
+    const x = x0 + i * (size + gap);
+    return uri ? `<image href="${uri}" x="${x}" y="${300 - size / 2 - 30}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/>`
+      : `<circle cx="${x + size / 2}" cy="270" r="${size / 2}" fill="#ffffff" fill-opacity="0.08"/>`;
+  }).join('');
+  const vs = n === 2 ? `<text x="600" y="290" text-anchor="middle" font-family="Outfit" font-weight="700" font-size="54" fill="#A7ABC8">vs</text>` : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#A9B6F5"/><stop offset="0.5" stop-color="#B9ACEB"/><stop offset="1" stop-color="#E5B9D9"/></linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1D2766"/><stop offset="1" stop-color="#0E1440"/></linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="70" y="72" width="1060" height="500" rx="56" fill="#2A2466" fill-opacity="0.18"/>
+  <rect x="70" y="56" width="1060" height="500" rx="56" fill="url(#card)"/>
+  <rect x="70.5" y="56.5" width="1059" height="499" rx="56" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="130" y="128" font-family="Inter" font-weight="600" font-size="28" fill="#A7ABC8">${esc(kicker)}</text>
+  <text x="1070" y="128" text-anchor="end" font-family="Inter" font-weight="700" font-size="28" fill="#9DB1FF">${esc(when || '')}</text>
+  ${imgs}${vs}
+  <text x="600" y="412" text-anchor="middle" font-family="Inter" font-weight="700" font-size="${name.length > 24 ? 36 : 44}" fill="#ffffff">${esc(clip(name))}</text>
+  <rect x="130" y="448" width="940" height="2" fill="#ffffff" fill-opacity="0.1"/>
+  <text x="130" y="505" font-family="Inter" font-weight="700" font-size="32" fill="#ffffff">Gruba katıl, birlikte tahmin edelim<tspan fill="#A7ABC8" font-weight="600">${members ? `&#160;· ${members} üye` : ''}</tspan></text>
+  <rect x="890" y="468" width="180" height="54" rx="27" fill="#9DB1FF"/>
+  <text x="980" y="504" text-anchor="middle" font-family="Inter" font-weight="700" font-size="26" fill="#0B1030">Katıl ›</text>
+  <text x="600" y="602" text-anchor="middle" font-family="Inter" font-weight="700" font-size="24" fill="#2B2A6B" fill-opacity="0.6">Tribün</text>
+</svg>`;
+}
+
 export function renderPng(svg) {
   return new Resvg(svg, { fitTo: { mode: 'width', value: 1200 }, font: { fontFiles: FONTS, loadSystemFonts: false, defaultFontFamily: 'Inter' } }).render().asPng();
 }
