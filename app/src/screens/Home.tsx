@@ -34,7 +34,7 @@ export default function Home() {
   // Takip edilen takımlara, takip edilmeyen grup takımları da eklenir (grup maçları ana ekranda görünsün).
   const teamIds = [...new Set([...store.teams.map((x) => x.id), ...groups.map((g) => g.team.id)])];
   const query = scope === 'mine' && teamIds.length ? `/api/mine?teams=${teamIds.join(',')}` : null;
-  const state = useApi<Mine>(query, 60000);
+  const state = useApi<Mine>(query, 60000, true);
   const day = useApi<{ date: string; fixtures: Fixture[] }>(scope === 'all' ? `/api/fixtures?date=${store.meta.today}` : null, 60000);
   const openMatch = (f: Fixture) => nav.navigate('Match', { id: f.id });
 
@@ -119,7 +119,7 @@ export default function Home() {
   }
   if (scope === 'all') {
     return (
-      <Screen tab title="Maçlarım" right={addButton} team={store.mainTeam?.name} onRefresh={day.reload} refreshing={day.loading && day.data !== undefined}>
+      <Screen tab title="Maçlarım" right={addButton} team={store.mainTeam?.name} onRefresh={day.reload}>
         {filter}
         <Loader state={day}>
           {(d) => d.fixtures.length ? <MatchList title="Bugünün maçları" fixtures={d.fixtures} onMatch={openMatch} showLeague /> : <Empty>Bugün katalogdaki liglerde maç yok.</Empty>}
@@ -128,7 +128,7 @@ export default function Home() {
     );
   }
   return (
-    <Screen tab title="Maçlarım" right={addButton} team={store.mainTeam?.name} onRefresh={state.reload} refreshing={state.loading && state.data !== undefined}>
+    <Screen tab title="Maçlarım" right={addButton} team={store.mainTeam?.name} onRefresh={state.reload}>
       {filter}
       {notice}
       <Loader state={state}>

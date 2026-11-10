@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -26,9 +26,13 @@ export function Backdrop({ team, league }: { team?: string; league?: number }) {
 // Ortak ekran iskeleti.
 // iOS'ta yığın ekranlarının başlığı yerel gezinme çubuğudur (Liquid Glass); içerik onun altından kayar.
 // Sekme ekranlarında ve diğer platformlarda başlık uygulama içinde çizilir.
-export function Screen({ title, tab, right, team, league, children, onRefresh, refreshing, bottomInset }: {
-  title?: string; tab?: boolean; right?: React.ReactNode; team?: string; league?: number; children: React.ReactNode; onRefresh?: () => void; refreshing?: boolean; bottomInset?: boolean;
+// `onRefresh`: aşağı çekince çağrılır. Yenileme göstergesi yalnızca kullanıcı çekince görünür; arka plandaki otomatik
+// yenilemeler göstergeyi açmaz (açarsa iOS içeriği aşağı iterek ekranı zıplatır).
+export function Screen({ title, tab, right, team, league, children, onRefresh, bottomInset }: {
+  title?: string; tab?: boolean; right?: React.ReactNode; team?: string; league?: number; children: React.ReactNode; onRefresh?: () => unknown; bottomInset?: boolean;
 }) {
+  const [pulling, setPulling] = useState(false);
+  const pull = async () => { setPulling(true); try { await onRefresh?.(); } finally { setPulling(false); } };
   const t = useTheme();
   const nav = useNavigation();
   const insets = useSafeAreaInsets();
@@ -42,7 +46,7 @@ export function Screen({ title, tab, right, team, league, children, onRefresh, r
     nav.setOptions({ title: title ?? '', headerRight: hasRight ? () => rightRef.current : undefined });
   }, [nav, tab, title, hasRight]);
 
-  const refresh = onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={t.muted} /> : undefined;
+  const refresh = onRefresh ? <RefreshControl refreshing={pulling} onRefresh={pull} tintColor={t.muted} /> : undefined;
   if (IOS) {
     return (
       <View style={{ flex: 1, backgroundColor: t.bg }}>

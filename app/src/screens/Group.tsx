@@ -34,7 +34,7 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
   };
 
   return (
-    <Screen team={group?.team.name} onRefresh={state.reload} refreshing={state.loading && state.data !== undefined}>
+    <Screen team={group?.team.name} onRefresh={state.reload}>
       <Loader state={state}>
         {(d) => (
           <>
