@@ -33,7 +33,7 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
   const appActive = useAppActive();
   const store = useStore();
   const secret = store.me?.secret ?? '';
-  const { id, name, match, home, away, kickoff } = route.params;
+  const { id, name, match, home, away, kickoff, derby } = route.params;
   const [messages, setMessages] = useState<Message[]>([]);
   const [myId, setMyId] = useState<string | null>(null);
   const [text, setText] = useState('');
@@ -149,6 +149,8 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <Backdrop />
+      {/* Derbi odası: zemine kırmızı ton. */}
+      {derby ? <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(229,50,45,0.16)' }} /> : null}
       {!IOS && <View style={{ paddingTop: insets.top }}><BackBar title={name} onBack={nav.goBack} /></View>}
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={IOS ? 'padding' : undefined} keyboardVerticalOffset={0}>
         <FlatList

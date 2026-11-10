@@ -12,7 +12,8 @@ export type RootParams = {
   MyTeams: undefined;
   Group: { id: string };
   // match verilirse grubun o maçın odası (yoksa genel sohbet).
-  Chat: { id: string; name: string; match?: number; home?: string; away?: string; kickoff?: number };
+  // derby: derbi odası (kırmızı tonlu zemin, başlıkta 🔥).
+  Chat: { id: string; name: string; match?: number; home?: string; away?: string; kickoff?: number; derby?: boolean };
   Feedback: undefined;
   Settings: undefined;
   Member: { id: string; name: string };

@@ -8,7 +8,7 @@ import { Group, rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { track } from '../telemetry';
-import { MAX_SCOPE_LEAGUES } from '../groups/scope';
+import { MAX_SCOPE_TEAMS } from '../groups/scope';
 import { Button, Card, Crest, Empty, GAP, Icon, Loader, Panel, Seg } from '../ui';
 import { Screen } from './Screen';
 import { fbPushPermission } from '../fb';
@@ -66,12 +66,9 @@ function MyGroups({ secret }: { secret: string }) {
   const [code, setCode] = useState(linked);
   // Uygulama açıkken bağlantıya dokunulursa (sıcak açılış) form yine kodla açılır.
   useEffect(() => { if (linked) { setForm('join'); setCode(linked); } }, [linked]);
-  const [team, setTeam] = useState<Team | undefined>(store.mainTeam ?? store.teams[0]);
-  // Kapsam: "Bu grupta hangi maçları tahmin edeceksiniz?" Bir takımın maçları ya da seçilen turnuvalar.
-  const [kind, setKind] = useState<'team' | 'leagues'>('team');
-  // Lig türü: arkadaş grubu (sohbet, herkes birbirini görür) ya da açık lig (herkese açık bağlantı, sıralama, kurucu duyurusu).
-  const [type, setType] = useState<'friends' | 'open'>('friends');
-  const [picked, setPicked] = useState<number[]>([]);
+  // Grup = takım(lar): 1–3 takım seçilir, grup bu takımların bütün maçlarını tahmin eder (derbiler dahil). Turnuva kapsamı ve
+  // açık lig yeni grupta sunulmuyor (eski gruplar çalışmaya devam eder).
+  const [teamIds, setTeamIds] = useState<number[]>(() => { const first = store.mainTeam ?? store.teams[0]; return first ? [first.id] : []; });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -85,25 +82,24 @@ function MyGroups({ secret }: { secret: string }) {
       setForm('none'); setName(''); setCode('');
       nav.setParams({ code: undefined } as never);
       state.reload();
-      track(form === 'join' ? 'group_joined' : 'group_created', form === 'join' ? undefined : { scope: kind });
+      track(form === 'join' ? 'group_joined' : 'group_created', form === 'join' ? undefined : { teams: teamIds.length });
       // Gruptan tahmin isteği ve mesaj bildirimi gelebilsin (sistem izni bir kez sorulur).
       fbPushPermission().catch(() => {});
       nav.navigate('Group', { id: group.id });
     } catch (e) { setError((e as ApiError).message); } finally { setBusy(false); }
   };
-  const togglePicked = (id: number) => setPicked((l) => (l.includes(id) ? l.filter((x) => x !== id) : l.length >= MAX_SCOPE_LEAGUES ? l : [...l, id]));
+  const uniqueTeams = store.teams.filter((x, i, all) => all.findIndex((y) => y.name === x.name) === i);
+  const toggleTeam = (id: number) => setTeamIds((l) => (l.includes(id) ? l.filter((x) => x !== id) : l.length >= MAX_SCOPE_TEAMS ? l : [...l, id]));
   const create = () => {
-    if (kind === 'leagues') {
-      const chosen = picked.map((id) => store.league(id)).filter((l): l is NonNullable<typeof l> => !!l);
-      if (!chosen.length) return;
-      return run(() => rpc<Group>('create_group', {
-        p_secret: secret, p_name: name.trim(), p_team_id: 0, p_team_name: chosen.map((l) => l.name).join(', ').slice(0, 80), p_team_logo: chosen[0].logo,
-        p_scope: { type: 'leagues', ids: picked }, p_kind: type,
-      }));
-    }
-    return team && run(() => rpc<Group>('create_group', { p_secret: secret, p_name: name.trim(), p_team_id: team.id, p_team_name: team.name, p_team_logo: team.logo, p_kind: type }));
+    const chosen = teamIds.map((id) => store.teams.find((x) => x.id === id)).filter((x): x is Team => !!x);
+    if (!chosen.length) return;
+    return run(() => rpc<Group>('create_group', {
+      p_secret: secret, p_name: name.trim(), p_team_id: chosen[0].id, p_team_name: chosen.map((x) => x.name).join(' · ').slice(0, 80), p_team_logo: chosen[0].logo,
+      // Tek takımda kapsam boş kalır (eski gruplarla aynı); birden çok takımda {type:'teams'}.
+      p_scope: chosen.length > 1 ? { type: 'teams', ids: chosen.map((x) => x.id) } : null, p_kind: 'friends',
+    }));
   };
-  const canCreate = !!name.trim() && (kind === 'leagues' ? picked.length > 0 : !!team);
+  const canCreate = !!name.trim() && teamIds.length > 0;
   const join = () => run(() => rpc<Group>('join_group', { p_secret: secret, p_code: code.trim() }));
   const open = (next: 'create' | 'join') => { setError(''); setForm(form === next ? 'none' : next); };
 
@@ -133,7 +129,7 @@ function MyGroups({ secret }: { secret: string }) {
       </Loader>
 
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-        <View style={{ flex: 1 }}><Button kind={form === 'create' ? 'pri' : 'sec'} label="Lig kur" onPress={() => open('create')} /></View>
+        <View style={{ flex: 1 }}><Button kind={form === 'create' ? 'pri' : 'sec'} label="Grup kur" onPress={() => open('create')} /></View>
         <View style={{ flex: 1 }}><Button kind={form === 'join' ? 'pri' : 'sec'} label="Kodla katıl" onPress={() => open('join')} /></View>
       </View>
 
@@ -146,42 +142,26 @@ function MyGroups({ secret }: { secret: string }) {
       )}
       {form === 'create' && !needsAccount && (
         <Card style={{ marginTop: GAP, padding: 16, gap: 12 }}>
-          <Seg value={type} onChange={setType} options={[['friends', 'Arkadaş grubu'], ['open', 'Açık lig']]} />
-          <Text style={{ fontSize: 12.5, color: t.muted, lineHeight: 18 }}>
-            {type === 'friends' ? 'En fazla 50 kişi; sohbet ve maç odaları var, herkes birbirinin tahminini görür.' : 'Bağlantıyı alan herkes katılır; ilk 10 ve herkesin kendi sırası görünür. Üyeler sohbet edemez, yalnızca sen duyuru yazarsın.'}
-          </Text>
-          <Field value={name} onChange={setName} placeholder={type === 'open' ? 'Lig adı' : 'Grup adı'} maxLength={40} />
-          <Text style={{ fontSize: 14, fontWeight: '600', color: t.fg }}>Bu {type === 'open' ? 'ligde' : 'grupta'} hangi maçları tahmin edeceksiniz?</Text>
-          <Seg value={kind} onChange={setKind} options={[['team', 'Bir takımın maçları'], ['leagues', 'Turnuvalar']]} />
-          {kind === 'leagues' ? (
-            <>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {store.meta.leagues.map((l) => {
-                  const on = picked.includes(l.id);
-                  return (
-                    <Pressable key={l.id} onPress={() => togglePicked(l.id)} accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={l.name}
-                      style={{ paddingVertical: 7, paddingHorizontal: 12, borderRadius: 99, backgroundColor: on ? t.accentSoft : t.surface2, borderWidth: 1, borderColor: on ? t.accent : 'transparent' }}>
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: t.fg }}>{l.name}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <Text style={{ color: t.muted, fontSize: 12.5 }}>En fazla {MAX_SCOPE_LEAGUES} turnuva seçebilirsin. Kapsam kişisel takibinden bağımsızdır.</Text>
-            </>
-          ) : store.teams.length ? (
+          <Field value={name} onChange={setName} placeholder="Grup adı" maxLength={40} />
+          <Text style={{ fontSize: 14, fontWeight: '600', color: t.fg }}>Hangi takımların maçlarını tahmin edeceksiniz?</Text>
+          {uniqueTeams.length ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {store.teams.filter((x, i, all) => all.findIndex((y) => y.name === x.name) === i).map((x) => {
-                const on = x.id === team?.id;
+              {uniqueTeams.map((x) => {
+                const on = teamIds.includes(x.id);
                 return (
-                  <Pressable key={x.id} onPress={() => setTeam(x)} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={x.name}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 99, backgroundColor: on ? t.accentSoft : t.surface2, borderWidth: 1, borderColor: on ? t.accent : 'transparent' }}>
+                  <Pressable key={x.id} onPress={() => toggleTeam(x.id)} accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={x.name}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 99, backgroundColor: on ? t.accentSoft : t.surface2, borderWidth: 1, borderColor: on ? t.accent : 'transparent', opacity: !on && teamIds.length >= MAX_SCOPE_TEAMS ? 0.45 : 1 }}>
                     <Crest uri={x.logo} size={20} />
                     <Text style={{ fontSize: 14, fontWeight: '600', color: t.fg }}>{x.name}</Text>
+                    {on ? <Text style={{ fontSize: 13, color: t.accent, fontWeight: '800' }}>✓</Text> : null}
                   </Pressable>
                 );
               })}
             </View>
-          ) : <Text style={{ color: t.muted, fontSize: 13 }}>Bir takım seçmek için önce takım takip et ya da "Turnuvalar"ı seç.</Text>}
+          ) : <Text style={{ color: t.muted, fontSize: 13 }}>Önce Profil → Takımlarım'dan takım ekle.</Text>}
+          <Text style={{ color: t.muted, fontSize: 12.5, lineHeight: 18 }}>
+            En fazla {MAX_SCOPE_TEAMS} takım. Örneğin Galatasaray ve Fenerbahçe seçersen ikisinin bütün maçları, derbiler dahil, grupta tahmin edilir. Grubun sohbeti maçlara özel: her maçın odası başlamadan 1 saat önce açılır.
+          </Text>
           {error ? <Text style={{ color: t.live, fontSize: 13 }}>{error}</Text> : null}
           <Button label={busy ? 'Kuruluyor…' : 'Kur'} disabled={busy || !canCreate} onPress={create} />
         </Card>
