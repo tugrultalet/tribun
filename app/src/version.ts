@@ -9,8 +9,9 @@ export function versionLess(a: string, b: string): boolean {
 }
 // Bildirim konuları (saf, testli): bildirimler açıksa ana takımın konusu (ör. team_645, negatif numara: team_-5).
 // Maç bildirimleri: açıksa takip edilen tüm takımların konuları (ana takım dahil).
-export const pushTopics = (s: { notify?: boolean; main?: number; teams?: { id: number }[] }): string[] => {
-  if (!s.notify) return [];
+export const pushTopics = (s: { notify?: boolean; remind?: boolean; main?: number; teams?: { id: number }[] }): string[] => {
   const ids = [...new Set([...(s.main != null ? [s.main] : []), ...(s.teams ?? []).map((t) => t.id)])];
-  return ids.map((id) => `team_${id}`);
+  // team_: maç başladı / gol / maç sonu. pre_team_: maçtan 1 saat önce tahmin hatırlatması (ayrı açılıp kapanır;
+  // ayarlanmamışsa maç bildirimleriyle birlikte gelir).
+  return [...(s.notify ? ids.map((id) => `team_${id}`) : []), ...((s.remind ?? s.notify) ? ids.map((id) => `pre_team_${id}`) : [])];
 };

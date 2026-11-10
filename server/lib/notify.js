@@ -19,7 +19,21 @@ export const eventKey = (kind, f) => `${f.id}:${kind}:${f.s ? f.s.join('-') : ''
 const topicOf = (id) => `team_${id}`;
 const score = (f) => `${f.h.name} ${f.s?.[0] ?? 0}–${f.s?.[1] ?? 0} ${f.a.name}`;
 
+// Tahmin hatırlatması: maçtan yaklaşık 1 saat önce, hatırlatmayı açanların konusuna (pre_team_<numara>).
+// Dokununca maç ekranı (tahmin kartı) açılır.
+export function reminderFor(f, now = Date.now()) {
+  const mins = Math.round((f.ts * 1000 - now) / 60000);
+  const when = mins >= 50 ? '1 saat sonra' : `${Math.max(mins, 1)} dakika sonra`;
+  return {
+    condition: `'pre_${topicOf(f.h.id)}' in topics || 'pre_${topicOf(f.a.id)}' in topics`,
+    notification: { title: `${f.h.name} – ${f.a.name}`, body: `Maç ${when} başlıyor. Skoru tahmin et!` },
+    data: { matchId: String(f.id), kind: 'pre' },
+    apns: { payload: { aps: { sound: 'default' } } },
+  };
+}
+
 export function messageFor(kind, f) {
+  if (kind === 'pre') return reminderFor(f);
   const minute = f.min ? ` (${f.min}${f.extra ? `+${f.extra}` : ''}')` : '';
   const text = {
     start: { title: 'Maç başladı', body: `${f.h.name} – ${f.a.name}` },
