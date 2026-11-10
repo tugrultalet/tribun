@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { pollMs } from '../poll';
 import { Pressable, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Fixture, Lineup, Lineups as LineupData, Match as MatchData, MatchEvent, Standings, Team, useApi } from '../api';
@@ -16,8 +17,11 @@ export default function Match({ route }: NativeStackScreenProps<RootParams, 'Mat
   const nav = useNav();
   const store = useStore();
   const [tab, setTab] = useState<Tab>('sum');
-  const state = useApi<MatchData>(`/api/match/${route.params.id}`, 30000);
+  const id = `/api/match/${route.params.id}`;
+  const [every, setEvery] = useState<number | undefined>(30000);
+  const state = useApi<MatchData>(id, every);
   const f = state.data?.fixture;
+  useEffect(() => { if (f) setEvery(pollMs(f)); }, [f?.st, f?.ts]);
   const league = f ? store.league(f.lg) : undefined;
   return (
     <Screen league={f?.lg} onRefresh={state.reload} title={f ? `${league?.name ?? f.lgName ?? ''} · ${f.round}` : ''}>

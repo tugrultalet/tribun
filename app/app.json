@@ -9,6 +9,9 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.sportvisor.tribun",
+      "associatedDomains": [
+        "applinks:tribunapp.io"
+      ],
       "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,

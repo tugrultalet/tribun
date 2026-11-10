@@ -6,7 +6,8 @@ import { useAppActive } from './appState';
 // verilmezse yerel sunucuya gidilir. Yayın (TestFlight/App Store) sürümü ise varsayılan olarak Render'daki sunucuyu kullanır.
 const PRODUCTION_API_URL = 'https://tribun-api.onrender.com';
 // Davet bağlantıları geliştirme sırasında bile yayındaki sunucuyu gösterir (kişi uygulamadan bağımsız bir sayfaya gelir).
-export const PUBLIC_URL = PRODUCTION_API_URL;
+// Paylaşılan bağlantılar (davet, gizlilik) kalıcı alan adını kullanır; API adresi değişse de bağlantılar bozulmaz.
+export const PUBLIC_URL = 'https://tribunapp.io';
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? 'http://localhost:8787' : PRODUCTION_API_URL)).replace(/\/$/, '');
 
 export type Team = { id: number; name: string; logo: string };
