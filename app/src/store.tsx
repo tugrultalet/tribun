@@ -46,6 +46,15 @@ async function deleteSecret(): Promise<void> {
 async function writeSecret(secret: string): Promise<void> {
   if (SECURE) await SecureStore.setItemAsync(SECRET_KEY, secret, { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK });
 }
+// Uygulamada profil yok ama Keychain'de sır varsa (uygulama silinip yeniden kurulduysa ya da yerel kayıt bozulduysa):
+// sır geçerliyse profil adıyla geri gelir; kullanıcı yeniden giriş yapmaz. Ağ yoksa bir sonraki açılışta yine denenir.
+// Çıkış yap ve hesabı sil sırrı Keychain'den de siler, o yüzden bu yol yalnızca kullanıcı çıkmadıysa çalışır.
+async function restoreFromKeychain(base: Saved): Promise<Saved> {
+  const kept = await readSecret();
+  if (!kept) return base;
+  const info = await rpc<{ name?: string; provider?: Provider | null }>('account_info', { p_secret: kept }).catch(() => null);
+  return info?.name ? { ...base, me: { secret: kept, name: info.name, provider: info.provider ?? undefined } } : base;
+}
 // Diske (AsyncStorage) yazılan kopya: sır çıkarılır.
 const toDisk = (s: Saved): Saved => (SECURE && s.me ? { ...s, me: { ...s.me, secret: '' } } : s);
 
@@ -121,7 +130,7 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
   useEffect(() => {
     (async () => {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
-      if (!raw) return setSaved({ ...EMPTY, ids: 2 });
+      if (!raw) return setSaved(await restoreFromKeychain({ ...EMPTY, ids: 2 }));
       const stored: Saved = JSON.parse(raw);
       let next = migrate(stored);
       if (next.me) {
@@ -130,6 +139,7 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
         // Sır bulunamazsa (ör. Keychain silinmiş) takma ad yeniden sorulur.
         next = secret ? { ...next, me: { ...next.me, secret } } : { ...next, me: undefined };
       }
+      if (!next.me) next = await restoreFromKeychain(next);
       const disk = JSON.stringify(toDisk(next));
       if (disk !== JSON.stringify(stored)) AsyncStorage.setItem(STORAGE_KEY, disk).catch(() => {});
       setSaved(next);

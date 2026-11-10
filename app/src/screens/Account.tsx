@@ -65,13 +65,15 @@ function Details({ secret }: { secret: string }) {
   };
   const hidden = hide ?? a?.hide_global ?? false;
   const toggleHide = (v: boolean) => { setHide(v); rpc('set_hide_global', { p_secret: secret, p_hide: v }).catch(() => setHide(!v)); };
-  const confirmDelete = () => {
-    const go = () => store.deleteAccount().then(() => track('account_deleted'), (e) => Alert.alert('Silinemedi', (e as Error).message));
-    if (Platform.OS === 'web') { if (globalThis.confirm?.('Hesabın ve tüm verilerin kalıcı olarak silinsin mi?')) go(); return; }
-    Alert.alert('Hesabımı sil', 'Takma adın, grup üyeliklerin, mesajların ve tahminlerin kalıcı olarak silinir. Kurduğun gruplar başka üye varsa ona devredilir. Bu işlem geri alınamaz.', [
-      { text: 'Vazgeç', style: 'cancel' },
-      { text: 'Sil', style: 'destructive', onPress: go },
-    ]);
+  // Hesap silme iki adımlı: önce "Hesabımı sil", sonra onay kelimesi (SİL) yazılınca kırmızı düğme çalışır.
+  const [deleting, setDeleting] = useState(false);
+  const [word, setWord] = useState('');
+  const [delBusy, setDelBusy] = useState(false);
+  const wordOk = ['SİL', 'SIL'].includes(word.trim().toLocaleUpperCase('tr'));
+  const doDelete = () => {
+    if (!wordOk || delBusy) return;
+    setDelBusy(true);
+    store.deleteAccount().then(() => track('account_deleted'), (e) => { setDelBusy(false); Alert.alert('Silinemedi', (e as Error).message); });
   };
   const nav = useNav();
   const confirmSignOut = () => {
@@ -161,12 +163,27 @@ function Details({ secret }: { secret: string }) {
 
       <Section eyebrow="Hesabı sil">
         <Card>
-          <Pressable onPress={confirmDelete} accessibilityRole="button" style={[line, { borderTopWidth: 0, borderColor: t.line }]}>
+          <Pressable onPress={() => { setDeleting((v) => !v); setWord(''); }} accessibilityRole="button" style={[line, { borderTopWidth: 0, borderColor: t.line }]}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 15, color: t.live, fontWeight: '600' }}>Hesabımı sil</Text>
               <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 18 }}>Takma ad, gruplar, mesajlar ve tahminler kalıcı olarak silinir. Takip ettiğin takımlar telefonda kalır.</Text>
             </View>
           </Pressable>
+          {deleting && (
+            <View style={{ paddingHorizontal: 14, paddingBottom: 14, gap: 10 }}>
+              <Text style={{ fontSize: 13.5, color: t.fg, lineHeight: 19 }}>
+                Bu işlem geri alınamaz. Kurduğun gruplar başka üye varsa ona devredilir. Onaylamak için <Text style={{ fontWeight: '800' }}>SİL</Text> yaz.
+              </Text>
+              <Field value={word} onChange={setWord} placeholder="SİL" maxLength={10} autoCapitalize="characters" onSubmit={doDelete} />
+              <Pressable onPress={doDelete} disabled={!wordOk || delBusy} accessibilityRole="button" accessibilityState={{ disabled: !wordOk || delBusy }}
+                style={{ height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: t.live, opacity: wordOk && !delBusy ? 1 : 0.35 }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>{delBusy ? 'Siliniyor…' : 'Hesabımı kalıcı olarak sil'}</Text>
+              </Pressable>
+              <Pressable onPress={() => { setDeleting(false); setWord(''); }} hitSlop={8} style={{ alignSelf: 'center' }}>
+                <Text style={{ fontSize: 13.5, color: t.muted }}>Vazgeç</Text>
+              </Pressable>
+            </View>
+          )}
         </Card>
       </Section>
       <View style={{ height: HAIR }} />
