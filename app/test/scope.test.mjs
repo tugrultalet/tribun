@@ -1,5 +1,5 @@
 // Saf mantık testleri: npm test (Node 22.6+; ağ ve arayüz gerekmez).
-import { inScope, isDerby, isDerbyByName, scopeLeagues, scopeTeams } from '../src/groups/scopeRules.ts';
+import { inScope, isDerby, isDerbyByName, scopeLeagues, scopeMatch, scopeTeams } from '../src/groups/scopeRules.ts';
 import assert from 'node:assert/strict';
 const F = (lg, h, a) => ({ id: 1, lg, h: { id: h }, a: { id: a } });
 const legacy = { scope: null, team: { id: 645 } };
@@ -20,4 +20,8 @@ assert.ok(isDerby(F(203, 645, 611)) && isDerby(F(203, 549, 998)) && !isDerby(F(2
 const ars = { scope: { type: 'teams', ids: [42, 50] }, team: { id: 42 } };
 assert.ok(isDerby(F(39, 42, 50), ars) && !isDerby(F(39, 42, 50)) && !isDerby(F(39, 42, 9), ars));
 assert.ok(isDerbyByName('Galatasaray', 'Fenerbahçe') && !isDerbyByName('Galatasaray', 'Amed') && !isDerbyByName(null, 'Fenerbahçe'));
+// maça özel grup: yalnızca o maç
+const one = { scope: { type: 'match', ids: [777001] }, team: { id: 645 } };
+assert.equal(scopeMatch(one), 777001); assert.equal(scopeTeams(one), null); assert.equal(scopeMatch(teams), null);
+assert.ok(inScope(one, { id: 777001, lg: 5, h: { id: 1 }, a: { id: 2 } }) && !inScope(one, { id: 9, lg: 5, h: { id: 645 }, a: { id: 2 } }));
 console.log('ok');

@@ -10,7 +10,8 @@ export type RootParams = {
   Team: { team: Team };
   Picker: undefined;
   MyTeams: undefined;
-  Group: { id: string };
+  // invite: açılınca davet ekranı da açılsın (maç grubu yeni kurulduğunda).
+  Group: { id: string; invite?: boolean };
   // match verilirse grubun o maçın odası (yoksa genel sohbet).
   // derby: derbi odası (kırmızı tonlu zemin, başlıkta 🔥).
   Chat: { id: string; name: string; match?: number; home?: string; away?: string; kickoff?: number; derby?: boolean };

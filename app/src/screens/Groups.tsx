@@ -125,7 +125,7 @@ function MyGroups({ secret }: { secret: string }) {
                 <Crest uri={g.team.logo} size={36} />
                 <View style={{ flex: 1 }}>
                   <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: '600', color: t.fg }}>{g.name}{g.verified ? ' ✓' : ''}</Text>
-                  <Text numberOfLines={1} style={{ fontSize: 13, color: t.muted }}>{g.kind === 'open' ? `Açık lig · ${g.members} üye` : g.last_message ? `${g.last_message.name}: ${g.last_message.body}` : `${g.members} üye · ${g.team.name}`}</Text>
+                  <Text numberOfLines={1} style={{ fontSize: 13, color: t.muted }}>{g.kind === 'open' ? `Açık lig · ${g.members} üye` : g.scope?.type === 'match' ? `Tek maç · ${g.members} üye` : `${g.members} üye · ${g.team.name}`}</Text>
                 </View>
                 {unread[g.id] ? (
                   <View accessibilityLabel={`${unread[g.id]} okunmamış mesaj`} style={{ minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: t.live }}>
@@ -141,7 +141,7 @@ function MyGroups({ secret }: { secret: string }) {
 
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
         <View style={{ flex: 1 }}><Button kind={form === 'create' ? 'pri' : 'sec'} label="Grup kur" onPress={() => open('create')} /></View>
-        <View style={{ flex: 1 }}><Button kind={form === 'join' ? 'pri' : 'sec'} label="Kodla katıl" onPress={() => open('join')} /></View>
+        <View style={{ flex: 1 }}><Button kind={form === 'join' ? 'pri' : 'sec'} label="Gruba katıl" onPress={() => open('join')} /></View>
       </View>
 
       {form === 'create' && needsAccount && (

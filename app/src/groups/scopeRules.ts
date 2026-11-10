@@ -10,9 +10,13 @@ export const MAX_SCOPE_TEAMS = 3;
 export const scopeLeagues = (g: Pick<Group, 'scope'>): number[] | null => (g.scope?.type === 'leagues' ? g.scope.ids : null);
 // Takım kapsamlı grupta takımlar (eski gruplarda tek takım); turnuva kapsamında null.
 export const scopeTeams = (g: Pick<Group, 'scope' | 'team'>): number[] | null =>
-  g.scope?.type === 'leagues' ? null : g.scope?.type === 'teams' ? g.scope.ids : [g.team.id];
+  g.scope?.type === 'leagues' || g.scope?.type === 'match' ? null : g.scope?.type === 'teams' ? g.scope.ids : [g.team.id];
+// Maça özel grupta maç numarası.
+export const scopeMatch = (g: Pick<Group, 'scope'>): number | null => (g.scope?.type === 'match' ? g.scope.ids[0] ?? null : null);
 // Bu maç grubun kapsamında mı?
 export function inScope(g: Pick<Group, 'scope' | 'team'>, f: Fixture): boolean {
+  const one = scopeMatch(g);
+  if (one != null) return f.id === one;
   const lg = scopeLeagues(g);
   if (lg) return lg.includes(f.lg);
   const teams = scopeTeams(g) ?? [];
