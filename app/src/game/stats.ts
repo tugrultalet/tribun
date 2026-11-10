@@ -3,7 +3,9 @@
 import type { Fixture } from '../api';
 import { points } from '../groups/standings.ts';
 
-export type MyPick = { match_id: number; h: number; a: number; updated_at: string; kickoff: string | null };
+export type MyPick = { match_id: number; h: number; a: number; updated_at: string; kickoff: string | null; joker?: boolean };
+// Veritabanındaki puan defteri satırı (sunucu maç sonucunu yazınca hesaplanır; sürpriz bonusu ve joker dahil).
+export type Ledger = { match_id: number; total: number; base: number; bonus: number; joker: boolean; outcome: 'exact' | 'correct' | 'miss'; kickoff: string; week: string };
 // /api/results yanıtındaki biten maç.
 export type Result = { id: number; st: 'ft'; s: [number, number]; ts: number; date?: string; lg?: number; h?: { id: number; name: string }; a?: { id: number; name: string } };
 // /api/results yanıtındaki henüz bitmemiş maç (yalnızca adlar ve saat için).

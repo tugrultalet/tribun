@@ -19,8 +19,8 @@ export default function Member({ route }: NativeStackScreenProps<RootParams, 'Me
       <Loader state={state}>
         {(d) => d.error ? <Empty>{d.error}</Empty> : (
           <>
-            <SummaryCard picks={Array.isArray(d.picks) ? d.picks : []} />
-            <PicksList title="Tahminleri" picks={Array.isArray(d.picks) ? d.picks : []} />
+            <SummaryCard profile={route.params.id} picks={Array.isArray(d.picks) ? d.picks : []} />
+            <PicksList title="Tahminleri" profile={route.params.id} picks={Array.isArray(d.picks) ? d.picks : []} />
           </>
         )}
       </Loader>

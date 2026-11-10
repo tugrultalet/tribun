@@ -3,7 +3,7 @@ import { get } from '../api';
 import { rpc } from '../social';
 import { useRpc } from '../social';
 import { useStore } from '../store';
-import { MyPick, OpenMatch, Result, needsResult } from './stats';
+import { Ledger, MyPick, OpenMatch, Result, needsResult } from './stats';
 
 // Benim tüm tahminlerim (kişisel puan ve ana ekran etiketleri için).
 // Beklenmeyen (dizi olmayan) yanıt boş liste sayılır; ekranlar çökmesin.
@@ -69,3 +69,17 @@ export function useOpenMatches(picks: MyPick[] | undefined): Map<number, OpenMat
   }, [key]);
   return openKnown;
 }
+
+// Puan defteri (veritabanında hesaplanan puanlar). `profile` verilirse ortak gruptaki o üyenin defteri.
+export function usePoints(profile?: string, refreshMs = 120000): Map<number, Ledger> {
+  const secret = useStore().me?.secret;
+  const state = useRpc<Ledger[]>('points_of', secret ? { p_secret: secret, ...(profile ? { p_profile: profile } : {}) } : null, refreshMs);
+  return useMemo(() => new Map((Array.isArray(state.data) ? state.data : []).map((l) => [l.match_id, l])), [state.data]);
+}
+
+// Maçın topluluk dağılımı (tahmin girene ya da maç başlayana kadar gizli).
+export type Dist = { n: number; h: number; d: number; a: number };
+export type Community = { hidden: boolean; tribun?: Dist | null; groups?: (Dist & { name: string; members: number })[] };
+
+export const setJoker = (secret: string, matchId: number, on: boolean) =>
+  rpc<{ ok: boolean; moved_from?: number | null }>('set_joker', { p_secret: secret, p_match: matchId, p_on: on });

@@ -133,6 +133,18 @@ Arkadaş grupları Supabase'de durur (proje: `tribun`, şema: `supabase/migratio
 
 Bilinen sınırlar: başlamamış maçta başkalarının tahminini gizleyen şey arayüzdür (API'yi doğrudan çağıran bir grup üyesi görebilir); bildirim yoktur; herkese açık yorum yoktur.
 
+### Puanlama (veritabanında)
+
+Sunucu dakikada bir, tahmin girilmiş ve henüz puanlanmamış maçların saatini, durumunu ve skorunu Supabase'e yazar (`server_sync_matches`, yalnızca service role). Maç bitince puanlar veritabanında hesaplanıp kalıcı deftere (`points`) yazılır; skor sonradan düzeltilirse yeniden puanlanır. Tahmin kilidi de veritabanı saatiyle: maçın saati sunucudan geldiyse o geçerlidir.
+
+- Tam skor 3, doğru sonuç 1.
+- **Sürpriz bonusu +2:** doğru 1/X/2'yi topluluğun %25'inden azı seçtiyse (başlama anındaki tahminlerle).
+- **Joker:** haftada (Pzt–Paz, Türkiye saati) bir maç; puan ×2 (bonus dahil), maç başlayınca kilitlenir.
+- **Seri rozetleri:** üst üste 3/5/10 doğru sonuç (puan vermez).
+- **Topluluk yüzdesi:** tahmin girene ya da maç başlayana kadar gizli; Tribün geneli en az 20 tahminle gösterilir.
+
+Render'da `SUPABASE_SERVICE_ROLE_KEY` tanımlı olmalı (açılışta "Puanlama: açık" yazar). Anahtar repoya girmez.
+
 ## Yayıncı bilgisi
 
 Maç kartında ve maç sayfasında görünen "Yayın: …" bilgisi `server/index.js` içindeki lig tablosundaki `tv` alanından gelir. Türkiye'de yayın hakları lig bazında satıldığı için elle tutulur ve her sezon başında güncellenmelidir. Maç bazında tam kanal bilgisi yoktur.

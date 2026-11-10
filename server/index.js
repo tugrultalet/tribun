@@ -14,6 +14,7 @@ import { privacyPage } from './lib/privacy.js';
 import { createFcm, loadServiceAccount } from './lib/fcm.js';
 import { messageFor } from './lib/notify.js';
 import { Buckets, clientIp, dateInWindow } from './lib/limits.js';
+import { createSupa, syncMatches } from './lib/supa.js';
 import { createApiFootball } from './providers/apifootball.js';
 import { createHighlightly } from './providers/highlightly.js';
 
@@ -165,11 +166,26 @@ server.headersTimeout = 15000;
 // canlı/başlamak üzere maç yoksa kaynağa istek gitmez.
 if (process.env.BACKGROUND_REFRESH !== '0') setInterval(() => core.tick().catch(() => {}), 15000).unref();
 
+// Puanlama: tahmin girilen maçların saatini ve sonucunu dakikada bir Supabase'e yazar; puanlar veritabanında hesaplanır.
+const supa = createSupa();
+if (supa && process.env.BACKGROUND_REFRESH !== '0') {
+  let syncing = false;
+  setInterval(async () => {
+    if (syncing) return;
+    syncing = true;
+    try {
+      const r = await syncMatches(supa, (ids) => core.results(ids));
+      if (r.scored) console.log(`Puanlama: ${r.scored} maç puanlandı.`);
+    } catch (e) { console.warn('Puanlama eşitlemesi başarısız:', e.message); } finally { syncing = false; }
+  }, 60000).unref();
+}
+
 server.listen(PORT, () => {
   const s = provider.state;
   console.log(`Tribün API http://localhost:${PORT}`);
   console.log(`Veri kaynağı: ${provider.name}${s.plan ? ` (plan ${s.plan}${s.limitDay ? `, günlük limit ${s.limitDay}` : ''})` : ''}`);
   const problem = provider.configError();
   if (problem) console.warn(`UYARI: ${problem} server/.env dosyasına ekleyin.`);
+  console.log(supa ? 'Puanlama: açık (Supabase)' : 'Puanlama: kapalı (SUPABASE_SERVICE_ROLE_KEY tanımlı değil)');
   console.log(fcm ? `Bildirimler: açık (Firebase projesi ${fcm.projectId})` : 'Bildirimler: kapalı (FIREBASE_SERVICE_ACCOUNT tanımlı değil)');
 });
