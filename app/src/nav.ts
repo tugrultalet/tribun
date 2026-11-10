@@ -21,6 +21,8 @@ export type RootParams = {
   Ask: { token: string };
   Account: undefined;
   PickHistory: undefined;
+  // "Arkadaş ekle" bağlantısı (tribunapp.io/a/KOD): davet edenle arkadaş olunur.
+  FriendLink: { code: string };
   // E-postadaki giriş bağlantısı: h = Supabase token_hash.
   EmailLink: { h?: string } | undefined;
 };

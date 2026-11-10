@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Platform, Pressable, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, Share, Text, View } from 'react-native';
+import { PUBLIC_URL } from '../api';
 import { useNav } from '../nav';
 import { rpc, useRpc } from '../social';
 import { useStore } from '../store';
@@ -36,8 +37,29 @@ export function FriendsSection() {
     Alert.alert('Arkadaşlıktan çıkar', msg, [{ text: 'Vazgeç', style: 'cancel' }, { text: 'Çıkar', style: 'destructive', onPress: go }]);
   };
 
+  // Arkadaş ekle: kişiye özel bağlantı WhatsApp'tan (kartlı önizleme); açan kişi uygulamada arkadaşın olur.
+  const invite = async () => {
+    try {
+      const r = await rpc<{ code: string }>('my_friend_code', { p_secret: secret });
+      const link = `${PUBLIC_URL}/a/${r.code}?s=${Date.now().toString(36)}`;
+      const text = `Tribün'de arkadaş olalım ⚽ Skor tahminlerimizi karşılaştıralım.\n${link}`;
+      track('friend_invite_sent');
+      try { await Linking.openURL(Platform.OS === 'web' ? `https://wa.me/?text=${encodeURIComponent(text)}` : `whatsapp://send?text=${encodeURIComponent(text)}`); }
+      catch { await Share.share({ message: text }).catch(() => {}); }
+    } catch (e) { Alert.alert('Davet hazırlanamadı', (e as Error).message); }
+  };
+  const addButton = (
+    <Pressable onPress={invite} accessibilityRole="button" accessibilityLabel="Arkadaş ekle"
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 14, marginBottom: 10,
+        backgroundColor: pressed ? '#1DA851' : '#25D366' })}>
+      <Text style={{ fontSize: 16 }}>➕</Text>
+      <Text style={{ fontSize: 15, fontWeight: '800', color: '#05301A' }}>Arkadaş ekle</Text>
+    </Pressable>
+  );
+
   return (
     <Section eyebrow={`Arkadaşlarım${friends.length ? ` · ${friends.length}` : ''}`}>
+      {addButton}
       {friends.length ? (
         <>
           <Seg value={period} onChange={setPeriod} options={[['week', 'Bu hafta'], ['season', 'Sezon']]} />
@@ -65,7 +87,7 @@ export function FriendsSection() {
         <Card style={{ padding: 14 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: t.fg }}>🤝 Arkadaşlarınla yarış</Text>
           <Text style={{ fontSize: 13, color: t.muted, marginTop: 4, lineHeight: 18 }}>
-            Bir maça tahmin yap, "Arkadaşlarına sor" ile WhatsApp'tan gönder. Bağlantıdan gelip tahmin yapan herkes burada arkadaşın olarak görünür; birbirinizin tahminlerini ve puanlarını görürsünüz.
+            "Arkadaş ekle" ile WhatsApp'tan davet gönder ya da bir maça tahmin yapıp "Arkadaşlarına sor" ile paylaş. Bağlantıdan gelen herkes burada arkadaşın olarak görünür; birbirinizin tahminlerini ve puanlarını görürsünüz.
           </Text>
         </Card>
       )}

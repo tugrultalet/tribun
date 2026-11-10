@@ -38,10 +38,11 @@ import AskLink from './src/screens/AskLink';
 import AccountScreen from './src/screens/Account';
 import PickHistory from './src/screens/PickHistory';
 import EmailLink from './src/screens/EmailLink';
+import FriendLink from './src/screens/FriendLink';
 import Team from './src/screens/Team';
 
 // Davet bağlantısı: tribun://join/ABC234 → Gruplar sekmesi, katılma formu kodla dolu.
-const LINKING: LinkingOptions<RootParams> = { prefixes: ['tribun://', 'https://tribunapp.io', 'https://www.tribunapp.io'], config: { screens: { Tabs: { screens: { Groups: { path: 'j/:code', alias: ['join/:code'] } } }, Ask: 't/:token', EmailLink: 'giris', Match: { path: 'match/:id', parse: { id: Number } } } } };
+const LINKING: LinkingOptions<RootParams> = { prefixes: ['tribun://', 'https://tribunapp.io', 'https://www.tribunapp.io'], config: { screens: { Tabs: { screens: { Groups: { path: 'j/:code', alias: ['join/:code'] } } }, Ask: 't/:token', EmailLink: 'giris', FriendLink: 'a/:code', Match: { path: 'match/:id', parse: { id: Number } } } } };
 const Stack = createNativeStackNavigator<RootParams>();
 const Tab = createBottomTabNavigator<TabParams>();
 const IOS = Platform.OS === 'ios';
@@ -132,6 +133,7 @@ function Root() {
           <Stack.Screen name="Account" component={AccountScreen} options={{ title: 'Hesap' }} />
           <Stack.Screen name="PickHistory" component={PickHistory} options={{ title: 'Geçmiş tahminler' }} />
           <Stack.Screen name="EmailLink" component={EmailLink} options={{ title: 'E-posta ile giriş' }} />
+          <Stack.Screen name="FriendLink" component={FriendLink} options={{ title: 'Arkadaş daveti' }} />
           <Stack.Screen name="Feedback" component={Feedback} options={{ title: 'Geri bildirim' }} />
         </>
       ) : (

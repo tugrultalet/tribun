@@ -22,14 +22,25 @@ import { Field } from '../ui';
 // Gruplar açılır (katılma formu kodla).
 export default function Groups() {
   const store = useStore();
+  const t = useTheme();
   const linked = cleanCode(useRoute<RouteProp<TabParams, 'Groups'>>().params?.code);
   const [tab, setTab] = useState<'friends' | 'groups'>(linked ? 'groups' : 'friends');
   useEffect(() => { if (linked) setTab('groups'); }, [linked]);
+  // "Arkadaş ekle" bağlantısıyla gelip yeni takma ad seçtiyse: davet edenle arkadaş olunur.
+  const [joined, setJoined] = useState('');
+  useEffect(() => {
+    const code = store.friendCode;
+    if (!store.me || !code) return;
+    store.setFriendCode(undefined);
+    rpc<{ ok: boolean; new?: boolean; name?: string }>('accept_friend', { p_secret: store.me.secret, p_code: code })
+      .then((r) => { if (r.ok && r.name) { setTab('friends'); setJoined(`${r.name} ile artık arkadaşsınız 🤝`); } }).catch(() => {});
+  }, [store.me?.secret, store.friendCode]);
   return (
     <Screen tab title="Arkadaşlar">
       {store.me ? (
         <>
           <Seg value={tab} onChange={setTab} options={[['friends', 'Arkadaşlar'], ['groups', 'Gruplar']]} />
+          {!!joined && <Text style={{ fontSize: 14, fontWeight: '600', color: t.win, textAlign: 'center', marginTop: 10 }}>{joined}</Text>}
           <View style={{ marginTop: 4 }}>{tab === 'friends' ? <FriendsSection /> : <MyGroups secret={store.me.secret} />}</View>
         </>
       ) : <NameForm />}
