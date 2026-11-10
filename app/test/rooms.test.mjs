@@ -1,0 +1,14 @@
+import { roomState, roomsToShow } from '../src/chat/rooms.ts';
+import assert from 'node:assert/strict';
+const now = 1_800_000_000_000, H = 3600000;
+const f = (id, st, inH) => ({ id, st, ts: (now + inH * H) / 1000 });
+assert.equal(roomState(f(1, 'ns', 2), now), 'soon');
+assert.equal(roomState(f(1, 'ns', 0.5), now), 'open', 'başlamadan 1 saat önce açılır');
+assert.equal(roomState(f(1, 'live', -2.5), now), 'open');
+assert.equal(roomState(f(1, 'ft', -2), now), 'open', 'bitişten sonra 1 saat');
+assert.equal(roomState(f(1, 'ft', -3.5), now), 'closed');
+assert.equal(roomState(f(1, 'off', 0.2), now), 'closed');
+const r = roomsToShow([f(1, 'ns', 5), f(2, 'live', -1), f(3, 'ns', 30), f(4, 'ns', 0.5), f(5, 'ft', -10)], now);
+assert.deepEqual(r.open.map((x) => x.id), [2, 4]);
+assert.deepEqual(r.soon.map((x) => x.id), [1]);
+console.log('ok');

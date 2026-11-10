@@ -11,7 +11,8 @@ export type RootParams = {
   Picker: undefined;
   MyTeams: undefined;
   Group: { id: string };
-  Chat: { id: string; name: string };
+  // match verilirse grubun o maçın odası (yoksa genel sohbet).
+  Chat: { id: string; name: string; match?: number; home?: string; away?: string; kickoff?: number };
   Feedback: undefined;
   Settings: undefined;
   Member: { id: string; name: string };
