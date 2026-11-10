@@ -18,6 +18,7 @@ import { Buckets, clientIp, dateInWindow } from './lib/limits.js';
 import { createSupa, syncMatches } from './lib/supa.js';
 import { askPage, validAskToken } from './lib/ask.js';
 import { logoUri, matchSvg, renderPng } from './lib/og.js';
+import { nationalName } from './lib/national.js';
 import { sendPushes } from './lib/push.js';
 import { createApns, loadApnsConfig } from './lib/apns.js';
 import { createLive } from './lib/live.js';
@@ -117,6 +118,8 @@ const cacheFor = (p) =>
 // Universal Links: tribunapp.io/j/KOD bağlantısı uygulama kuruluysa doğrudan uygulamada açılır.
 // Önizleme görseli: istek bilgisi + maç (logolar, lig, saat). Son 200 görsel bellekte tutulur.
 const ogCache = new Map();
+// Milli takım adları Türkçe (Belgium → Belçika); kulüp adları olduğu gibi kalır.
+const trName = (n) => { const t = nationalName(n); return t.toLowerCase() === String(n || '').replace(/-/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase() ? n : t; };
 const DAY_FMT = new Intl.DateTimeFormat('tr-TR', { timeZone: 'Europe/Istanbul', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 async function askImage(token) {
   const info = await publicRpc('ask_info', { p_token: token });
@@ -128,7 +131,7 @@ async function askImage(token) {
   const lg = f && (CATALOG.find((c) => c.id === f.lg)?.name || f.lgName);
   const kick = f ? f.ts * 1000 : Date.parse(info.kickoff);
   const png = renderPng(matchSvg({
-    home: f?.h.name || info.home, away: f?.a.name || info.away,
+    home: trName(f?.h.name || info.home), away: trName(f?.a.name || info.away),
     homeLogo: await logoUri(f?.h.logo), awayLogo: await logoUri(f?.a.logo),
     pick: info.pick, sender: info.sender,
     // Lig ve tur birlikte sığmıyorsa yalnızca lig adı.
@@ -231,6 +234,7 @@ const server = http.createServer(async (req, res) => {
   if (ask && validAskToken(ask[1])) {
     let info = null;
     try { info = await publicRpc('ask_info', { p_token: ask[1].toUpperCase() }); } catch { /* sayfa "bulunamadı" gösterir */ }
+    if (info) info = { ...info, home: trName(info.home), away: trName(info.away) };
     res.writeHead(info ? 200 : 404, {
       'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=60', ...SECURITY_HEADERS,
       'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src ${SUPABASE_URL}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
