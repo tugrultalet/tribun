@@ -7,9 +7,10 @@ export type MyPick = { match_id: number; h: number; a: number; updated_at: strin
 // Veritabanındaki puan defteri satırı (sunucu maç sonucunu yazınca hesaplanır; sürpriz bonusu ve joker dahil).
 export type Ledger = { match_id: number; total: number; base: number; bonus: number; joker: boolean; outcome: 'exact' | 'correct' | 'miss'; kickoff: string; week: string };
 // /api/results yanıtındaki biten maç.
-export type Result = { id: number; st: 'ft'; s: [number, number]; ts: number; date?: string; lg?: number; h?: { id: number; name: string }; a?: { id: number; name: string } };
+export type Result = { id: number; st: 'ft'; s: [number, number]; ts: number; date?: string; lg?: number; h?: { id: number; name: string; logo?: string }; a?: { id: number; name: string; logo?: string } };
 // /api/results yanıtındaki henüz bitmemiş maç (yalnızca adlar ve saat için).
-export type OpenMatch = { id: number; st: string; s?: [number, number] | null; ts: number; date: string; lg: number; h: { id: number; name: string }; a: { id: number; name: string } };
+export type OpenMatch = { id: number; st: string; s?: [number, number] | null; ts: number; date: string; time?: string; lg: number; min?: number | null; short?: string | null;
+  h: { id: number; name: string; logo?: string }; a: { id: number; name: string; logo?: string } };
 export type Stats = { total: number; exact: number; correct: number; played: number; rate: number };
 
 const asFixture = (r: Result) => ({ st: 'ft', s: r.s, ts: r.ts }) as unknown as Fixture;

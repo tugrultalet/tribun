@@ -12,4 +12,5 @@ assert.deepEqual(pushTopics({ notify: true, main: 645 }), ['team_645']);
 assert.deepEqual(pushTopics({ notify: true, main: -5 }), ['team_-5']);
 assert.deepEqual(pushTopics({ notify: false, main: 645 }), []);
 assert.deepEqual(pushTopics({ notify: true }), []);
+assert.deepEqual(pushTopics({ notify: true, main: 645, teams: [{ id: 645 }, { id: 777 }] }), ['team_645', 'team_777'], 'tüm takımlar');
 console.log('ok');

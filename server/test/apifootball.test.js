@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createApiFootball } from '../providers/apifootball.js';
+import { createApiFootball, fullName } from '../providers/apifootball.js';
 import { fakeFetch, sample } from './helpers.js';
 
 const ok = (response, headers = {}) => ({ headers: { 'x-ratelimit-limit': '300', 'x-ratelimit-requests-limit': '7500', 'x-ratelimit-requests-remaining': '7000', ...headers }, body: { errors: [], response } });
@@ -120,4 +120,20 @@ test('turnuvanın güncel sezonu bulunamazsa son sezona düşer', async () => {
   let n = 0;
   const { provider } = make(() => ok(++n === 1 ? [{ seasons: [] }] : [{ seasons: [{ year: 2022 }, { year: 2024 }] }]));
   assert.equal(await provider.seasonOf(32), 2024);
+});
+
+test('kadro adları ilk adla açılır', async () => {
+  const { provider } = make((path) => path.startsWith('players?')
+    ? ok([{ player: { id: 62401, firstname: 'Tarık', lastname: 'Çetin' } }])
+    : ok(sample('af-squad').response));
+  const s = await provider.squad(611);
+  assert.equal(s.players[0].name, 'Tarık Çetin');
+});
+
+test('fullName yalnızca baş harf uyuşursa açar', () => {
+  assert.equal(fullName('U. Çakır', 'Uğurcan'), 'Uğurcan Çakır');
+  assert.equal(fullName('İ. Kahveci', 'İrfan Can'), 'İrfan Kahveci');
+  assert.equal(fullName('Fred', 'Frederico'), 'Fred');
+  assert.equal(fullName('U. Çakır', 'Mert'), 'U. Çakır');
+  assert.equal(fullName('U. Çakır', undefined), 'U. Çakır');
 });

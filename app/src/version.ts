@@ -8,4 +8,9 @@ export function versionLess(a: string, b: string): boolean {
   return false;
 }
 // Bildirim konuları (saf, testli): bildirimler açıksa ana takımın konusu (ör. team_645, negatif numara: team_-5).
-export const pushTopics = (s: { notify?: boolean; main?: number }): string[] => (s.notify && s.main != null ? [`team_${s.main}`] : []);
+// Maç bildirimleri: açıksa takip edilen tüm takımların konuları (ana takım dahil).
+export const pushTopics = (s: { notify?: boolean; main?: number; teams?: { id: number }[] }): string[] => {
+  if (!s.notify) return [];
+  const ids = [...new Set([...(s.main != null ? [s.main] : []), ...(s.teams ?? []).map((t) => t.id)])];
+  return ids.map((id) => `team_${id}`);
+};

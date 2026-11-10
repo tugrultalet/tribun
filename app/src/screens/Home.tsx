@@ -101,7 +101,7 @@ export default function Home() {
       active.push(f.id);
       followOnLockScreen(f, store.league(f.lg)?.name ?? '', null).catch(() => {});
     }
-  }, [state.data, ranks, store.main, store.liveOff, store.teams]);
+  }, [state.data, ranks, store.main, store.liveOn, store.teams]);
 
   // Turnuva kapsamlı gruplar ve "tüm maçlarını takip et" turnuvaları için turnuva fikstürleri (sunucu önbelleğinden).
   const full = store.full ?? [];
@@ -179,7 +179,7 @@ export default function Home() {
       <Icon.plus color={t.accent} />
     </Pressable>
   );
-  const filter = <View style={{ marginTop: 4 }}><Seg value={scope} onChange={setScope} options={[['mine', 'Takiplerim'], ['all', 'Tüm ligler']]} /></View>;
+  const filter = <View style={{ marginTop: 4 }}><Seg value={scope} onChange={setScope} options={[['mine', 'Takımlarım'], ['all', 'Tüm ligler']]} /></View>;
   // Uzak ayarlardan gelen bakım/duyuru bandı ve (bir kez) ana takım bildirim izni kartı.
   const rc = useRemote();
   const bannerText = rc.maintenance || rc.announcement;
