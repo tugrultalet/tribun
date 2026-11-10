@@ -24,8 +24,8 @@ type Saved = { teams: FollowedTeam[]; main?: number; onboarded: boolean; me?: Me
   full?: number[];
   // Bildirimler: notify açık/kapalı (undefined: henüz sorulmadı), topics: şu an abone olunan konular.
   notify?: boolean; topics?: string[];
-  // Ana takımın maçı başlarken kilit ekranında canlı skor (Live Activity) otomatik açılsın mı.
-  liveAuto?: boolean };
+  // Kilit ekranında canlı skor (Live Activity): takip edilen her takım için varsayılan açık; burada kapatılanlar tutulur.
+  liveOff?: number[] };
 // ids: 2 boş kayıtta da bulunmalı; yoksa kayıt bir sonraki açılışta "eski" sanılıp numaraları yeniden çevrilirdi.
 const EMPTY: Saved = { teams: [], onboarded: false, v: 3, ids: 2 };
 const STORAGE_KEY = 'tribun:v1';
@@ -76,7 +76,9 @@ type Store = Saved & {
   setMain: (id: number) => void;
   // Ana takım bildirimlerini açar (iOS izni istenir; verilmezse false döner) ya da kapatır.
   setNotify: (on: boolean) => Promise<boolean>;
-  setLiveAuto: (on: boolean) => void;
+  // Takımın maçları kilit ekranında kendiliğinden açılsın mı (takip edilen takımlar için varsayılan: evet).
+  liveFor: (teamId: number) => boolean;
+  setLiveFor: (teamId: number, on: boolean) => void;
   // Numarası sunucuyla eşleşmeyen takımı doğru kayıtla değiştirir (kind ve turnuva seçimi korunur).
   replaceTeam: (oldId: number, team: Team) => void;
   followsFull: (id: number) => boolean;
@@ -166,7 +168,11 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
         update((s) => ({ ...s, notify: on }));
         return true;
       },
-      setLiveAuto: (on) => update((s) => ({ ...s, liveAuto: on })),
+      liveFor: (id) => !(saved.liveOff ?? []).includes(id),
+      setLiveFor: (id, on) => update((s) => {
+        const off = (s.liveOff ?? []).filter((x) => x !== id);
+        return { ...s, liveOff: on ? off : [...off, id] };
+      }),
       replaceTeam: (oldId, team) => update((s) => {
         const teams = s.teams.map((t) => (t.id === oldId ? { ...t, id: team.id, name: team.name, logo: team.logo } : t));
         const d = dedupeTeams(teams, s.main === oldId ? team.id : s.main);
