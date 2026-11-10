@@ -7,7 +7,8 @@ import { TabParams, useNav } from '../nav';
 import { Group, rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { Button, Card, Crest, Empty, Icon, Loader, Panel } from '../ui';
+import { MAX_SCOPE_LEAGUES } from '../groups/scope';
+import { Button, Card, Crest, Empty, Icon, Loader, Panel, Seg } from '../ui';
 import { Screen } from './Screen';
 
 export function Field({ value, onChange, placeholder, maxLength, autoCapitalize }: { value: string; onChange: (v: string) => void; placeholder: string; maxLength: number; autoCapitalize?: 'characters' | 'sentences' }) {
@@ -63,7 +64,10 @@ function MyGroups({ secret }: { secret: string }) {
   const [code, setCode] = useState(linked);
   // Uygulama açıkken bağlantıya dokunulursa (sıcak açılış) form yine kodla açılır.
   useEffect(() => { if (linked) { setForm('join'); setCode(linked); } }, [linked]);
-  const [team, setTeam] = useState<Team | undefined>(store.teams[0]);
+  const [team, setTeam] = useState<Team | undefined>(store.mainTeam ?? store.teams[0]);
+  // Kapsam: "Bu grupta hangi maçları tahmin edeceksiniz?" Bir takımın maçları ya da seçilen turnuvalar.
+  const [kind, setKind] = useState<'team' | 'leagues'>('team');
+  const [picked, setPicked] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -77,7 +81,19 @@ function MyGroups({ secret }: { secret: string }) {
       nav.navigate('Group', { id: group.id });
     } catch (e) { setError((e as ApiError).message); } finally { setBusy(false); }
   };
-  const create = () => team && run(() => rpc<Group>('create_group', { p_secret: secret, p_name: name.trim(), p_team_id: team.id, p_team_name: team.name, p_team_logo: team.logo }));
+  const togglePicked = (id: number) => setPicked((l) => (l.includes(id) ? l.filter((x) => x !== id) : l.length >= MAX_SCOPE_LEAGUES ? l : [...l, id]));
+  const create = () => {
+    if (kind === 'leagues') {
+      const chosen = picked.map((id) => store.league(id)).filter((l): l is NonNullable<typeof l> => !!l);
+      if (!chosen.length) return;
+      return run(() => rpc<Group>('create_group', {
+        p_secret: secret, p_name: name.trim(), p_team_id: 0, p_team_name: chosen.map((l) => l.name).join(', ').slice(0, 80), p_team_logo: chosen[0].logo,
+        p_scope: { type: 'leagues', ids: picked },
+      }));
+    }
+    return team && run(() => rpc<Group>('create_group', { p_secret: secret, p_name: name.trim(), p_team_id: team.id, p_team_name: team.name, p_team_logo: team.logo }));
+  };
+  const canCreate = !!name.trim() && (kind === 'leagues' ? picked.length > 0 : !!team);
   const join = () => run(() => rpc<Group>('join_group', { p_secret: secret, p_code: code.trim() }));
   const open = (next: 'create' | 'join') => { setError(''); setForm(form === next ? 'none' : next); };
 
@@ -109,7 +125,24 @@ function MyGroups({ secret }: { secret: string }) {
       {form === 'create' && (
         <Card style={{ marginTop: 12, padding: 16, gap: 12 }}>
           <Field value={name} onChange={setName} placeholder="Grup adı" maxLength={40} />
-          {store.teams.length ? (
+          <Text style={{ fontSize: 14, fontWeight: '600', color: t.fg }}>Bu grupta hangi maçları tahmin edeceksiniz?</Text>
+          <Seg value={kind} onChange={setKind} options={[['team', 'Bir takımın maçları'], ['leagues', 'Turnuvalar']]} />
+          {kind === 'leagues' ? (
+            <>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {store.meta.leagues.map((l) => {
+                  const on = picked.includes(l.id);
+                  return (
+                    <Pressable key={l.id} onPress={() => togglePicked(l.id)} accessibilityRole="checkbox" accessibilityState={{ checked: on }} accessibilityLabel={l.name}
+                      style={{ paddingVertical: 7, paddingHorizontal: 12, borderRadius: 99, backgroundColor: on ? t.accentSoft : t.surface2, borderWidth: 1, borderColor: on ? t.accent : 'transparent' }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: t.fg }}>{l.name}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <Text style={{ color: t.muted, fontSize: 12.5 }}>En fazla {MAX_SCOPE_LEAGUES} turnuva seçebilirsin. Kapsam kişisel takibinden bağımsızdır.</Text>
+            </>
+          ) : store.teams.length ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {store.teams.map((x) => {
                 const on = x.id === team?.id;
@@ -122,9 +155,9 @@ function MyGroups({ secret }: { secret: string }) {
                 );
               })}
             </View>
-          ) : <Text style={{ color: t.muted, fontSize: 13 }}>Grup bir takımın maçları için kurulur. Önce Ayarlar'dan bir takım takip et.</Text>}
+          ) : <Text style={{ color: t.muted, fontSize: 13 }}>Bir takım seçmek için önce takım takip et ya da "Turnuvalar"ı seç.</Text>}
           {error ? <Text style={{ color: t.live, fontSize: 13 }}>{error}</Text> : null}
-          <Button label={busy ? 'Kuruluyor…' : 'Kur'} disabled={busy || !name.trim() || !team} onPress={create} />
+          <Button label={busy ? 'Kuruluyor…' : 'Kur'} disabled={busy || !canCreate} onPress={create} />
         </Card>
       )}
       {form === 'join' && (

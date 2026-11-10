@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, Share, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ApiError, Fixture, TeamData, useApi } from '../api';
+import { ApiError, Fixture } from '../api';
+import { useGroupFixtures } from '../groups/scope';
 import { dayLabel } from '../dates';
 import { RootParams, useNav } from '../nav';
 import { entryCount, hasStarted, isValid, points, ranks, sameWeek, standings } from '../groups/standings';
@@ -24,7 +25,7 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
   const [inviting, setInviting] = useState(false);
   const state = useRpc<GroupDetail>('group_detail', secret ? { p_secret: secret, p_group: id } : null, 15000);
   const group = state.data?.group;
-  const fixtures = useApi<TeamData>(group ? `/api/team/${group.team.id}` : null, 60000);
+  const fixtures = useGroupFixtures(group);
 
   const leave = () => {
     const go = () => rpc('leave_group', { p_secret: secret, p_group: id }).then(() => nav.goBack(), () => {});
@@ -55,9 +56,9 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
               <Tabs value={tab} onChange={setTab} options={[['predict', 'Tahmin'], ['table', 'Puan']]} />
             </View>
             <Loader state={fixtures}>
-              {(team) => tab === 'predict'
-                ? <Predict detail={d} fixtures={team.fixtures} today={store.meta.today} secret={secret} onSaved={state.reload} />
-                : <Table detail={d} fixtures={team.fixtures} today={store.meta.today} />}
+              {(list) => tab === 'predict'
+                ? <Predict detail={d} fixtures={list} today={store.meta.today} secret={secret} onSaved={state.reload} />
+                : <Table detail={d} fixtures={list} today={store.meta.today} />}
             </Loader>
             {inviting && <InviteSheet group={d.group} onClose={() => setInviting(false)} />}
             <Pressable onPress={leave} accessibilityRole="button" style={{ alignSelf: 'center', padding: 14, marginTop: 10 }}>
