@@ -76,7 +76,7 @@ ${closed ? '<p class="lead">Maç başladı, tahminler kapandı.</p>' : `
     .catch(function(x){err.textContent=x.message;go.disabled=false;go.textContent='Tahminimi gönder';});};
 })();
 </script>`;
-  return shell(title, `${info.sender} · Tribün`, body, script, image);
+  return shell(title, 'TribünApp', body, script, image);
 }
 
 function shell(title, desc, body, script, image) {
