@@ -43,7 +43,8 @@ export default function Leagues() {
     <Screen tab title="Turnuvalar">
       <SearchBox value={q} onChange={setQ} placeholder="Lig, kupa veya ülke ara" />
       {group('Takip ettiklerin', all.filter((l) => store.followsLeague(l.id)))}
-      {LEAGUE_GROUPS.map(([type, title]) => <React.Fragment key={type}>{group(title, all.filter((l) => l.type === type))}</React.Fragment>)}
+      {/* Takip edilenler yalnızca üstteki tabloda durur; aşağıdaki listelerden çıkar. */}
+      {LEAGUE_GROUPS.map(([type, title]) => <React.Fragment key={type}>{group(title, all.filter((l) => l.type === type && !store.followsLeague(l.id)))}</React.Fragment>)}
       {!all.length && <Empty>Eşleşen lig yok.</Empty>}
     </Screen>
   );

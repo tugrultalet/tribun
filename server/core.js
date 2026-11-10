@@ -52,6 +52,14 @@ export function createCore({ provider, cacheDir }) {
     }
     return list;
   };
+  // Milli takım maçı içeren bir liste yüklenirken Türkçe adlar için milli takım listesi gerekir. Yoksa (örneğin önbellek
+  // boşken) bir kez yüklenir; böylece adlar, takım seçici hiç açılmasa da Türkçe gelir.
+  const intlIds = new Set(leagues.filter((l) => l.type === 'intl').map((l) => l.id));
+  const isNationalFixture = (f) => intlIds.has(f.lg) || /^friendlies$/i.test(f.lgName || '');
+  async function withNationalNames(list) {
+    if (!nationalNames.size && list.some(isNationalFixture)) await getNational().catch(() => {});
+    return norm(list);
+  }
   // Kulüp hazırlık maçları takım ekranlarını doldurmasın; milli takım hazırlık maçları kalır.
   const keepFixture = (f) => !/^(friendlies clubs?|club friendlies)$/i.test(f.lgName || '');
 
@@ -67,14 +75,14 @@ export function createCore({ provider, cacheDir }) {
   // Bir ligin tüm sezon fikstürü. Günlük maç listeleri buradan süzülür; böylece tarih başına istek harcanmaz.
   function getSeason(lg) {
     return cached(`season:${lg}`, slowTtl, async () => ({
-      league: lg, updated: Date.now(), fixtures: norm(await provider.seasonFixtures(lg, await seasonFor(lg))).sort(byTime),
+      league: lg, updated: Date.now(), fixtures: (await withNationalNames(await provider.seasonFixtures(lg, await seasonFor(lg)))).sort(byTime),
     }));
   }
   // Takımın katıldığı tüm yarışmalardaki sezon maçları (lig, kupalar, milli takımlarda turnuvalar ve hazırlıklar).
   function teamSeason(id) {
     return cached(`teamfx:${id}`, slowTtl, async () => ({
       updated: Date.now(),
-      fixtures: norm((await provider.teamSeason(id, currentSeason())).filter(keepFixture)).sort(byTime),
+      fixtures: (await withNationalNames((await provider.teamSeason(id, currentSeason())).filter(keepFixture))).sort(byTime),
     }));
   }
 

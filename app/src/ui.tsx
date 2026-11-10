@@ -3,7 +3,8 @@ import { ActivityIndicator, Image, Platform, Pressable, ScrollView, StyleProp, S
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { ApiError, Fixture, Standings, Zone } from './api';
-import { seasonLabel, shortDate } from './dates';
+import { dayLabel, seasonLabel } from './dates';
+import { shortName } from './names';
 import { useStore } from './store';
 import { useTheme, ZONE_NAMES } from './theme';
 
@@ -172,38 +173,60 @@ export function statusText(f: Fixture): string {
   if (f.st === 'off') return f.short === 'PST' ? 'Ert.' : 'İptal';
   return f.time;
 }
-export function MatchRow({ f, onPress, showLeague, first, dateLabel }: { f: Fixture; onPress: () => void; showLeague?: boolean; first?: boolean; dateLabel?: string }) {
+// Maç satırı (Apple Sports'a yakın, kompakt): `showLeague` ise üstte küçük, ortalı lig adı; altında tek satır:
+// [arma] Ev sahibi ........ saat / skor ........ Deplasman [arma]. Armalar kenarlara dayalı, adlar armayla aynı hizada.
+// Ev sahibi hep solda olduğundan iç saha / deplasman satırın düzeninden okunur; takip edilen takım kalın yazılır.
+export function MatchRow({ f, onPress, showLeague }: { f: Fixture; onPress: () => void; showLeague?: boolean }) {
   const t = useTheme();
-  const { followsTeam } = useStore();
+  const { followsTeam, league } = useStore();
   const done = f.st === 'ft';
-  const line = (side: 'h' | 'a') => {
-    const team = f[side], i = side === 'h' ? 0 : 1;
+  const live = f.st === 'live';
+  const homeMine = followsTeam(f.h.id), awayMine = followsTeam(f.a.id);
+  const lgName = league(f.lg)?.name ?? f.lgName;
+  const nameStyle = (i: 0 | 1, mine: boolean) => {
     const won = done && f.s && f.s[i] > f.s[1 - i], lost = done && f.s && f.s[i] < f.s[1 - i];
-    const color = lost ? t.muted : t.fg, weight = won ? '700' : '500';
-    return (
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
-        <Crest uri={team.logo} size={22} />
-        <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 14.5, fontWeight: weight, color }}>{team.name}</Text>
-        {followsTeam(team.id) && <Icon.star size={12} color={t.accent} filled />}
-        <View style={{ flex: 1 }} />
-        <Text style={{ fontWeight: '600', fontSize: 17, lineHeight: 20, minWidth: 16, textAlign: 'right', color: f.st === 'live' ? t.live : color }}>{f.s ? f.s[i] : ''}</Text>
-      </View>
-    );
+    return { fontSize: 14, fontWeight: (won || (mine && !done) ? '700' : '500') as '700' | '500', color: lost ? t.muted : t.fg, flexShrink: 1, minWidth: 0 };
   };
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${f.h.name} ${f.a.name}`}
-      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, paddingHorizontal: 16, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
-      <View style={{ width: 46, alignItems: 'center', gap: 2 }}>
-        {dateLabel ? <Text style={{ fontSize: 11, fontWeight: '700', color: t.muted }}>{dateLabel}</Text> : null}
-        <Text style={{ fontSize: 12.5, fontWeight: '700', color: f.st === 'live' ? t.live : dateLabel ? t.fg : t.muted }}>{statusText(f)}</Text>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${f.h.name} ${f.a.name}, ${statusText(f)}`}
+      style={({ pressed }) => ({ paddingTop: showLeague && lgName ? 4 : 8, paddingBottom: 8, paddingHorizontal: 14, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+      {showLeague && lgName ? <Text numberOfLines={1} style={{ textAlign: 'center', fontSize: 10.5, color: t.muted, marginBottom: 3 }}>{lgName}{f.round ? ` · ${f.round}` : ''}</Text> : null}
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <Crest uri={f.h.logo} size={26} />
+          <Text numberOfLines={1} style={nameStyle(0, homeMine)}>{shortName(f.h.name)}</Text>
+        </View>
+        <View style={{ minWidth: 64, alignItems: 'center', paddingHorizontal: 6 }}>
+          {f.s && f.st !== 'ns' ? (
+            <Text style={{ fontWeight: '700', fontSize: 16, color: live ? t.live : t.fg, fontVariant: ['tabular-nums'] }}>{f.s[0]}–{f.s[1]}</Text>
+          ) : (
+            <Text style={{ fontWeight: '700', fontSize: 15, color: t.fg, fontVariant: ['tabular-nums'] }}>{statusText(f)}</Text>
+          )}
+          {f.st === 'live' || f.st === 'ft' || f.st === 'off' ? <Text style={{ fontSize: 10, lineHeight: 12, color: live ? t.live : t.muted, fontWeight: '600' }}>{statusText(f)}</Text> : null}
+        </View>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, minWidth: 0 }}>
+          <Text numberOfLines={1} style={[nameStyle(1, awayMine), { textAlign: 'right' }]}>{shortName(f.a.name)}</Text>
+          <Crest uri={f.a.logo} size={26} />
+        </View>
       </View>
-      <View style={{ flex: 1, gap: 4 }}>{line('h')}{line('a')}</View>
-      {showLeague && <LeagueBadge id={f.lg} logo={f.lgLogo} />}
     </Pressable>
   );
 }
-export function MatchList({ fixtures, onMatch, showLeague, dated, title }: { fixtures: Fixture[]; onMatch: (f: Fixture) => void; showLeague?: boolean; dated?: boolean; title?: string }) {
-  return <Panel title={title} style={title ? undefined : { marginTop: 0, paddingVertical: 6 }}>{fixtures.map((f, i) => <MatchRow key={f.id} f={f} first={i === 0} showLeague={showLeague} dateLabel={dated ? shortDate(f.date) : undefined} onPress={() => onMatch(f)} />)}</Panel>;
+// `today` verilirse maçlar günlere ayrılır ve her günün başlığı bir kez yazılır (satırlarda tarih tekrarlanmaz).
+export function MatchList({ fixtures, onMatch, showLeague, today, title }: { fixtures: Fixture[]; onMatch: (f: Fixture) => void; showLeague?: boolean; today?: string; title?: string }) {
+  const t = useTheme();
+  return (
+    <Panel title={title} style={title ? undefined : { marginTop: 0, paddingVertical: 6 }}>
+      {fixtures.map((f, i) => (
+        <React.Fragment key={f.id}>
+          {today && (i === 0 || fixtures[i - 1].date !== f.date) ? (
+            <Text style={{ fontSize: 11.5, fontWeight: '700', letterSpacing: 0.4, color: t.muted, paddingHorizontal: 16, paddingTop: i === 0 ? 4 : 12, paddingBottom: 2 }}>{dayLabel(f.date, today).toLocaleUpperCase('tr')}</Text>
+          ) : null}
+          <MatchRow f={f} showLeague={showLeague} onPress={() => onMatch(f)} />
+        </React.Fragment>
+      ))}
+    </Panel>
+  );
 }
 
 /* ---------- Puan durumu ---------- */

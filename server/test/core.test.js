@@ -92,3 +92,13 @@ test('aynı ligde aynı gün sonradan başlayan maç, önceki maç bitse de canl
   const second = await core.day(a.date, [203]);
   assert.deepEqual(second.fixtures.map((f) => f.st), ['ft', 'live']);
 });
+
+test('önbellek boşken milli takım maçları da Türkçe adlarla gelir (takım seçici hiç açılmadan)', async () => {
+  const match = fx({ lg: 5, lgName: 'UEFA Nations League', h: TR, a: side(1, 'Belgium'), offsetDays: 3 });
+  const { core } = makeCore({
+    nationalTeams: async () => [side(777, 'Turkey'), side(1, 'Belgium')],
+    teamSeason: async () => [match],
+  });
+  const team = await core.team(777); // /api/national hiç çağrılmadı
+  assert.deepEqual([team.fixtures[0].h.name, team.fixtures[0].a.name], ['Türkiye', 'Belçika']);
+});
