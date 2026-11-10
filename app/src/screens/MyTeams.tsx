@@ -6,7 +6,7 @@ import { Competition, FollowedTeam, competitionsOf, euroIds, selectionOf } from 
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { Button, Card, Crest, Empty, Icon, StarButton, SwipeRow, statusText, HAIR } from '../ui';
+import { Button, Card, Crest, Empty, GAP, Icon, StarButton, SwipeRow, statusText, HAIR } from '../ui';
 import { Screen } from './Screen';
 
 // Takımlarım: ana takım (★) en üstte; her takımın altında o takımın turnuvaları çip olarak, tek dokunuşla açılıp kapanır.
@@ -18,7 +18,7 @@ export default function MyTeams() {
   return (
     <Screen title="Takımlarım">
       {ordered.length ? <Card style={{ marginTop: 4 }}>{ordered.map((team, i) => <Row key={team.id} team={team} first={i === 0} />)}</Card> : <Empty>Henüz takım takip etmiyorsun.</Empty>}
-      <View style={{ marginTop: 20 }}><Button kind="sec" label="+ Takım ekle (kulüp ya da milli takım)" onPress={() => nav.navigate('Picker')} /></View>
+      <View style={{ marginTop: GAP }}><Button kind="sec" label="+ Takım ekle (kulüp ya da milli takım)" onPress={() => nav.navigate('Picker')} /></View>
       <Empty>Maçlarım sekmesinde takımlarının seçili turnuvalardaki maçları görünür. Ana takım ★: renk teması ve öncelikli bildirimler onundur. Takımı sola kaydırarak takipten çıkarabilirsin.</Empty>
     </Screen>
   );

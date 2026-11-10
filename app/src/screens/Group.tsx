@@ -14,7 +14,7 @@ import { setPick } from '../game/hooks';
 import { Stepper } from '../game/Stepper';
 import { notePickSaved } from '../review';
 import { track } from '../telemetry';
-import { Button, Card, Crest, Empty, Icon, Loader, Panel, Seg, Tabs } from '../ui';
+import { Button, Card, Crest, Empty, GAP, Icon, Loader, Panel, Seg, Tabs } from '../ui';
 import { useRemote } from '../remoteConfig';
 import { InviteSheet } from './InviteSheet';
 import { Screen } from './Screen';
@@ -187,8 +187,8 @@ function Table({ detail, fixtures, today }: { detail: GroupDetail; fixtures: Fix
   const cell = { fontSize: 15, color: t.fg, textAlign: 'center' as const, fontVariant: ['tabular-nums' as const] };
   return (
     <>
-      <View style={{ marginTop: 12 }}><Seg value={scope} onChange={setScope} options={[['week', 'Hafta'], ['season', 'Sezon']]} /></View>
-      <Card style={{ marginTop: 12, paddingVertical: 6 }}>
+      <View style={{ marginTop: GAP }}><Seg value={scope} onChange={setScope} options={[['week', 'Hafta'], ['season', 'Sezon']]} /></View>
+      <Card style={{ marginTop: GAP, paddingVertical: 6 }}>
         <View style={{ flexDirection: 'row', paddingVertical: 6, paddingHorizontal: 12 }}>
           <Text style={[head, { width: 26 }]} />
           <Text style={[head, { flex: 1, textAlign: 'left', paddingLeft: 6 }]}>Üye</Text>

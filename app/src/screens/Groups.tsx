@@ -10,7 +10,7 @@ import { useTheme } from '../theme';
 import { ScoreCard } from '../game/ScoreCard';
 import { track } from '../telemetry';
 import { MAX_SCOPE_LEAGUES } from '../groups/scope';
-import { Button, Card, Crest, Empty, Icon, Loader, Panel, Seg } from '../ui';
+import { Button, Card, Crest, Empty, GAP, Icon, Loader, Panel, Seg } from '../ui';
 import { Screen } from './Screen';
 
 export function Field({ value, onChange, placeholder, maxLength, autoCapitalize }: { value: string; onChange: (v: string) => void; placeholder: string; maxLength: number; autoCapitalize?: 'characters' | 'sentences' }) {
@@ -107,7 +107,7 @@ function MyGroups({ secret }: { secret: string }) {
     <>
       <Loader state={state}>
         {(groups) => groups.length ? (
-          <Panel style={{ marginTop: 4, paddingVertical: 6 }}>
+          <Panel style={{ paddingVertical: 6 }}>
             {groups.map((g) => (
               <Pressable key={g.id} onPress={() => nav.navigate('Group', { id: g.id })} accessibilityRole="button" accessibilityLabel={g.name}
                 style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 16, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
@@ -129,7 +129,7 @@ function MyGroups({ secret }: { secret: string }) {
       </View>
 
       {form === 'create' && (
-        <Card style={{ marginTop: 12, padding: 16, gap: 12 }}>
+        <Card style={{ marginTop: GAP, padding: 16, gap: 12 }}>
           <Field value={name} onChange={setName} placeholder="Grup adı" maxLength={40} />
           <Text style={{ fontSize: 14, fontWeight: '600', color: t.fg }}>Bu grupta hangi maçları tahmin edeceksiniz?</Text>
           <Seg value={kind} onChange={setKind} options={[['team', 'Bir takımın maçları'], ['leagues', 'Turnuvalar']]} />
@@ -167,7 +167,7 @@ function MyGroups({ secret }: { secret: string }) {
         </Card>
       )}
       {form === 'join' && (
-        <Card style={{ marginTop: 12, padding: 16, gap: 12 }}>
+        <Card style={{ marginTop: GAP, padding: 16, gap: 12 }}>
           <Field value={code} onChange={(v) => setCode(v.toUpperCase())} placeholder="Davet kodu (6 karakter)" maxLength={6} autoCapitalize="characters" />
           {error ? <Text style={{ color: t.live, fontSize: 13 }}>{error}</Text> : null}
           <Button label={busy ? 'Katılınıyor…' : 'Katıl'} disabled={busy || code.trim().length < 6} onPress={join} />
