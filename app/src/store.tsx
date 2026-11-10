@@ -31,7 +31,9 @@ type Saved = { teams: FollowedTeam[]; main?: number; onboarded: boolean; me?: Me
   // "Hesabını bağla" önerisi (ilk tahminden sonra) kapatıldı mı.
   linkHintOff?: boolean;
   // "Arkadaşlarına sor" bağlantısıyla gelindiyse: o maça tahmin kaydedilince gönderenle arkadaş olunur.
-  ask?: { token: string; match: number } };
+  ask?: { token: string; match: number };
+  // "Arkadaş ekle" bağlantısıyla gelindi ama henüz profil yoktu: takma ad seçilince davet edenle arkadaş olunur.
+  friendCode?: string };
 // ids: 2 boş kayıtta da bulunmalı; yoksa kayıt bir sonraki açılışta "eski" sanılıp numaraları yeniden çevrilirdi.
 const EMPTY: Saved = { teams: [], onboarded: false, v: 3, ids: 2 };
 const STORAGE_KEY = 'tribun:v1';
@@ -100,6 +102,8 @@ type Store = Saved & {
   dismissLinkHint: () => void;
   ask?: { token: string; match: number };
   setAsk: (ask: { token: string; match: number } | undefined) => void;
+  friendCode?: string;
+  setFriendCode: (code: string | undefined) => void;
   // Numarası sunucuyla eşleşmeyen takımı doğru kayıtla değiştirir (kind ve turnuva seçimi korunur).
   replaceTeam: (oldId: number, team: Team) => void;
   followsFull: (id: number) => boolean;
@@ -205,6 +209,8 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
       dismissLinkHint: () => update((s) => ({ ...s, linkHintOff: true })),
       ask: saved.ask,
       setAsk: (ask) => update((s) => ({ ...s, ask })),
+      friendCode: saved.friendCode,
+      setFriendCode: (friendCode) => update((s) => ({ ...s, friendCode })),
       replaceTeam: (oldId, team) => update((s) => {
         const teams = s.teams.map((t) => (t.id === oldId ? { ...t, id: team.id, name: team.name, logo: team.logo } : t));
         const d = dedupeTeams(teams, s.main === oldId ? team.id : s.main);

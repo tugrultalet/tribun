@@ -83,6 +83,30 @@ export function groupSvg({ name, logos, kicker, when, members }) {
 </svg>`;
 }
 
+// Arkadaş daveti kartı: davet edenin baş harfi (yuvarlak), "X seni Tribün'e davet ediyor".
+export function friendSvg({ name }) {
+  const initial = esc(String(name || '?').slice(0, 1).toLocaleUpperCase('tr'));
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#A9B6F5"/><stop offset="0.5" stop-color="#B9ACEB"/><stop offset="1" stop-color="#E5B9D9"/></linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1D2766"/><stop offset="1" stop-color="#0E1440"/></linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="70" y="72" width="1060" height="500" rx="56" fill="#2A2466" fill-opacity="0.18"/>
+  <rect x="70" y="56" width="1060" height="500" rx="56" fill="url(#card)"/>
+  <rect x="70.5" y="56.5" width="1059" height="499" rx="56" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
+  <text x="130" y="128" font-family="Inter" font-weight="600" font-size="28" fill="#A7ABC8">Arkadaş daveti</text>
+  <circle cx="600" cy="245" r="82" fill="#9DB1FF"/>
+  <text x="600" y="276" text-anchor="middle" font-family="Outfit" font-weight="700" font-size="92" fill="#0B1030">${initial}</text>
+  <text x="600" y="400" text-anchor="middle" font-family="Inter" font-weight="700" font-size="42" fill="#ffffff">${esc(clip(String(name || '')))} seni Tribün'e davet ediyor</text>
+  <rect x="130" y="448" width="940" height="2" fill="#ffffff" fill-opacity="0.1"/>
+  <text x="130" y="505" font-family="Inter" font-weight="700" font-size="30" fill="#ffffff">Skor tahminlerimizi karşılaştıralım</text>
+  <rect x="890" y="468" width="180" height="54" rx="27" fill="#9DB1FF"/>
+  <text x="980" y="504" text-anchor="middle" font-family="Inter" font-weight="700" font-size="26" fill="#0B1030">Katıl ›</text>
+  <text x="600" y="602" text-anchor="middle" font-family="Inter" font-weight="700" font-size="24" fill="#2B2A6B" fill-opacity="0.6">Tribün</text>
+</svg>`;
+}
+
 export function renderPng(svg) {
   return new Resvg(svg, { fitTo: { mode: 'width', value: 1200 }, font: { fontFiles: FONTS, loadSystemFonts: false, defaultFontFamily: 'Inter' } }).render().asPng();
 }

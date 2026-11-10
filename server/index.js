@@ -18,7 +18,8 @@ import { Buckets, clientIp, dateInWindow } from './lib/limits.js';
 import { createSupa, syncMatches } from './lib/supa.js';
 import { askPage, validAskToken } from './lib/ask.js';
 import { loginPage } from './lib/login.js';
-import { groupSvg, logoUri, matchSvg, renderPng } from './lib/og.js';
+import { friendSvg, groupSvg, logoUri, matchSvg, renderPng } from './lib/og.js';
+import { friendPage, validFriendCode } from './lib/friend.js';
 import { nationalName } from './lib/national.js';
 import { sendPushes } from './lib/push.js';
 import { createApns, loadApnsConfig } from './lib/apns.js';
@@ -172,7 +173,7 @@ async function askImage(token) {
   return png;
 }
 
-const AASA = JSON.stringify({ applinks: { details: [{ appIDs: [`${process.env.APPLE_TEAM_ID || 'M93BM8ZSQH'}.com.sportvisor.tribun`], components: [{ '/': '/j/*' }, { '/': '/t/*' }, { '/': '/giris' }] }] } });
+const AASA = JSON.stringify({ applinks: { details: [{ appIDs: [`${process.env.APPLE_TEAM_ID || 'M93BM8ZSQH'}.com.sportvisor.tribun`], components: [{ '/': '/j/*' }, { '/': '/t/*' }, { '/': '/a/*' }, { '/': '/giris' }] }] } });
 const PUBLIC_HOST = (process.env.PUBLIC_HOST || 'tribunapp.io').toLowerCase();
 // Supabase: sunucu yetkili istemci (service role, ortam değişkeninden) ve herkese açık anahtarla çağrı (web sayfaları).
 // Publishable anahtar gizli değildir; uygulamada da durur.
@@ -243,6 +244,27 @@ const server = http.createServer(async (req, res) => {
       'x-frame-options': 'DENY', 'referrer-policy': 'no-referrer',
     });
     return res.end(loginPage({ hash: url.searchParams.get('h') }));
+  }
+  // Arkadaş daveti: /a/KOD (sayfa) ve /a/KOD/og.png (WhatsApp kartı)
+  const fr = /^\/a\/([A-Za-z0-9]{8})(\/og\.png)?$/.exec(url.pathname);
+  if (fr && validFriendCode(fr[1])) {
+    let info = null;
+    try { info = await publicRpc('friend_invite_info', { p_code: fr[1].toUpperCase() }); } catch { /* ad olmadan */ }
+    if (fr[2]) {
+      if (!info) { res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8', ...SECURITY_HEADERS }); return res.end('Görsel yok'); }
+      const key = `f:${fr[1].toUpperCase()}:${info.name}`;
+      const png = ogCache.get(key) || renderPng(friendSvg({ name: info.name }));
+      ogCache.set(key, png);
+      res.writeHead(200, { 'content-type': 'image/png', 'content-length': png.length, 'cache-control': 'public, max-age=3600', ...SECURITY_HEADERS });
+      return res.end(png);
+    }
+    res.writeHead(info ? 200 : 404, {
+      'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300', ...SECURITY_HEADERS,
+      'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      'x-frame-options': 'DENY',
+    });
+    const image = info ? `https://${PUBLIC_HOST}/a/${fr[1].toUpperCase()}/og.png?d=${OG_DESIGN}` : null;
+    return res.end(friendPage({ code: fr[1], name: info?.name, storeUrl: process.env.APP_STORE_URL, image }));
   }
   // Grup davetinin önizleme görseli: /j/KOD/og.png
   const gog = /^\/j\/([A-Za-z0-9]{6})\/og\.png$/.exec(url.pathname);
