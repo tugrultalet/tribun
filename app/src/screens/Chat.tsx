@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import { FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -39,8 +39,16 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
   const [detail, setDetail] = useState<GroupDetail | null>(null);
   const [teamFx, setTeamFx] = useState<Fixture[]>([]);
   const [games, setGames] = useState<{ f: Fixture; events: MatchEvent[] }[]>([]);
+  const [kbOpen, setKbOpen] = useState(false);
   const last = useRef(0);
   const list = useRef<FlatList<ChatItem<Message>>>(null);
+
+  // Klavye açıkken alt güvenli alan boşluğu gerekmez (klavye zaten ekranın altını kaplar).
+  useEffect(() => {
+    const show = Keyboard.addListener(IOS ? 'keyboardWillShow' : 'keyboardDidShow', () => setKbOpen(true));
+    const hide = Keyboard.addListener(IOS ? 'keyboardWillHide' : 'keyboardDidHide', () => setKbOpen(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   useLayoutEffect(() => { if (IOS) navigation.setOptions({ title: name }); }, [navigation, name]);
 
@@ -106,7 +114,7 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <Backdrop />
       {!IOS && <View style={{ paddingTop: insets.top }}><BackBar title={name} onBack={nav.goBack} /></View>}
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={IOS ? 'padding' : undefined} keyboardVerticalOffset={IOS ? headerHeight : 0}>
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={IOS ? 'padding' : undefined} keyboardVerticalOffset={0}>
         <FlatList
           ref={list}
           data={items}
@@ -129,7 +137,7 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
           }}
         />
         {error ? <Text style={{ color: t.live, fontSize: 12, textAlign: 'center', paddingBottom: 4 }}>{error}</Text> : null}
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 12, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 10) }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 12, paddingTop: 8, paddingBottom: kbOpen ? 8 : Math.max(insets.bottom, 10) }}>
           <TextInput value={text} onChangeText={setText} placeholder="Mesaj yaz" placeholderTextColor={t.muted} multiline maxLength={500} accessibilityLabel="Mesaj yaz"
             style={{ flex: 1, minHeight: 42, maxHeight: 120, borderRadius: 21, paddingHorizontal: 16, paddingTop: 11, paddingBottom: 11, fontSize: 16, color: t.fg, backgroundColor: t.surface2 }} />
           <Pressable onPress={send} disabled={!text.trim() || sending} accessibilityRole="button" accessibilityLabel="Gönder"
