@@ -7,7 +7,7 @@ import { useTheme } from '../theme';
 import { Button } from '../ui';
 import { askMessage } from './ask';
 
-type AskResult = { token: string; notified: number; again: boolean };
+type AskResult = { token: string; notified: number; again: boolean; already?: boolean; friends?: number };
 
 // Tahminini girdikten sonra: gruplarındaki arkadaşlarına bildirim (maç başına bir kez) ve gruplarında olmayanlara
 // WhatsApp bağlantısı. Bağlantıyla gelen, seçilen gruba katılır. Tahminin varsayılan olarak görünür; gizlenebilir.
@@ -22,19 +22,23 @@ export function AskFriends({ f, secret, pick }: { f: Fixture; secret: string; pi
   const [msg, setMsg] = useState('');
   const chosen = group === undefined ? groups[0]?.id ?? null : group;
 
-  const ask = async (): Promise<AskResult | null> => {
+  // notify: grup arkadaşlarına bildirim (yalnızca "Gruplarıma bildir"). WhatsApp paylaşımı bildirim göndermez.
+  const ask = async (notify: boolean): Promise<AskResult | null> => {
     setBusy(true); setMsg('');
     try {
-      const r = await rpc<AskResult>('ask_friends', { p_secret: secret, p_match: f.id, p_show: show, p_home: f.h.name, p_away: f.a.name, p_group: chosen });
-      if (!r.again) {
-        track('ask_sent', { notified: r.notified, show });
-        setMsg(r.notified ? `${r.notified} arkadaşına bildirim gitti.` : 'Gruplarındaki herkes zaten tahmin girmiş.');
+      const r = await rpc<AskResult>('ask_friends', { p_secret: secret, p_match: f.id, p_show: show, p_home: f.h.name, p_away: f.a.name, p_group: chosen, p_notify: notify });
+      if (notify) {
+        if (r.notified) track('ask_sent', { notified: r.notified, show });
+        setMsg(r.notified ? `${r.notified} arkadaşına bildirim gitti.`
+          : r.already ? 'Bu maç için grup arkadaşlarına zaten bildirim gitti.'
+          : r.friends === 0 ? 'Gruplarında henüz başka kimse yok. WhatsApp\'tan davet et.'
+          : 'Grup arkadaşlarının hepsi bu maça zaten tahmin girmiş.');
       }
       return r;
     } catch (e) { setMsg((e as { message?: string }).message ?? 'Gönderilemedi.'); return null; } finally { setBusy(false); }
   };
   const whatsapp = async () => {
-    const r = await ask();
+    const r = await ask(false);
     if (!r) return;
     const text = askMessage({ home: f.h.name, away: f.a.name, pick: show ? pick : null, token: r.token });
     track('ask_shared', { channel: 'whatsapp' });
@@ -58,7 +62,7 @@ export function AskFriends({ f, secret, pick }: { f: Fixture; secret: string; pi
         </Pressable>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {groups.length > 0 && (
-            <Pressable onPress={() => { ask(); }} disabled={busy} accessibilityRole="button" accessibilityLabel="Gruplarıma bildir"
+            <Pressable onPress={() => { ask(true); }} disabled={busy} accessibilityRole="button" accessibilityLabel="Gruplarıma bildir"
               style={({ pressed }) => ({ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 12,
                 backgroundColor: pressed ? t.line : t.surface2, borderWidth: 1, borderColor: t.line })}>
               <Text style={{ fontSize: 13 }}>🔔</Text>
@@ -102,7 +106,7 @@ export function AskFriends({ f, secret, pick }: { f: Fixture; secret: string; pi
         </View>
       )}
       <Button label={busy ? 'Gönderiliyor…' : "WhatsApp'ta sor"} disabled={busy} onPress={whatsapp} />
-      {groups.length > 0 && <Button kind="sec" label="Yalnızca gruplarıma bildir" disabled={busy} onPress={() => { ask(); }} />}
+      {groups.length > 0 && <Button kind="sec" label="Yalnızca gruplarıma bildir" disabled={busy} onPress={() => { ask(true); }} />}
       <Text style={{ fontSize: 12, color: msg ? t.fg : t.muted, textAlign: 'center' }}>
         {msg || 'Gruplarındaki, bu maça henüz tahmin girmemiş arkadaşlarına bir kez bildirim gider.'}
       </Text>
