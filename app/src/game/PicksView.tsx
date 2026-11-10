@@ -2,7 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useNav } from '../nav';
 import { useTheme } from '../theme';
-import { Card, Empty, GAP, HAIR, Section, Seg } from '../ui';
+import { Card, Empty, GAP, HAIR, Section, Seg, SwipeRow } from '../ui';
+import { Alert, Platform } from 'react-native';
+import { rpc } from '../social';
+import { useStore } from '../store';
+import { track } from '../telemetry';
 import { useOpenMatches, usePoints, useResults } from './hooks';
 import { abbr } from '../chat/timeline';
 import { Crest } from '../ui';
@@ -139,8 +143,17 @@ function when(o: OpenMatch | undefined, t: ReturnType<typeof useTheme>): { text:
 }
 
 // Profil: yalnızca başlamamış ve canlı maçların tahminleri.
-export function ActivePicks({ picks, open }: { picks: MyPick[]; open: Map<number, OpenMatch> }) {
+// Başlamamış maçın satırı sola kaydırınca "Sil" (onay sorar); canlı maçta silinemez.
+export function ActivePicks({ picks, open, onDeleted }: { picks: MyPick[]; open: Map<number, OpenMatch>; onDeleted?: () => void }) {
   const t = useTheme();
+  const secret = useStore().me?.secret;
+  const remove = (p: MyPick, title: string) => {
+    if (!secret) return;
+    const go = () => rpc('delete_pick', { p_secret: secret, p_match: p.match_id }).then(() => { track('pick_deleted'); onDeleted?.(); }, (e) => Alert.alert('Silinemedi', (e as Error).message));
+    const msg = `${title} tahminin (${p.h}–${p.a}) silinsin mi?${p.joker ? ' Bu maçtaki jokerin de kalkar.' : ''}`;
+    if (Platform.OS === 'web') { if (globalThis.confirm?.(msg)) go(); return; }
+    Alert.alert('Tahmini sil', msg, [{ text: 'Vazgeç', style: 'cancel' }, { text: 'Sil', style: 'destructive', onPress: go }]);
+  };
   if (!picks.length) return <Empty>Aktif tahminin yok. Bir maça dokun, skor tahmini yap.</Empty>;
   return (
     <Card>
@@ -148,12 +161,14 @@ export function ActivePicks({ picks, open }: { picks: MyPick[]; open: Map<number
         const o = open.get(p.match_id);
         const w = when(o, t);
         const live = o?.st === 'live' && o.s;
-        return (
+        const title = o ? `${o.h.name} – ${o.a.name}` : 'Bu maç';
+        const row = (
           <CompactRow key={p.match_id} first={i === 0} id={p.match_id} m={o} mid={live ? `${o.s![0]}–${o.s![1]}` : 'vs'} midTone={live ? w.tone : t.muted}
             pick={`${p.h}–${p.a}`} mark={p.joker ? '×2' : ''}
             a11y={`${o ? `${o.h.name} – ${o.a.name}` : 'Maç'}, tahmin ${p.h}–${p.a}, ${w.text}`}
             right={<Text numberOfLines={1} style={{ width: 64, textAlign: 'right', fontSize: 12.5, fontWeight: live ? '700' : '500', color: w.tone, fontVariant: ['tabular-nums'] }}>{w.text}</Text>} />
         );
+        return live ? row : <SwipeRow key={p.match_id} label="Sil" onAction={() => remove(p, title)}>{row}</SwipeRow>;
       })}
     </Card>
   );

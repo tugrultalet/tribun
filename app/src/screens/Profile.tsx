@@ -54,7 +54,7 @@ export default function Profile() {
 
       {store.me && (
         <Section eyebrow="Aktif tahminler">
-          <ActivePicks picks={active} open={open} />
+          <ActivePicks picks={active} open={open} onDeleted={picks.reload} />
           {past.length > 0 && (
             <Card style={{ marginTop: 10 }}>
               <Pressable onPress={() => nav.navigate('PickHistory')} accessibilityRole="button"
