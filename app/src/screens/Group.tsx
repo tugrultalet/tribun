@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, Share, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ApiError, Fixture } from '../api';
-import { useGroupFixtures } from '../groups/scope';
+import { isDerby, useGroupFixtures } from '../groups/scope';
 import { dayLabel, daysBetween } from '../dates';
 import { RootParams, useNav } from '../nav';
 import { entryCount, hasStarted, isValid, points, ranks, sameWeek, standings } from '../groups/standings';
@@ -70,7 +70,7 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
                 <Text numberOfLines={1} style={{ textAlign: 'center', fontSize: 13, color: t.muted, marginTop: 10 }}>{d.group.last_message.name}: {d.group.last_message.body}</Text>
               </Pressable>
             )}
-            {chatOn && !open && fixtures.data && <MatchRooms group={id} fixtures={fixtures.data} secret={secret} />}
+            {chatOn && !open && fixtures.data && <MatchRooms group={id} fixtures={fixtures.data} secret={secret} derby={(f) => !!group && isDerby(f, group)} />}
             <View style={{ marginTop: 8 }}>
               <Tabs value={tab} onChange={setTab} options={[['predict', 'Tahmin'], ['table', 'Puan']]} />
             </View>

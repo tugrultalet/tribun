@@ -7,8 +7,8 @@ import { useAppActive } from '../appState';
 import { ApiError, Fixture, LeagueFixtures, TeamData, get } from '../api';
 import type { Group } from '../social';
 
-export { MAX_SCOPE_LEAGUES, inScope, scopeLeagues } from './scopeRules';
-import { scopeLeagues } from './scopeRules';
+export { MAX_SCOPE_LEAGUES, MAX_SCOPE_TEAMS, inScope, isDerby, isDerbyByName, scopeLeagues, scopeTeams } from './scopeRules';
+import { scopeLeagues, scopeTeams } from './scopeRules';
 
 const byTime = (a: Fixture, b: Fixture) => a.ts - b.ts || a.id - b.id;
 
@@ -50,18 +50,23 @@ export function useGroupFixtures(group: Group | undefined) {
   const isFocused = useIsFocused();
   const appActive = useAppActive();
   const focused = isFocused && appActive;
-  const teamId = group && !leagues ? group.team.id : 0;
+  // Takım kapsamı: grubun 1–3 takımının fikstürleri birleştirilir (iki takımın birbirine karşı maçı bir kez).
+  const teamKey = group && !leagues ? (scopeTeams(group) ?? []).join(',') : '';
   const load = useCallback(async () => {
-    if (!teamId) return;
+    if (!teamKey) return;
     setLoading(true);
-    try { setTeam((await get<TeamData>(`/api/team/${teamId}`)).fixtures); setError(null); }
-    catch (e) { setError(e as ApiError); } finally { setLoading(false); }
-  }, [teamId]);
+    try {
+      const lists = await Promise.all(teamKey.split(',').map((id) => get<TeamData>(`/api/team/${id}`)));
+      const seen = new Set<number>();
+      setTeam(lists.flatMap((l) => l.fixtures).filter((f) => (seen.has(f.id) ? false : (seen.add(f.id), true))).sort(byTime));
+      setError(null);
+    } catch (e) { setError(e as ApiError); } finally { setLoading(false); }
+  }, [teamKey]);
   useEffect(() => {
-    if (!teamId || !focused) return;
+    if (!teamKey || !focused) return;
     load();
     const t = setInterval(load, 60000);
     return () => clearInterval(t);
-  }, [teamId, focused, load]);
+  }, [teamKey, focused, load]);
   return leagues ? league : { data: team, error, loading, reload: load };
 }

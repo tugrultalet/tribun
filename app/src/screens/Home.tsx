@@ -5,7 +5,7 @@ import { followOnLockScreen, liveMatches, liveSupported, saveWidget, stopFollowi
 import { dayLabel, daysBetween } from '../dates';
 import { euroIds, followedFixtures } from '../follow';
 import { useMyPicks } from '../game/hooks';
-import { inScope, scopeLeagues, useLeagueFixtures } from '../groups/scope';
+import { inScope, scopeLeagues, scopeTeams, useLeagueFixtures } from '../groups/scope';
 import { sameWeek } from '../groups/standings';
 import { useNav } from '../nav';
 import { Group, rpc, useRpc } from '../social';
@@ -43,7 +43,7 @@ export default function Home() {
   const groups = Array.isArray(groupsRaw) ? groupsRaw : [];
 
   // Takip edilen takımlara, takip edilmeyen grup takımları da eklenir (grup maçları ana ekranda görünsün).
-  const teamIds = [...new Set([...store.teams.map((x) => x.id), ...groups.map((g) => g.team.id)])];
+  const teamIds = [...new Set([...store.teams.map((x) => x.id), ...groups.flatMap((g) => scopeTeams(g) ?? [])])];
   const query = scope === 'mine' && teamIds.length ? `/api/mine?teams=${teamIds.join(',')}` : null;
   const [fast, setFast] = useState(true);
   const state = useApi<Mine>(query, fast ? FAST_MS : SLOW_MS, true);
