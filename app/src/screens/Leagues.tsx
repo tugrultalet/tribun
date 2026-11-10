@@ -41,7 +41,7 @@ export default function Leagues() {
   );
   const group = (title: string, list: League[]) => list.length > 0 && <Section eyebrow={title}><Card>{list.map(row)}</Card></Section>;
   return (
-    <Screen tab title="Keşfet">
+    <Screen tab title="Ligler">
       <SearchBox value={q} onChange={setQ} placeholder="Lig, kupa veya ülke ara" />
       {!needle && <ExploreSections />}
       {LEAGUE_GROUPS.map(([type, title]) => <React.Fragment key={type}>{group(title, all.filter((l) => l.type === type))}</React.Fragment>)}
