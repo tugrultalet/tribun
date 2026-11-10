@@ -27,7 +27,9 @@ type Saved = { teams: FollowedTeam[]; main?: number; onboarded: boolean; me?: Me
   // remind: maçtan 1 saat önce tahmin hatırlatması (undefined: maç bildirimleriyle aynı).
   remind?: boolean;
   // Kilit ekranında canlı skor (Live Activity): takip edilen tüm takımlar için tek anahtar (varsayılan açık).
-  liveOn?: boolean };
+  liveOn?: boolean;
+  // "Hesabını bağla" önerisi (ilk tahminden sonra) kapatıldı mı.
+  linkHintOff?: boolean };
 // ids: 2 boş kayıtta da bulunmalı; yoksa kayıt bir sonraki açılışta "eski" sanılıp numaraları yeniden çevrilirdi.
 const EMPTY: Saved = { teams: [], onboarded: false, v: 3, ids: 2 };
 const STORAGE_KEY = 'tribun:v1';
@@ -92,6 +94,8 @@ type Store = Saved & {
   // Takip edilen takımların maçları kilit ekranında kendiliğinden açılsın mı (varsayılan: evet).
   liveFor: (teamId: number) => boolean;
   setLiveOn: (on: boolean) => void;
+  linkHintOff: boolean;
+  dismissLinkHint: () => void;
   // Numarası sunucuyla eşleşmeyen takımı doğru kayıtla değiştirir (kind ve turnuva seçimi korunur).
   replaceTeam: (oldId: number, team: Team) => void;
   followsFull: (id: number) => boolean;
@@ -193,6 +197,8 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
       },
       liveFor: () => saved.liveOn !== false,
       setLiveOn: (on) => update((s) => ({ ...s, liveOn: on })),
+      linkHintOff: !!saved.linkHintOff,
+      dismissLinkHint: () => update((s) => ({ ...s, linkHintOff: true })),
       replaceTeam: (oldId, team) => update((s) => {
         const teams = s.teams.map((t) => (t.id === oldId ? { ...t, id: team.id, name: team.name, logo: team.logo } : t));
         const d = dedupeTeams(teams, s.main === oldId ? team.id : s.main);

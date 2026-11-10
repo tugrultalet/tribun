@@ -7,7 +7,7 @@ import { useTheme } from '../theme';
 import { Card, Crest, HAIR, Section } from '../ui';
 
 type Popular = { match_id: number; home: string; away: string; kickoff: string; n: number; h: number; d: number; a: number };
-type Board = { active: number; top: { rank: number; name: string; points: number; me: boolean }[]; me: { rank: number; points: number } | null };
+type Board = { active: number; top: { rank: number; name: string; points: number; me: boolean }[]; me: { rank: number | null; points: number; linked?: boolean } | null };
 type OpenLeague = { id: string; name: string; code: string; team_name: string; team_logo: string; members: number; joined: boolean };
 type Explore = { popular?: Popular[]; week?: Board; fans?: Board & { team: number }; leagues?: OpenLeague[] };
 
@@ -32,10 +32,18 @@ export function ExploreSections() {
         ))}
         {b.me && !b.top.some((r) => r.me) && (
           <View style={{ flexDirection: 'row', paddingVertical: 9, paddingHorizontal: 14, borderTopWidth: HAIR, borderColor: t.line, backgroundColor: t.accentSoft }}>
-            <Text style={{ width: 28, fontSize: 14, color: t.muted }}>{b.me.rank}</Text>
+            <Text style={{ width: 28, fontSize: 14, color: t.muted }}>{b.me.rank ?? '–'}</Text>
             <Text style={{ flex: 1, fontSize: 15, fontWeight: '700', color: t.fg }}>Sen</Text>
             <Text style={{ fontSize: 15, fontWeight: '700', color: t.fg }}>{b.me.points}</Text>
           </View>
+        )}
+        {b.me && b.me.linked === false && (
+          // Sıralama yalnızca hesaba bağlı profilleri sıralar (sahte hesaplar sıralamayı bozmasın).
+          <Pressable onPress={() => nav.navigate('Account')} accessibilityRole="button"
+            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 14, borderTopWidth: HAIR, borderColor: t.line, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+            <Text style={{ fontSize: 16 }}>🔒</Text>
+            <Text style={{ flex: 1, fontSize: 13.5, color: t.fg }}>Sıralamada görünmek için <Text style={{ color: t.accent, fontWeight: '700' }}>hesabını bağla</Text></Text>
+          </Pressable>
         )}
       </Card>
     </Section>
