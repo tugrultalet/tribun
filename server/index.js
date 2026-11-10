@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { fail, today } from './lib/common.js';
 import { createCore } from './core.js';
 import { invitePage, validCode } from './lib/invite.js';
+import { privacyPage } from './lib/privacy.js';
 import { Buckets, clientIp, dateInWindow } from './lib/limits.js';
 import { createApiFootball } from './providers/apifootball.js';
 import { createHighlightly } from './providers/highlightly.js';
@@ -99,6 +100,11 @@ const server = http.createServer(async (req, res) => {
   if (req.method !== 'GET') return send(405, { error: { kind: 'bad', message: 'Yalnızca GET.' } });
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/') return send(200, { name: 'Tribün API', ok: true, provider: provider.id });
+  // Gizlilik politikası ve KVKK aydınlatma metni (App Store'a verilecek adres).
+  if (url.pathname === '/gizlilik') {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600', ...SECURITY_HEADERS, 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'" });
+    return res.end(privacyPage({ contact: process.env.CONTACT_EMAIL }));
+  }
   // Davet bağlantısı: /j/ABC123?n=Grup+adı  (WhatsApp'tan gelen kişi için karşılama sayfası)
   const invite = /^\/j\/([A-Za-z0-9]{6})$/.exec(url.pathname);
   if (invite && validCode(invite[1])) {

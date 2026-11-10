@@ -9,6 +9,8 @@ import { Button, Panel } from '../ui';
 import { Field } from '../screens/Groups';
 import { MatchPicks, setPick, useMyPicks } from './hooks';
 import { Stepper } from './Stepper';
+import { notePickSaved } from '../review';
+import { track } from '../telemetry';
 
 // Maç sayfasındaki tahmin kartı: her maça tahmin girilebilir (takip edilen takım şartı yok). Başlamadan önce +/− ile girilir ve
 // otomatik kaydedilir; maç başlayınca kilitlenir, arkadaşların tahminleri açılır ve puan gösterilir.
@@ -63,7 +65,7 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
     touched.current = true; setH(nh); setA(na); setState('saving'); setError('');
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
-      try { await setPick(secret, f.id, nh, na, f.ts); setState('saved'); picks.reload(); friends.reload(); }
+      try { await setPick(secret, f.id, nh, na, f.ts); setState('saved'); picks.reload(); friends.reload(); track('pick_saved', { source: 'match' }); notePickSaved(); }
       catch (e) { setState('error'); setError((e as { message?: string }).message ?? 'Kaydedilemedi.'); }
     }, 600);
   };

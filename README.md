@@ -72,6 +72,14 @@ Uygulamanın ilk sürümleri Highlightly numaralarını kaydetmişti; uygulama a
 - **Grup kapsamı** kişisel takipten bağımsızdır: grup kurarken "Bu grupta hangi maçları tahmin edeceksiniz?" sorulur. Bir takımın maçları (kapsamsız mevcut gruplar böyledir) ya da en çok 5 turnuva (`groups.scope = {"type":"leagues","ids":[..]}`). Kapsam mantığı `app/src/groups/scopeRules.ts` (testli).
 - Ana ekran sunucuda `/api/mine?teams=..` (en çok 30 takım). Katalogdaki turnuvalar (`server/lib/common.js`) Turnuvalar sekmesinde puan durumu ve fikstürle görülebilir.
 
+### Mağaza şartları ve destek
+
+- **Hesabımı sil** (Ayarlar): takma ad, üyelikler, mesajlar ve tahminler kalıcı silinir; kurulan grup başka üye varsa en eski üyeye devredilir (`delete_account`). App Store, hesap açılan uygulamalarda bunu zorunlu tutar.
+- **Gizlilik ve KVKK**: sunucuda `/gizlilik` (App Store'a gizlilik politikası adresi olarak bu verilir; `CONTACT_EMAIL` ile iletişim e-postası eklenebilir). Metin yayından önce hukuki olarak gözden geçirilmeli.
+- **Geri bildirim**: uygulama içinden, e-posta gerekmeden (`send_feedback`, saatte 5); Supabase'de `feedback` tablosunda okunur.
+- **Çökme ekranı** (ErrorBoundary) ve **analiz olayları** (`app/src/telemetry.ts`: ilk açılış, tahmin, grup, davet, ekran görüntüleme). Şimdilik yalnızca geliştirmede konsola yazar; Firebase eklenince bu dosya doldurulacak.
+- **Değerlendirme isteği**: 5. tahminden sonra bir kez (`expo-store-review`).
+
 ### Güvenlik ve kota koruması
 
 - **Sunucu:** IP başına istek sınırı (dakikada 120). Uygulamaya numaralar yalnızca sunucunun kendi yanıtlarından ulaştığı için bilinmeyen takım/maç numarası için kaynağa gitmek bütçeye bağlıdır (IP başına saatte 20, genel 60); kaynakta olmayan maç 6 saat tekrar sorulmaz; tarih bugünden en çok ±30 gün; günlük kotanın son 10 isteği canlı skor yenilemesine ayrılır (diğer durumlarda kayıtlı veri gösterilir). Bellek önbelleği sınırlı, diskte 45 günden eski dosyalar silinir. Yanıtlar gzip'lenir; beklenmeyen hataların ayrıntısı istemciye gönderilmez; davet sayfası CSP ve çerçeveleme engeliyle sunulur. Ayarlar: `server/.env.example`.

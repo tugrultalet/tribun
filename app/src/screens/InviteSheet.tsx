@@ -5,6 +5,7 @@ import ViewShot from 'react-native-view-shot';
 import type { Group } from '../social';
 import { inviteText, sendViaWhatsApp, shareText } from '../invite';
 import { gradientFor } from '../teamColors';
+import { track } from '../telemetry';
 import { useTheme } from '../theme';
 import { Button, Crest } from '../ui';
 
@@ -23,6 +24,7 @@ export function InviteSheet({ group, onClose }: { group: Group; onClose: () => v
       if (!uri) throw new Error('no image');
       // iOS'ta görsel dosyası paylaşılır; mesaj metni görselle birlikte gitmeyebileceği için bağlantı ayrıca da paylaşılabilir.
       await Share.share(Platform.OS === 'ios' ? { url: uri } : { message: inviteText(group) });
+      track('invite_sent', { channel: 'card' });
     } catch { await shareText(group); } finally { setBusy(false); }
   };
 
@@ -42,10 +44,10 @@ export function InviteSheet({ group, onClose }: { group: Group; onClose: () => v
               <Text style={{ marginTop: 10, fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.85)' }}>Tribün</Text>
             </LinearGradient>
           </ViewShot>
-          <Button label="WhatsApp'ta gönder" onPress={() => { sendViaWhatsApp(group); }} />
+          <Button label="WhatsApp'ta gönder" onPress={() => { track('invite_sent', { channel: 'whatsapp' }); sendViaWhatsApp(group); }} />
           <View style={{ flexDirection: 'row', gap: 10 }}>
             {Platform.OS !== 'web' && <View style={{ flex: 1 }}><Button kind="sec" label={busy ? 'Hazırlanıyor…' : 'Kartı gönder'} disabled={busy} onPress={shareCard} /></View>}
-            <View style={{ flex: 1 }}><Button kind="sec" label="Diğer…" onPress={() => { shareText(group); }} /></View>
+            <View style={{ flex: 1 }}><Button kind="sec" label="Diğer…" onPress={() => { track('invite_sent', { channel: 'share' }); shareText(group); }} /></View>
           </View>
         </Pressable>
       </Pressable>

@@ -29,6 +29,9 @@ async function readSecret(): Promise<string | null> {
   if (!SECURE) return null;
   try { return await SecureStore.getItemAsync(SECRET_KEY); } catch { return null; }
 }
+async function deleteSecret(): Promise<void> {
+  if (SECURE) await SecureStore.deleteItemAsync(SECRET_KEY).catch(() => {});
+}
 async function writeSecret(secret: string): Promise<void> {
   if (SECURE) await SecureStore.setItemAsync(SECRET_KEY, secret, { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK });
 }
@@ -73,6 +76,8 @@ type Store = Saved & {
   dismissNotice: () => void;
   restartOnboarding: () => void;
   setName: (name: string) => Promise<void>;
+  // Hesabı ve sunucudaki tüm verileri siler (geri alınamaz); takip tercihleri telefonda kalır.
+  deleteAccount: () => Promise<void>;
   reloadMeta: () => void;
 };
 const Ctx = createContext<Store | null>(null);
@@ -157,6 +162,12 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
         const profile = await rpc<{ name: string }>('register', { p_secret: secret, p_name: name });
         await writeSecret(secret);
         update((s) => ({ ...s, me: { secret, name: profile.name } }));
+      },
+      deleteAccount: async () => {
+        if (!saved.me) return;
+        await rpc('delete_account', { p_secret: saved.me.secret });
+        await deleteSecret();
+        update((s) => ({ ...s, me: undefined }));
       },
       reloadMeta,
     };

@@ -18,6 +18,8 @@ import Leagues from './src/screens/Leagues';
 import Match from './src/screens/Match';
 import MyTeams from './src/screens/MyTeams';
 import Chat from './src/screens/Chat';
+import Feedback from './src/screens/Feedback';
+import { reportError, screen } from './src/telemetry';
 import Group from './src/screens/Group';
 import Groups from './src/screens/Groups';
 import Onboarding from './src/screens/Onboarding';
@@ -109,11 +111,47 @@ function Root() {
           <Stack.Screen name="MyTeams" component={MyTeams} options={{ title: 'Takımlarım' }} />
           <Stack.Screen name="Group" component={Group} />
           <Stack.Screen name="Chat" component={Chat} />
+          <Stack.Screen name="Feedback" component={Feedback} options={{ title: 'Geri bildirim' }} />
         </>
       ) : (
         <Stack.Screen name="Onboarding" component={Onboarding} options={{ headerShown: false }} />
       )}
     </Stack.Navigator>
+  );
+}
+
+// Görüntülenen ekranın adı (analiz için).
+function currentRoute(state: unknown): string | undefined {
+  let s = state as { index?: number; routes?: { name: string; state?: unknown }[] } | undefined;
+  let name: string | undefined;
+  while (s?.routes?.length) {
+    const r = s.routes[s.index ?? 0];
+    name = r.name;
+    s = r.state as typeof s;
+  }
+  return name;
+}
+
+// Beklenmeyen bir hata tüm uygulamayı beyaz ekrana düşürmesin: hata raporlanır, kullanıcı yeniden deneyebilir.
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(error: unknown, info: { componentStack?: string | null }) { reportError(error, info.componentStack ?? 'render'); }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return <Crashed onRetry={() => this.setState({ failed: false })} />;
+  }
+}
+function Crashed({ onRetry }: { onRetry: () => void }) {
+  const t = useTheme();
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 14, backgroundColor: t.bg }}>
+      <Text style={{ fontSize: 18, fontWeight: '700', color: t.fg }}>Bir şeyler ters gitti</Text>
+      <Text style={{ textAlign: 'center', color: t.muted, lineHeight: 21 }}>Hata kaydedildi. Tekrar dene; sorun sürerse Ayarlar → Geri bildirim gönder ile bize yaz.</Text>
+      <Pressable onPress={onRetry} accessibilityRole="button" style={{ paddingVertical: 10, paddingHorizontal: 18, borderRadius: 12, backgroundColor: t.accent }}>
+        <Text style={{ fontWeight: '700', color: t.accentInk }}>Yeniden dene</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -142,7 +180,12 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       <StoreProvider fallback={(error, retry) => <Splash error={error} retry={retry} />}>
-        <NavigationContainer theme={navTheme} linking={Platform.OS === 'web' ? undefined : LINKING}><Root /></NavigationContainer>
+        <ErrorBoundary>
+          <NavigationContainer theme={navTheme} linking={Platform.OS === 'web' ? undefined : LINKING}
+            onStateChange={(s) => { const name = currentRoute(s); if (name) screen(name); }}>
+            <Root />
+          </NavigationContainer>
+        </ErrorBoundary>
       </StoreProvider>
     </SafeAreaProvider>
   );

@@ -2,3 +2,7 @@
 // durmak üzere tasarlanmıştır: tablolara doğrudan erişim vermez, yalnızca veritabanındaki izinli fonksiyonları çağırır.
 export const SUPABASE_URL = 'https://kbekepfgbgxlyqllkkuu.supabase.co';
 export const SUPABASE_KEY = 'sb_publishable_k85M5vAXnmMtReECuvCEqg_smrFYQxd';
+
+// Uygulama sürümü (app.json'dan): geri bildirime ve Ayarlar'a yazılır.
+import appJson from '../app.json';
+export const APP_VERSION: string = appJson.expo.version;
