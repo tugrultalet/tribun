@@ -41,7 +41,6 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
   const [games, setGames] = useState<{ f: Fixture; events: MatchEvent[] }[]>([]);
   const [kbOpen, setKbOpen] = useState(false);
   const last = useRef(0);
-  const list = useRef<FlatList<ChatItem<Message>>>(null);
 
   // Klavye açıkken alt güvenli alan boşluğu gerekmez (klavye zaten ekranın altını kaplar).
   useEffect(() => {
@@ -99,6 +98,7 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
     const now = Date.now();
     return mergeTimeline(messages, games.flatMap((g) => systemMessages(g.f, g.events, now, detail ? finalSummary(detail, g.f, teamFx) : null)));
   }, [messages, games, detail, teamFx]);
+  const inverted = useMemo(() => [...items].reverse(), [items]);
   const liveGame = games.find((g) => g.f.st === 'live')?.f;
 
   const send = async () => {
@@ -116,13 +116,14 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
       {!IOS && <View style={{ paddingTop: insets.top }}><BackBar title={name} onBack={nav.goBack} /></View>}
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={IOS ? 'padding' : undefined} keyboardVerticalOffset={0}>
         <FlatList
-          ref={list}
-          data={items}
+          data={inverted}
+          inverted
           keyExtractor={(m) => m.id}
-          contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={{ padding: 14, paddingTop: liveGame ? 58 : 14, gap: 8, flexGrow: 1, justifyContent: 'flex-end' }}
-          onContentSizeChange={() => list.current?.scrollToEnd({ animated: false })}
-          ListEmptyComponent={<Text style={{ textAlign: 'center', color: t.muted, fontSize: 14 }}>Henüz mesaj yok. İlk mesajı sen yaz.</Text>}
+          contentInsetAdjustmentBehavior="never"
+          keyboardDismissMode={IOS ? 'interactive' : 'on-drag'}
+          // Ters çevrilmiş liste: en yeni mesaj hep altta, kaydırma hesabı gerekmez. Görsel üst boşluk (başlık + canlı şerit) paddingBottom'dur.
+          contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 14, paddingBottom: (IOS ? headerHeight : 0) + (liveGame ? 52 : 14), gap: 8 }}
+          ListEmptyComponent={<Text style={{ textAlign: 'center', color: t.muted, fontSize: 14, transform: [{ scaleY: -1 }] }}>Henüz mesaj yok. İlk mesajı sen yaz.</Text>}
           renderItem={({ item: row }) => {
             if (row.kind === 'system') return <SystemLine m={row} f={games.find((g) => row.id.startsWith(`${g.f.id}:`))?.f} />;
             const item = row.msg;
