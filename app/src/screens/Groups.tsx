@@ -9,6 +9,7 @@ import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { track } from '../telemetry';
 import { MAX_SCOPE_TEAMS } from '../groups/scope';
+import { FriendsSection } from '../game/Friends';
 import { Button, Card, Crest, Empty, GAP, Icon, Loader, Panel, Seg } from '../ui';
 import { Screen } from './Screen';
 import { fbPushPermission } from '../fb';
@@ -16,12 +17,22 @@ import { RestoreBlock, SignInButtons, useCanSignIn } from './SignIn';
 
 import { Field } from '../ui';
 
-// Gruplar sekmesi: takma ad (ilk kez), gruplarım, grup kurma ve koda katılma.
+// Arkadaşlar sekmesi: üstte Arkadaşlar | Gruplar. Arkadaşlar: tahmin paylaşımıyla eklenen arkadaşlar ve sıralama.
+// Gruplar: küçük sohbet grupları (kurma, koda katılma). Takma ad yoksa önce o istenir. Davet bağlantısıyla gelindiyse
+// Gruplar açılır (katılma formu kodla).
 export default function Groups() {
   const store = useStore();
+  const linked = cleanCode(useRoute<RouteProp<TabParams, 'Groups'>>().params?.code);
+  const [tab, setTab] = useState<'friends' | 'groups'>(linked ? 'groups' : 'friends');
+  useEffect(() => { if (linked) setTab('groups'); }, [linked]);
   return (
-    <Screen tab title="Gruplar">
-      {store.me ? <MyGroups secret={store.me.secret} /> : <NameForm />}
+    <Screen tab title="Arkadaşlar">
+      {store.me ? (
+        <>
+          <Seg value={tab} onChange={setTab} options={[['friends', 'Arkadaşlar'], ['groups', 'Gruplar']]} />
+          <View style={{ marginTop: 4 }}>{tab === 'friends' ? <FriendsSection /> : <MyGroups secret={store.me.secret} />}</View>
+        </>
+      ) : <NameForm />}
     </Screen>
   );
 }
@@ -39,7 +50,7 @@ function NameForm() {
   return (
     <Panel title="Arkadaşlarınla tahmin et">
       <View style={{ padding: 16, gap: 12 }}>
-        <Text style={{ color: t.muted, fontSize: 14, lineHeight: 20, textAlign: 'center' }}>Grup kur, arkadaşlarını davet et, takımının maçlarına skor tahmini gir ve grupta sohbet et. Başlamak için bir takma ad seç.</Text>
+        <Text style={{ color: t.muted, fontSize: 14, lineHeight: 20, textAlign: 'center' }}>Arkadaşlarınla skor tahmini yap, puanlarınızı karşılaştırın, maç sohbetlerine katıl. Başlamak için bir takma ad seç.</Text>
         <Field value={name} onChange={setValue} placeholder="Takma adın" maxLength={30} />
         {error ? <Text style={{ color: t.live, fontSize: 13 }}>{error}</Text> : null}
         <Button label={busy ? 'Kaydediliyor…' : 'Devam'} disabled={busy || !name.trim()} onPress={submit} />
