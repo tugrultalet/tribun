@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Linking, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { ApiError } from '../api';
 import { Cancelled, availableProviders, sendEmailCode, validEmail, verifyEmail, type Provider } from '../auth';
 import { useStore } from '../store';
@@ -21,7 +21,6 @@ export function SignInButtons({ onDone }: { onDone?: () => void }) {
   const [address, setAddress] = useState('');
   const [code, setCode] = useState('');
   const [sentTo, setSentTo] = useState('');
-  const [manual, setManual] = useState(false); // kodu elle yazma (e-posta bilgisayarda açıldıysa)
   useEffect(() => { availableProviders().then(setProviders); }, []);
 
   const go = async (p: Provider, token?: string) => {
@@ -36,13 +35,14 @@ export function SignInButtons({ onDone }: { onDone?: () => void }) {
   };
   const send = async () => {
     setBusy(true); setError('');
-    try { await sendEmailCode(address); setSentTo(address.trim()); setCode(''); setManual(false); setEmail('code'); track('email_code_sent'); }
+    try { await sendEmailCode(address); setSentTo(address.trim()); setCode(''); setEmail('code'); track('email_code_sent'); }
     catch (e) { setError((e as ApiError).message); } finally { setBusy(false); }
   };
-  const verify = async () => {
+  const verify = async (value = code) => {
+    if (value.length < 6 || busy) return;
     setBusy(true); setError('');
     let token: string;
-    try { token = await verifyEmail({ email: sentTo, code }); } catch (e) { setError((e as ApiError).message); setBusy(false); return; }
+    try { token = await verifyEmail({ email: sentTo, code: value }); } catch (e) { setError((e as ApiError).message); setBusy(false); return; }
     await go('email', token);
   };
   const saveName = async () => {
@@ -76,18 +76,13 @@ export function SignInButtons({ onDone }: { onDone?: () => void }) {
             <Text style={{ color: t.fg, fontSize: 17, fontWeight: '700', textAlign: 'center' }}>📩 E-postanı kontrol et</Text>
             <Text style={{ color: t.muted, fontSize: 13.5, textAlign: 'center', lineHeight: 19 }}>
               <Text style={{ color: t.fg, fontWeight: '600' }}>{sentTo}</Text> adresine bir giriş bağlantısı gönderdik. E-postadaki{' '}
-              <Text style={{ color: t.fg, fontWeight: '600' }}>Tribün'e giriş yap</Text> düğmesine dokun, giriş kendiliğinden tamamlanır.
+              <Text style={{ color: t.fg, fontWeight: '600' }}>Tribün'e giriş yap</Text> düğmesine dokun ya da e-postadaki 6 haneli kodu yaz.
             </Text>
             {Platform.OS === 'ios' && <Button label="Mail uygulamasını aç" onPress={() => { Linking.openURL('message://').catch(() => {}); }} />}
-            {manual ? (
-              <>
-                <Field value={code.length > 3 && code.length <= 6 ? `${code.slice(0, 3)}-${code.slice(3)}` : code} onChange={(v) => setCode(v.replace(/\D/g, '').slice(0, 10))} placeholder="123-456" maxLength={11} autoCapitalize="none" keyboardType="number-pad" textContentType="oneTimeCode" onSubmit={verify} />
-                <Button kind="sec" label={busy ? 'Kontrol ediliyor…' : 'Kodla giriş yap'} disabled={busy || code.length < 6} onPress={verify} />
-              </>
-            ) : null}
+            <CodeBoxes value={code} busy={busy} onChange={(v) => { setCode(v); setError(''); if (v.length === 6) verify(v); }} />
+            {busy && <Text style={{ color: t.muted, fontSize: 13, textAlign: 'center' }}>Kontrol ediliyor…</Text>}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }}>
               <Chip label="↻  Tekrar gönder" onPress={send} disabled={busy} />
-              {!manual && <Chip label="🔢  Kodla giriş yap" onPress={() => setManual(true)} />}
               <Chip label="✎  E-postayı değiştir" onPress={() => { setEmail('form'); setError(''); }} />
             </View>
           </>
@@ -152,6 +147,34 @@ function Chip({ label, onPress, disabled }: { label: string; onPress: () => void
       style={({ pressed }) => ({ paddingVertical: 9, paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, borderColor: t.line,
         backgroundColor: pressed ? t.line : t.surface2, opacity: disabled ? 0.5 : 1 })}>
       <Text style={{ fontSize: 13.5, fontWeight: '700', color: t.fg }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+// 6 haneli kod: altı kutu, üçüncüden sonra tire. Görünmez tek bir alan rakamları alır (yapıştırma ve iOS'un
+// "e-postadan kod" önerisi de çalışır); kutulara dokununca klavye açılır. Altıncı rakamda giriş kendiliğinden başlar.
+function CodeBoxes({ value, onChange, busy }: { value: string; onChange: (v: string) => void; busy: boolean }) {
+  const t = useTheme();
+  const ref = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const box = (i: number) => {
+    const ch = value[i] ?? '';
+    const active = !busy && i === Math.min(value.length, 5);
+    return (
+      <View key={i} style={{ width: 44, height: 54, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surface2,
+        borderWidth: active ? 2 : 1, borderColor: active ? t.accent : t.line }}>
+        <Text style={{ fontSize: 24, fontWeight: '700', color: t.fg, fontVariant: ['tabular-nums'] }}>{ch}</Text>
+      </View>
+    );
+  };
+  return (
+    <Pressable onPress={() => ref.current?.focus()} accessibilityRole="none" accessibilityLabel="6 haneli giriş kodu"
+      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: busy ? 0.6 : 1 }}>
+      {[0, 1, 2].map(box)}
+      <Text style={{ fontSize: 22, fontWeight: '700', color: t.muted, marginHorizontal: 2 }}>–</Text>
+      {[3, 4, 5].map(box)}
+      <TextInput ref={ref} value={value} autoFocus editable={!busy} keyboardType="number-pad" textContentType="oneTimeCode" autoComplete="one-time-code"
+        maxLength={7} onChangeText={(v) => onChange(v.replace(/\D/g, '').slice(0, 6))} caretHidden accessibilityLabel="Giriş kodu"
+        style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }} />
     </Pressable>
   );
 }
