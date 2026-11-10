@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Linking, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { ApiError } from '../api';
-import { Cancelled, availableProviders, sendEmailCode, validEmail, verifyEmail, type Provider } from '../auth';
+import { Cancelled, availableProviders, emailTypo, sendEmailCode, validEmail, verifyEmail, type Provider } from '../auth';
 import { useStore } from '../store';
 import { track } from '../telemetry';
 import { useTheme } from '../theme';
@@ -67,6 +67,11 @@ export function SignInButtons({ onDone }: { onDone?: () => void }) {
           <>
             <Text style={{ color: t.muted, fontSize: 13.5, textAlign: 'center' }}>E-postana bir giriş bağlantısı gönderelim; dokununca giriş tamamlanır.</Text>
             <Field value={address} onChange={setAddress} placeholder="E-posta adresin" maxLength={120} autoCapitalize="none" keyboardType="email-address" textContentType="emailAddress" onSubmit={send} />
+            {emailTypo(address) && (
+              <Pressable onPress={() => setAddress(emailTypo(address)!)} accessibilityRole="button" style={{ alignSelf: 'center' }}>
+                <Text style={{ color: t.fg, fontSize: 13.5 }}>Bunu mu demek istedin? <Text style={{ color: t.accent, fontWeight: '700' }}>{emailTypo(address)}</Text></Text>
+              </Pressable>
+            )}
             <Button label={busy ? 'Gönderiliyor…' : 'Giriş bağlantısı gönder'} disabled={busy || !validEmail(address)} onPress={send} />
           </>
         ) : (
