@@ -75,8 +75,7 @@ export function SignInButtons({ onDone }: { onDone?: () => void }) {
                 (EmailLink ekranı). Kod yalnızca e-posta bilgisayarda açıldıysa, istenirse. */}
             <Text style={{ color: t.fg, fontSize: 17, fontWeight: '700', textAlign: 'center' }}>📩 E-postanı kontrol et</Text>
             <Text style={{ color: t.muted, fontSize: 13.5, textAlign: 'center', lineHeight: 19 }}>
-              <Text style={{ color: t.fg, fontWeight: '600' }}>{sentTo}</Text> adresine bir giriş bağlantısı gönderdik. E-postadaki{' '}
-              <Text style={{ color: t.fg, fontWeight: '600' }}>Tribün'e giriş yap</Text> düğmesine dokun ya da e-postadaki 6 haneli kodu yaz.
+              <Text style={{ color: t.fg, fontWeight: '600' }}>{sentTo}</Text> adresine bir bağlantı linki gönderdik.
             </Text>
             {Platform.OS === 'ios' && <Button label="Mail uygulamasını aç" onPress={() => { Linking.openURL('message://').catch(() => {}); }} />}
             <CodeBoxes value={code} busy={busy} onChange={(v) => { setCode(v); setError(''); if (v.length === 6) verify(v); }} />
