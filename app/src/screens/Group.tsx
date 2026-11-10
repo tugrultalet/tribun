@@ -61,10 +61,11 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
               {d.owner && d.arrivals != null && open && <Text style={{ fontSize: 13, color: t.fg }}>Bu linkle gelen: {d.arrivals} kişi</Text>}
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              {chatOn && <View style={{ flex: 1 }}><Button label={open ? 'Duyurular' : 'Sohbet'} onPress={() => nav.navigate('Chat', { id, name: open ? `${d.group.name} · Duyurular` : d.group.name })} /></View>}
+              {/* Arkadaş grubunda genel sohbet yok; sohbet yalnızca maç odalarında. Açık ligde kurucunun duyuruları sürer. */}
+              {chatOn && open && <View style={{ flex: 1 }}><Button label="Duyurular" onPress={() => nav.navigate('Chat', { id, name: `${d.group.name} · Duyurular` })} /></View>}
               <View style={{ flex: 1 }}><Button kind="sec" label="Davet et" onPress={() => setInviting(true)} /></View>
             </View>
-            {chatOn && d.group.last_message && (
+            {chatOn && open && d.group.last_message && (
               <Pressable onPress={() => nav.navigate('Chat', { id, name: d.group.name })} accessibilityRole="button">
                 <Text numberOfLines={1} style={{ textAlign: 'center', fontSize: 13, color: t.muted, marginTop: 10 }}>{d.group.last_message.name}: {d.group.last_message.body}</Text>
               </Pressable>
