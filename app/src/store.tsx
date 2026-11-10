@@ -96,7 +96,8 @@ type Store = Saved & {
   setName: (name: string) => Promise<void>;
   // Apple/Google ile giriş: profili hesaba bağlar ya da başka telefondaki profili geri yükler.
   // 'new': bu hesapla hiç profil yok; takma ad sorulup `setName` çağrılınca hesaba bağlanır.
-  linkAccount: (provider: Provider) => Promise<'linked' | 'restored' | 'new'>;
+  // token verilirse (e-posta kodu doğrulandıysa) giriş penceresi açılmaz.
+  linkAccount: (provider: Provider, token?: string) => Promise<'linked' | 'restored' | 'new'>;
   setProvider: (provider: Provider | undefined) => void;
   // Web'de (tribunapp.io/t/…) yapılmış tahmini ve grubu bu cihaza alır (geçiş kodu). Başarılıysa davet edenin adı.
   claimWeb: (code: string) => Promise<string | null>;
@@ -208,8 +209,8 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
         }
         update((s) => ({ ...s, me: { secret, name: profile.name, provider } }));
       },
-      linkAccount: async (provider) => {
-        const token = await signIn(provider);
+      linkAccount: async (provider, given) => {
+        const token = given ?? (await signIn(provider));
         const secret = saved.me?.secret ?? Crypto.randomUUID() + Crypto.randomUUID();
         const r = await rpc<{ status: 'linked' | 'restored' | 'new'; name?: string }>('link_account', { p_secret: secret, p_provider: provider }, token);
         if (r.status === 'new') { pending = { secret, provider, token }; return 'new'; }

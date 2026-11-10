@@ -6,7 +6,7 @@ import * as Crypto from 'expo-crypto';
 import { ApiError } from './api';
 import { SUPABASE_KEY, SUPABASE_URL } from './config';
 
-export type Provider = 'apple' | 'google';
+export type Provider = 'apple' | 'google' | 'email';
 
 type AppleModule = typeof import('expo-apple-authentication');
 let apple: AppleModule | null = null;
@@ -58,4 +58,39 @@ export async function signIn(provider: Provider): Promise<string> {
   throw new ApiError('social', 'Google ile giriş henüz açık değil.');
 }
 
-export const providerName = (p?: string | null) => (p === 'apple' ? 'Apple' : p === 'google' ? 'Google' : '');
+export const providerName = (p?: string | null) => (p === 'apple' ? 'Apple' : p === 'google' ? 'Google' : p === 'email' ? 'E-posta' : '');
+
+// ---------- E-posta ile giriş ----------
+// Supabase Auth e-postaya hem 6 haneli kod hem de uygulamayı açan bağlantı (tribunapp.io/giris?h=…) gönderir.
+// Kod her cihazda çalışır (e-posta bilgisayarda açılsa da); bağlantı telefonda tek dokunuşla girer.
+export const validEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim());
+
+async function authPost(path: string, body: object): Promise<any> {
+  let res: Response;
+  try {
+    res = await fetch(`${SUPABASE_URL}/auth/v1/${path}`, { method: 'POST', headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  } catch {
+    throw new ApiError('network', 'Bağlantı kurulamadı. İnternetini kontrol et.');
+  }
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const msg = String(data?.msg || data?.error_description || data?.message || '');
+    if (res.status === 429 || /rate limit|security purposes/i.test(msg)) throw new ApiError('social', 'Çok sık denedin. Biraz bekleyip tekrar dene.');
+    if (/expired|invalid/i.test(msg)) throw new ApiError('social', 'Kod hatalı ya da süresi dolmuş. Yeni kod iste.');
+    throw new ApiError('social', msg || 'E-posta ile giriş yapılamadı.');
+  }
+  return data;
+}
+
+export async function sendEmailCode(email: string): Promise<void> {
+  if (!validEmail(email)) throw new ApiError('social', 'Geçerli bir e-posta adresi yaz.');
+  await authPost('otp', { email: email.trim().toLowerCase(), create_user: true });
+}
+
+// Kodla (e-posta + 6 haneli kod) ya da bağlantıdaki özetle (h) doğrular; Supabase oturum anahtarını döner.
+export async function verifyEmail(o: { email: string; code: string } | { hash: string }): Promise<string> {
+  const body = 'hash' in o ? { type: 'email', token_hash: o.hash } : { type: 'email', email: o.email.trim().toLowerCase(), token: o.code.trim() };
+  const data = await authPost('verify', body);
+  if (!data?.access_token) throw new ApiError('social', 'Giriş yapılamadı.');
+  return data.access_token as string;
+}

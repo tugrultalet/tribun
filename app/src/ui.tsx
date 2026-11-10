@@ -352,11 +352,12 @@ export function BackBar({ title, onBack, color, background }: { title?: string; 
 }
 
 // Tek satırlık metin alanı (takma ad, grup adı, davet kodu).
-export function Field({ value, onChange, placeholder, maxLength, autoCapitalize }: { value: string; onChange: (v: string) => void; placeholder: string; maxLength: number; autoCapitalize?: 'characters' | 'sentences' }) {
+export function Field({ value, onChange, placeholder, maxLength, autoCapitalize, keyboardType, textContentType, onSubmit }: { value: string; onChange: (v: string) => void; placeholder: string; maxLength: number; autoCapitalize?: 'characters' | 'sentences' | 'none'; keyboardType?: 'email-address' | 'number-pad'; textContentType?: 'emailAddress' | 'oneTimeCode'; onSubmit?: () => void }) {
   const t = useTheme();
   return (
     <TextInput value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={t.muted} maxLength={maxLength} autoCorrect={false}
-      autoCapitalize={autoCapitalize ?? 'sentences'} accessibilityLabel={placeholder}
+      autoCapitalize={autoCapitalize ?? 'sentences'} accessibilityLabel={placeholder} keyboardType={keyboardType} textContentType={textContentType}
+      autoComplete={textContentType === 'emailAddress' ? 'email' : textContentType === 'oneTimeCode' ? 'one-time-code' : undefined} onSubmitEditing={onSubmit} returnKeyType={onSubmit ? 'go' : undefined}
       style={{ height: 46, borderRadius: 14, paddingHorizontal: 14, fontSize: 16, color: t.fg, backgroundColor: t.surface2 }} />
   );
 }
