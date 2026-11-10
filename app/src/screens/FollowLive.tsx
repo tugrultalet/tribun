@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, Text } from 'react-native';
 import type { Fixture } from '../api';
 import { useMyPicks } from '../game/hooks';
-import { canFollow, followOnLockScreen, liveMatches, liveSupported, stopFollowing } from '../live';
+import { canFollow, followOnLockScreen, liveMatches, liveSupported, refreshLocal, stopFollowing } from '../live';
 import { useStore } from '../store';
 import { track } from '../telemetry';
 import { useTheme } from '../theme';
@@ -16,6 +16,8 @@ export function FollowLive({ f }: { f: Fixture }) {
   const [on, setOn] = useState(() => liveMatches().includes(f.id));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // Maç bilgisi her yenilendiğinde açık etkinlik de güncellenir (kanalsız açıldıysa tek güncelleme yolu bu).
+  React.useEffect(() => { if (on) refreshLocal(f); }, [on, f.st, f.s?.[0], f.s?.[1], f.min, f.short]);
   if (!liveSupported() || !canFollow(f)) return null;
   const pick = picks.data?.find((p) => p.match_id === f.id);
   const toggle = async () => {
