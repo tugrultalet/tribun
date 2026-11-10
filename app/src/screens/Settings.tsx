@@ -8,7 +8,7 @@ import { track } from '../telemetry';
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { Card, Icon, Section, HAIR } from '../ui';
+import { Card, Crest, Icon, Section, HAIR } from '../ui';
 import { Screen } from './Screen';
 import { SignInButtons } from './SignIn';
 import { liveSupported } from '../live';
@@ -102,19 +102,9 @@ export default function Settings() {
               onValueChange={(on) => store.setNotify(on).then((ok) => { if (on && !ok) Alert.alert('Bildirim izni yok', 'iPhone Ayarlar → Tribün → Bildirimler bölümünden izin verebilirsin.'); })}
               accessibilityLabel="Ana takım bildirimleri" />
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: HAIR, borderColor: t.line }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, color: t.fg }}>Kilit ekranında canlı skor</Text>
-              <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 18 }}>
-                {liveSupported()
-                  ? `${store.mainTeam?.name ?? 'Ana takımın'} maçı başlarken kilit ekranında ve Dynamic Island'da otomatik açılır. Diğer maçlar için maç ekranındaki düğmeyi kullan.`
-                  : 'iOS 18 ve üzeri gerekir (Ayarlar → Tribün → Canlı Etkinlikler açık olmalı).'}
-              </Text>
-            </View>
-            <Switch value={!!store.liveAuto && liveSupported()} disabled={!liveSupported() || !store.mainTeam} onValueChange={store.setLiveAuto} accessibilityLabel="Kilit ekranında canlı skor" />
-          </View>
         </Card>
       </Section>
+      <LockScreenTeams />
       <Section eyebrow="Uygulama">
         <Card>
           {row('İlk açılış ekranını yeniden göster', undefined, true, store.restartOnboarding)}
@@ -137,5 +127,38 @@ export default function Settings() {
         </Card>
       </Section>
     </Screen>
+  );
+}
+
+// Kilit ekranında canlı skor: takip edilen her takım için ayrı anahtar (varsayılan açık). Açık takımların maçı başlarken
+// (ya da 30 dk kala) uygulama açıldığında kilit ekranı ve Dynamic Island kartı kendiliğinden açılır.
+function LockScreenTeams() {
+  const t = useTheme();
+  const nav = useNav();
+  const store = useStore();
+  const supported = liveSupported();
+  const ordered = [...store.teams].sort((a, b) => Number(b.id === store.main) - Number(a.id === store.main));
+  return (
+    <Section eyebrow="Kilit ekranında canlı skor">
+      <Card>
+        <Text style={{ fontSize: 12.5, color: t.muted, lineHeight: 18, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6 }}>
+          {supported
+            ? "Açık olan takımların maçı başlarken kilit ekranında ve Dynamic Island'da canlı skor kendiliğinden açılır. Başka maçlar için maç ekranındaki \u201cKilit ekranında takip et\u201d düğmesini kullan."
+            : 'iOS 18 ve üzeri gerekir (iPhone Ayarlar → Tribün → Canlı Etkinlikler açık olmalı).'}
+        </Text>
+        {ordered.length ? ordered.map((team) => (
+          <View key={team.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9, paddingHorizontal: 14, borderTopWidth: HAIR, borderColor: t.line }}>
+            <Crest uri={team.logo} size={26} />
+            <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, color: t.fg }}>{team.name}{team.id === store.main ? ' ★' : ''}</Text>
+            <Switch value={supported && store.liveFor(team.id)} disabled={!supported} onValueChange={(on) => store.setLiveFor(team.id, on)}
+              accessibilityLabel={`${team.name} kilit ekranında canlı skor`} />
+          </View>
+        )) : (
+          <Pressable onPress={() => nav.navigate('Picker')} accessibilityRole="button" style={{ paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: HAIR, borderColor: t.line }}>
+            <Text style={{ color: t.accent, fontWeight: '600' }}>+ Takım ekle</Text>
+          </Pressable>
+        )}
+      </Card>
+    </Section>
   );
 }

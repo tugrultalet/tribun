@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Fixture, Mine, useApi } from '../api';
-import { followOnLockScreen, liveMatches, liveSupported, saveWidget, widgetSnapshot, type WidgetRank } from '../live';
+import { followOnLockScreen, liveMatches, liveSupported, saveWidget, stopFollowing, widgetSnapshot, type WidgetRank } from '../live';
 import { dayLabel, daysBetween } from '../dates';
 import { euroIds, followedFixtures } from '../follow';
 import { useMyPicks } from '../game/hooks';
@@ -76,14 +76,32 @@ export default function Home() {
     if (!main || !state.data) return;
     const own = state.data.fixtures.filter((f) => f.h.id === main || f.a.id === main).sort((a, b) => a.ts - b.ts);
     const next = own.find((f) => f.st === 'live') ?? own.find((f) => f.st === 'ns');
-    const leagueName = next ? store.league(next.lg)?.name ?? '' : '';
-    saveWidget(widgetSnapshot(next, leagueName, Array.isArray(ranks) ? ranks[0] : undefined));
-    const soon = next && (next.st === 'live' || next.ts * 1000 - Date.now() < 30 * 60000);
-    if (store.liveAuto && next && soon && liveSupported() && !liveMatches().includes(next.id) && !autoStarted.current.has(next.id)) {
-      autoStarted.current.add(next.id);
-      followOnLockScreen(next, leagueName, null).catch(() => {});
+    saveWidget(widgetSnapshot(next, next ? store.league(next.lg)?.name ?? '' : '', Array.isArray(ranks) ? ranks[0] : undefined));
+    // Kilit ekranında otomatik canlı skor: takip edilen ve Ayarlar'da kapatılmamış takımların canlı ya da 30 dk içinde
+    // başlayacak maçları (aynı anda en çok 2; iOS'ta açık etkinlik sayısı sınırlı).
+    if (!liveSupported()) return;
+    const followed = new Set(store.teams.map((x) => x.id));
+    const wanted = state.data.fixtures
+      .filter((f) => (f.st === 'live' || (f.st === 'ns' && f.ts * 1000 - Date.now() < 30 * 60000 && f.ts * 1000 > Date.now() - 3 * 3600000)))
+      .filter((f) => [f.h.id, f.a.id].some((id) => followed.has(id) && store.liveFor(id)))
+      .sort((a, b) => a.ts - b.ts);
+    // Ayarlar'dan kapatılan takımın kendiliğinden açılmış kartı kapanır.
+    for (const f of state.data.fixtures) {
+      if (autoStarted.current.has(f.id) && liveMatches().includes(f.id) && !wanted.some((w) => w.id === f.id)
+          && ![f.h.id, f.a.id].some((id) => followed.has(id) && store.liveFor(id))) {
+        autoStarted.current.delete(f.id);
+        stopFollowing(f.id).catch(() => {});
+      }
     }
-  }, [state.data, ranks, store.main, store.liveAuto]);
+    const active = liveMatches();
+    for (const f of wanted) {
+      if (active.length >= 2) break;
+      if (active.includes(f.id) || autoStarted.current.has(f.id)) continue;
+      autoStarted.current.add(f.id);
+      active.push(f.id);
+      followOnLockScreen(f, store.league(f.lg)?.name ?? '', null).catch(() => {});
+    }
+  }, [state.data, ranks, store.main, store.liveOff, store.teams]);
 
   // Turnuva kapsamlı gruplar ve "tüm maçlarını takip et" turnuvaları için turnuva fikstürleri (sunucu önbelleğinden).
   const full = store.full ?? [];
