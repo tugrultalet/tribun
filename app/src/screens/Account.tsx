@@ -6,7 +6,8 @@ import { rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { track } from '../telemetry';
 import { useTheme } from '../theme';
-import { Button, Card, Empty, Field, GAP, HAIR, Section } from '../ui';
+import { Button, Card, Empty, Field, GAP, HAIR, Icon, Section } from '../ui';
+import { useNav } from '../nav';
 import { Screen } from './Screen';
 import { RestoreBlock, SignInButtons } from './SignIn';
 
@@ -72,6 +73,13 @@ function Details({ secret }: { secret: string }) {
       { text: 'Sil', style: 'destructive', onPress: go },
     ]);
   };
+  const nav = useNav();
+  const confirmSignOut = () => {
+    const go = () => store.signOut().then(() => { track('signed_out'); nav.goBack(); }, (e) => Alert.alert('Çıkış yapılamadı', (e as Error).message));
+    const msg = `Bu telefondan çıkış yapılır. Tekrar ${providerName(provider)} ile girince puanların, grupların ve tahminlerin geri gelir. Başka bir hesapla da girebilirsin.`;
+    if (Platform.OS === 'web') { if (globalThis.confirm?.(msg)) go(); return; }
+    Alert.alert('Çıkış yap', msg, [{ text: 'Vazgeç', style: 'cancel' }, { text: 'Çıkış yap', style: 'destructive', onPress: go }]);
+  };
   const line = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, paddingVertical: 12, paddingHorizontal: 14 };
   const stat = (value: number | string, label: string) => (
     <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
@@ -127,6 +135,13 @@ function Details({ secret }: { secret: string }) {
             </View>
           </View>
           {!provider && <View style={{ paddingHorizontal: 14, paddingBottom: 14 }}><SignInButtons onDone={info.reload} /></View>}
+          {provider && (
+            <Pressable onPress={confirmSignOut} accessibilityRole="button"
+              style={({ pressed }) => ({ ...line, borderTopWidth: HAIR, borderColor: t.line, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+              <Text style={{ flex: 1, fontSize: 15, color: t.fg }}>Çıkış yap</Text>
+              <Icon.chevron color={t.fg} />
+            </Pressable>
+          )}
         </Card>
       </Section>
 
