@@ -30,16 +30,16 @@ struct MatchLiveActivity: Widget {
         }
         DynamicIslandExpandedRegion(.center) {
           VStack(spacing: 2) {
+            // Lig adı en üstte, ortada (kameranın hemen altı).
+            Text(a.league).font(.caption2.weight(.semibold)).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
             Text("\(s.home) – \(s.away)").font(.system(size: 40, weight: .bold)).monospacedDigit()
               .contentTransition(.numericText(value: Double(s.home * 100 + s.away)))
             StatusLabel(state: s)
           }
         }
         DynamicIslandExpandedRegion(.bottom) {
-          // Köşeler yuvarlak olduğu için içerik kenardan içeride; lig adı ortada.
+          // Köşeler yuvarlak olduğu için içerik kenardan içeride.
           VStack(spacing: 8) {
-            Text(a.league).font(.caption2.weight(.semibold)).foregroundStyle(.secondary).lineLimit(1)
-              .frame(maxWidth: .infinity, alignment: .center)
             if s.status != "ns" { MatchProgress(state: s) }
             NoteRow(attributes: a, state: s)
           }
