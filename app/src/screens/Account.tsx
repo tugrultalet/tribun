@@ -134,10 +134,12 @@ function Details({ secret }: { secret: string }) {
         <Card>
           <View style={line}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, color: t.fg }}>Genel sıralamada görünme</Text>
-              <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 18 }}>Türkiye ve taraftar sıralamalarında adın yer almaz; grupların seni görmeye devam eder.</Text>
+              <Text style={{ fontSize: 15, color: t.fg }}>Sıralamalarda adım görünsün</Text>
+              <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 18 }}>
+                {hidden ? 'Kapalı: Türkiye ve taraftar sıralamalarında adın yer almaz.' : 'Açık: Türkiye ve taraftar sıralamalarında adın ve puanın görünür.'} Grupların seni her durumda görür.
+              </Text>
             </View>
-            <Switch value={hidden} disabled={!a} onValueChange={toggleHide} accessibilityLabel="Genel sıralamada görünme" />
+            <Switch value={!hidden} disabled={!a} onValueChange={(v) => toggleHide(!v)} accessibilityLabel="Sıralamalarda adım görünsün" />
           </View>
         </Card>
       </Section>

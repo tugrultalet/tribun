@@ -372,7 +372,9 @@ export function createCore({ provider, cacheDir, notify = null, onRefresh = null
   // Biten maçların sonuçları (tahmin puanları için). Önce önbellekteki fikstürlere bakılır; bulunamayan maç için maç
   // önbelleği (biten maç 30 gün saklanır) kullanılır ve tek çağrıda en çok 8 maç kaynağa sorulur, kalanı sonraki çağrıya
   // kalır. Böylece bir sonuç herkes için yalnızca bir kez istek tutar.
-  const slim = (f) => ({ id: f.id, st: f.st, s: f.s, ts: f.ts, date: f.date, lg: f.lg, h: { id: f.h.id, name: f.h.name }, a: { id: f.a.id, name: f.a.name } });
+  // Tahmin listeleri için: takım adları, logolar ve canlı dakika da (Profil'de tek satır gösterim).
+  const slim = (f) => ({ id: f.id, st: f.st, s: f.s, ts: f.ts, date: f.date, time: f.time, lg: f.lg, min: f.min ?? null, short: f.short ?? null,
+    h: { id: f.h.id, name: f.h.name, logo: f.h.logo }, a: { id: f.a.id, name: f.a.name, logo: f.a.logo } });
   async function getResults(ids, ctx) {
     const want = new Set(ids);
     const found = new Map();

@@ -4,8 +4,10 @@ import { useNav } from '../nav';
 import { useTheme } from '../theme';
 import { Card, Empty, GAP, HAIR, Section, Seg } from '../ui';
 import { useOpenMatches, usePoints, useResults } from './hooks';
-import { BADGES, Filter, PickRow, byWeek, summary } from './profile';
-import type { MyPick } from './stats';
+import { abbr } from '../chat/timeline';
+import { Crest } from '../ui';
+import { Filter, PickRow, byWeek, summary } from './profile';
+import type { MyPick, OpenMatch } from './stats';
 
 const MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 function weekLabel(start: string): string {
@@ -14,7 +16,7 @@ function weekLabel(start: string): string {
   return a.getUTCMonth() === b.getUTCMonth() ? `${a.getUTCDate()}–${b.getUTCDate()} ${m(b)}` : `${a.getUTCDate()} ${m(a)} – ${b.getUTCDate()} ${m(b)}`;
 }
 
-// Profil özeti: sezon puanı, isabet, seri ve seri rozetleri (3/5/10 maç üst üste doğru sonuç).
+// Profil özeti: sezon puanı, isabet ve seri (üst üste doğru sonuç bilinen tahmin sayısı).
 export function SummaryCard({ picks, profile }: { picks: MyPick[]; profile?: string }) {
   const t = useTheme();
   const results = useResults(picks);
@@ -31,19 +33,7 @@ export function SummaryCard({ picks, profile }: { picks: MyPick[]; profile?: str
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         {cell(String(s.total), 'Sezon puanı', true)}
         {cell(s.played ? `%${Math.round(s.rate * 100)}` : '–', 'İsabet')}
-        {cell(String(s.streak), 'Seri')}
-      </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 12 }}>
-        {BADGES.map((n) => {
-          const on = s.badges.includes(n);
-          return (
-            <View key={n} accessibilityLabel={`${n} maçlık seri rozeti${on ? '' : ' (henüz yok)'}`}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 99, backgroundColor: on ? t.accentSoft : t.surface2, opacity: on ? 1 : 0.5 }}>
-              <Text style={{ fontSize: 13 }}>🔥</Text>
-              <Text style={{ fontSize: 12.5, fontWeight: '700', color: on ? t.fg : t.muted }}>{n}</Text>
-            </View>
-          );
-        })}
+        {cell(s.streak ? `${s.streak} 🔥` : '0', 'üst üste doğru')}
       </View>
       {!picks.length && <Text style={{ fontSize: 12.5, color: t.muted, textAlign: 'center', marginTop: 10, paddingHorizontal: 12 }}>Herhangi bir maça dokun, skor tahmini yap ve puan topla.</Text>}
     </Card>
@@ -81,22 +71,90 @@ export function PicksList({ picks, title = 'Tahminlerim', profile }: { picks: My
   );
 }
 
-function PickLine({ row, first, names }: { row: PickRow; first: boolean; names?: { h: { name: string }; a: { name: string } } }) {
+type Teams = { h: { name: string; logo?: string }; a: { name: string; logo?: string } };
+
+// Tek satır: logo · kısaltma · sonuç · kısaltma · logo · tahmin · puan. Sürpriz/joker küçük işaretle gösterilir.
+function PickLine({ row, first, names }: { row: PickRow; first: boolean; names?: OpenMatch }) {
+  const t = useTheme();
+  const m: Teams | undefined = row.result?.h && row.result?.a ? { h: row.result.h, a: row.result.a } : names;
+  const tone = row.outcome === 'exact' ? t.win : row.outcome === 'correct' ? t.accent : t.muted;
+  const label = row.pts === null ? (row.result ? 'Geçersiz' : '–') : `+${row.pts}`;
+  const mark = [row.bonus ? `+${row.bonus}` : '', row.joker || row.pick.joker ? '×2' : ''].filter(Boolean).join(' ');
+  const mid = row.result ? `${row.result.s[0]}–${row.result.s[1]}` : '–';
+  return (
+    <CompactRow first={first} id={row.pick.match_id} m={m} mid={mid}
+      a11y={`${m ? `${m.h.name} ${mid} ${m.a.name}` : 'Maç'}, tahmin ${row.pick.h}–${row.pick.a}, ${row.pts === null ? 'puan yok' : `${row.pts} puan`}`}
+      pick={`${row.pick.h}–${row.pick.a}`} mark={mark}
+      right={<Text style={{ width: 52, textAlign: 'right', fontSize: 14, fontWeight: '700', color: tone, fontVariant: ['tabular-nums'] }}>{label}</Text>} />
+  );
+}
+
+// Profil ve geçmiş sayfasında ortak tek satırlık tahmin satırı.
+export function CompactRow({ first, id, m, mid, midTone, pick, mark, right, a11y }: { first: boolean; id: number; m?: Teams; mid: string; midTone?: string; pick: string; mark?: string; right: React.ReactNode; a11y: string }) {
   const t = useTheme();
   const nav = useNav();
-  const m = row.result?.h && row.result?.a ? { h: row.result.h, a: row.result.a } : names;
-  const tone = row.outcome === 'exact' ? t.win : row.outcome === 'correct' ? t.accent : row.outcome === 'miss' ? t.muted : t.muted;
-  const label = row.pts === null ? (row.result ? 'Geçersiz' : 'Bekliyor') : `+${row.pts}`;
+  const side = (x: { name: string; logo?: string } | undefined, flip?: boolean) => (
+    <View style={{ flexDirection: flip ? 'row-reverse' : 'row', alignItems: 'center', gap: 6, width: 62, justifyContent: flip ? 'flex-start' : 'flex-end' }}>
+      {x?.logo ? <Crest uri={x.logo} size={20} /> : <View style={{ width: 20 }} />}
+      <Text numberOfLines={1} style={{ fontSize: 13.5, fontWeight: '600', color: t.fg }}>{x ? abbr(x.name) : '…'}</Text>
+    </View>
+  );
   return (
-    <Pressable onPress={() => nav.navigate('Match', { id: row.pick.match_id })} accessibilityRole="button"
-      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 14, borderTopWidth: first ? 0 : HAIR, borderColor: t.line, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
-      <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} style={{ fontSize: 14.5, color: t.fg }}>{m ? `${m.h.name} – ${m.a.name}` : 'Maç'}</Text>
-        <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, fontVariant: ['tabular-nums'] }}>
-          Tahmin {row.pick.h}–{row.pick.a}{row.result ? ` · Sonuç ${row.result.s[0]}–${row.result.s[1]}` : ''}{row.bonus ? ' · sürpriz +2' : ''}{row.joker || row.pick.joker ? ' · joker ×2' : ''}
-        </Text>
+    <Pressable onPress={() => nav.navigate('Match', { id })} accessibilityRole="button" accessibilityLabel={a11y}
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 9, paddingHorizontal: 12, borderTopWidth: first ? 0 : HAIR, borderColor: t.line, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+      {side(m?.h)}
+      <Text numberOfLines={1} style={{ width: 44, textAlign: 'center', fontSize: 14, fontWeight: '700', color: midTone ?? t.fg, fontVariant: ['tabular-nums'] }}>{mid}</Text>
+      {side(m?.a, true)}
+      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+        <Text numberOfLines={1} style={{ fontSize: 12.5, color: t.muted, fontVariant: ['tabular-nums'] }}>Tahmin {pick}</Text>
+        {!!mark && <Text style={{ fontSize: 10.5, fontWeight: '700', color: t.accent }}>{mark}</Text>}
       </View>
-      <Text style={{ fontSize: 14, fontWeight: '700', color: tone, fontVariant: ['tabular-nums'] }}>{label}</Text>
+      {right}
     </Pressable>
+  );
+}
+
+
+// Aktif tahmin: maç henüz başlamadı ya da canlı. Geri kalanı (bitmiş, ertelenmiş, sonucu bekleyen eski maçlar) geçmişte.
+export function splitPicks(picks: MyPick[], results: Map<number, unknown>, open: Map<number, OpenMatch>, now = Date.now()) {
+  const active: MyPick[] = [], past: MyPick[] = [];
+  for (const p of picks) {
+    const o = open.get(p.match_id);
+    const isActive = !results.has(p.match_id) && (o ? o.st === 'live' || o.st === 'ns' : !!p.kickoff && new Date(p.kickoff).getTime() > now);
+    (isActive ? active : past).push(p);
+  }
+  active.sort((a, b) => (open.get(a.match_id)?.ts ?? 0) - (open.get(b.match_id)?.ts ?? 0));
+  return { active, past };
+}
+
+const DAYS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+function when(o: OpenMatch | undefined, t: ReturnType<typeof useTheme>): { text: string; tone: string } {
+  if (!o) return { text: '', tone: t.muted };
+  if (o.st === 'live') return { text: o.short === 'HT' ? 'Devre arası' : o.min ? `${o.min}'` : 'Canlı', tone: t.live };
+  const d = new Date(o.ts * 1000), today = new Date();
+  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const sameDay = d.toDateString() === today.toDateString();
+  const tomorrow = d.toDateString() === new Date(today.getTime() + 86400000).toDateString();
+  return { text: sameDay ? hm : tomorrow ? `Yarın ${hm}` : `${DAYS[d.getDay()]} ${hm}`, tone: t.muted };
+}
+
+// Profil: yalnızca başlamamış ve canlı maçların tahminleri.
+export function ActivePicks({ picks, open }: { picks: MyPick[]; open: Map<number, OpenMatch> }) {
+  const t = useTheme();
+  if (!picks.length) return <Empty>Aktif tahminin yok. Bir maça dokun, skor tahmini yap.</Empty>;
+  return (
+    <Card>
+      {picks.map((p, i) => {
+        const o = open.get(p.match_id);
+        const w = when(o, t);
+        const live = o?.st === 'live' && o.s;
+        return (
+          <CompactRow key={p.match_id} first={i === 0} id={p.match_id} m={o} mid={live ? `${o.s![0]}–${o.s![1]}` : 'vs'} midTone={live ? w.tone : t.muted}
+            pick={`${p.h}–${p.a}`} mark={p.joker ? '×2' : ''}
+            a11y={`${o ? `${o.h.name} – ${o.a.name}` : 'Maç'}, tahmin ${p.h}–${p.a}, ${w.text}`}
+            right={<Text numberOfLines={1} style={{ width: 64, textAlign: 'right', fontSize: 12.5, fontWeight: live ? '700' : '500', color: w.tone, fontVariant: ['tabular-nums'] }}>{w.text}</Text>} />
+        );
+      })}
+    </Card>
   );
 }

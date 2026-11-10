@@ -11,7 +11,7 @@ import { useNav } from '../nav';
 import { Group, rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { Button, Card, Crest, Empty, GAP, Icon, LiveDot, Loader, MatchList, RowNote, Seg, statusText } from '../ui';
+import { Button, Card, Crest, Empty, GAP, Icon, LiveDot, Loader, RedCard, MatchList, RowNote, Seg, statusText } from '../ui';
 import { resolveTeam } from '../healTeams';
 import { useAppActive } from '../appState';
 import { firebaseAvailable } from '../fb';
@@ -101,7 +101,7 @@ export default function Home() {
       active.push(f.id);
       followOnLockScreen(f, store.league(f.lg)?.name ?? '', null).catch(() => {});
     }
-  }, [state.data, ranks, store.main, store.liveOff, store.teams]);
+  }, [state.data, ranks, store.main, store.liveOn, store.teams]);
 
   // Turnuva kapsamlı gruplar ve "tüm maçlarını takip et" turnuvaları için turnuva fikstürleri (sunucu önbelleğinden).
   const full = store.full ?? [];
@@ -179,7 +179,7 @@ export default function Home() {
       <Icon.plus color={t.accent} />
     </Pressable>
   );
-  const filter = <View style={{ marginTop: 4 }}><Seg value={scope} onChange={setScope} options={[['mine', 'Takiplerim'], ['all', 'Tüm ligler']]} /></View>;
+  const filter = <View style={{ marginTop: 4 }}><Seg value={scope} onChange={setScope} options={[['mine', 'Takımlarım'], ['all', 'Tüm ligler']]} /></View>;
   // Uzak ayarlardan gelen bakım/duyuru bandı ve (bir kez) ana takım bildirim izni kartı.
   const rc = useRemote();
   const bannerText = rc.maintenance || rc.announcement;
@@ -274,7 +274,10 @@ function Hero({ f, today, note, onPress }: { f: Fixture; today: string; note?: R
   const side = (team: Fixture['h'], s: 'h' | 'a') => (
     <View style={{ flex: 1, alignItems: 'center', gap: 10 }}>
       <Crest uri={team.logo} size={56} />
-      <Text numberOfLines={2} style={{ fontWeight: '600', fontSize: 15, textAlign: 'center', color: t.fg }}>{team.name}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, maxWidth: '100%' }}>
+        <Text numberOfLines={2} style={{ fontWeight: '600', fontSize: 15, textAlign: 'center', color: t.fg, flexShrink: 1 }}>{team.name}</Text>
+        <RedCard n={f.rc?.[s === 'h' ? 0 : 1]} />
+      </View>
       {live && goals(s).length > 0 && (
         // Ev sahibinin golleri sola, deplasmanınkiler sağa dayalı; toplar dış kenarda aynı hizada.
         <View style={{ alignSelf: 'stretch', alignItems: s === 'h' ? 'flex-start' : 'flex-end', marginTop: -4, gap: 1 }}>

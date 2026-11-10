@@ -47,7 +47,20 @@ export function fx(f) {
     a: team(f.teams.away),
     s: f.goals?.home == null ? null : [f.goals.home, f.goals.away],
     pen: pen && pen.home != null ? [pen.home, pen.away] : null,
+    ...redCards(f),
   };
+}
+
+// Kırmızı kart sayısı (ikinci sarıdan atılma dahil). Yalnızca olayları da içeren yanıtlarda (fixtures?ids, canlı yenileme)
+// hesaplanır; kart yoksa alan hiç eklenmez.
+function redCards(f) {
+  if (!Array.isArray(f.events)) return {};
+  const rc = [0, 0];
+  for (const e of f.events) {
+    if (e.type !== 'Card' || !/Red|Second/i.test(e.detail || '')) continue;
+    rc[e.team?.id === f.teams.home.id ? 0 : 1] += 1;
+  }
+  return rc[0] || rc[1] ? { rc } : {};
 }
 
 export function event(e, homeId) {
@@ -102,6 +115,14 @@ export function zone(description = '') {
   return null;
 }
 
+// "U. Çakır" + ilk ad "Uğurcan" → "Uğurcan Çakır". İlk ad baş harfle uyuşmazsa ya da ad kısaltılmamışsa olduğu gibi kalır.
+export function fullName(name, firstname) {
+  const m = /^(\p{Lu})\.\s+(.+)$/u.exec(name || '');
+  const given = (firstname || '').trim().split(/\s+/)[0];
+  if (!m || !given || given[0].toLocaleUpperCase('tr') !== m[1].toLocaleUpperCase('tr')) return name;
+  return `${given} ${m[2]}`;
+}
+
 export function createApiFootball({ key, baseUrl, fetchImpl = fetch, sleepImpl = sleep } = {}) {
   const base = baseUrl || 'https://v3.football.api-sports.io/';
   const state = { plan: null, limitDay: null, remaining: null };
@@ -111,6 +132,23 @@ export function createApiFootball({ key, baseUrl, fetchImpl = fetch, sleepImpl =
   let hold = null; // { until, kind, message }: bu süre dolana kadar hiç istek gönderilmez
   let coolUntil = 0;
   const provider = { id: 'apifootball', name: 'API-Football', state, onState: null };
+
+  // Kadro uç noktası adları kısaltılmış verir ("U. Çakır"); oyuncu uç noktasındaki ilk adla açılır. Sezon başına
+  // en çok 3 sayfa (60 oyuncu); hata olursa kısaltılmış adlarla devam edilir.
+  async function firstNames(teamId) {
+    const out = new Map();
+    const now = new Date();
+    const season = now.getUTCMonth() >= 6 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
+    try {
+      for (let page = 1; page <= 3; page++) {
+        const rows = await request(`players?team=${teamId}&season=${season}&page=${page}`);
+        if (!Array.isArray(rows)) break;
+        for (const r of rows) if (r?.player?.id && r.player.firstname) out.set(r.player.id, r.player.firstname);
+        if (rows.length < 20) break;
+      }
+    } catch { /* kısaltılmış adlar kalır */ }
+    return out;
+  }
 
   function request(pathAndQuery) {
     const run = () => requestNow(pathAndQuery);
@@ -245,7 +283,8 @@ export function createApiFootball({ key, baseUrl, fetchImpl = fetch, sleepImpl =
     async squad(id) {
       const s = (await request(`players/squads?team=${id}`))[0];
       if (!s) throw fail('notfound', 'Kadro bulunamadı.');
-      return { team: team(s.team), players: s.players.map((p) => ({ id: p.id, name: p.name, age: p.age ?? null, no: p.number ?? null, pos: p.position })) };
+      const first = await firstNames(id);
+      return { team: team(s.team), players: s.players.map((p) => ({ id: p.id, name: fullName(p.name, first.get(p.id)), age: p.age ?? null, no: p.number ?? null, pos: p.position })) };
     },
   });
 }
