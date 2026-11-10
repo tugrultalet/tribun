@@ -89,11 +89,20 @@ const STATUS = { quota: 429, busy: 429, bad: 400, notfound: 404, config: 500, pl
 // IP başına istek sınırı: dakikada 120 istek, en çok 60'lık patlama (uygulamanın normal kullanımı bunun çok altında).
 const perIp = new Buckets({ rate: Number(process.env.RATE_PER_MIN || 120), burst: Number(process.env.RATE_BURST || 60) });
 setInterval(() => perIp.sweep(), 5 * 60000).unref();
+// Yanıt ne kadar süre önbellekte (telefon/ara sunucu) tutulabilir: canlı veri kısa, yavaş değişen veri uzun.
+const cacheFor = (p) =>
+  /^\/api\/(match\/[^/]+|results|mine|fixtures)$/.test(p) ? 'public, max-age=10'
+  : /^\/api\/(league\/\d+\/fixtures|team\/[^/]+|match\/[^/]+\/lineups)$/.test(p) ? 'public, max-age=30'
+  : /^\/api\/(standings\/\d+|league\/\d+\/teams|team\/[^/]+\/squad|national|meta)$/.test(p) ? 'public, max-age=300'
+  : 'no-store';
+// Universal Links: tribunapp.io/j/KOD bağlantısı uygulama kuruluysa doğrudan uygulamada açılır.
+const AASA = JSON.stringify({ applinks: { details: [{ appIDs: [`${process.env.APPLE_TEAM_ID || 'M93BM8ZSQH'}.com.sportvisor.tribun`], components: [{ '/': '/j/*' }] }] } });
+const PUBLIC_HOST = (process.env.PUBLIC_HOST || 'tribunapp.io').toLowerCase();
 const SECURITY_HEADERS = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' };
 
 const server = http.createServer(async (req, res) => {
-  const send = (code, body) => {
-    const headers = { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*', 'cache-control': 'no-store', ...SECURITY_HEADERS };
+  const send = (code, body, cache = 'no-store') => {
+    const headers = { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*', 'cache-control': code === 200 ? cache : 'no-store', ...SECURITY_HEADERS };
     const json = JSON.stringify(body);
     // Büyük yanıtlar sıkıştırılır (mobil veri ve süre).
     if (json.length > 1024 && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
@@ -108,6 +117,15 @@ const server = http.createServer(async (req, res) => {
   if (!perIp.take(ip)) return send(429, { error: { kind: 'busy', message: 'Çok fazla istek; biraz sonra tekrar dene.' } });
   if (req.method !== 'GET') return send(405, { error: { kind: 'bad', message: 'Yalnızca GET.' } });
   const url = new URL(req.url, 'http://x');
+  // www.tribunapp.io → tribunapp.io (tek adres; Universal Links yalnızca ana alan adında tanımlı).
+  if ((req.headers.host || '').toLowerCase() === `www.${PUBLIC_HOST}`) {
+    res.writeHead(301, { location: `https://${PUBLIC_HOST}${url.pathname}${url.search}` });
+    return res.end();
+  }
+  if (url.pathname === '/.well-known/apple-app-site-association' || url.pathname === '/apple-app-site-association') {
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'public, max-age=3600', ...SECURITY_HEADERS });
+    return res.end(AASA);
+  }
   if (url.pathname === '/') return send(200, { name: 'Tribün API', ok: true, provider: provider.id });
   // Gizlilik politikası ve KVKK aydınlatma metni (App Store'a verilecek adres).
   if (url.pathname === '/gizlilik') {
@@ -129,7 +147,7 @@ const server = http.createServer(async (req, res) => {
     const m = re.exec(url.pathname);
     if (!m) continue;
     try {
-      return send(200, await handler(m, url.searchParams, { ip }));
+      return send(200, await handler(m, url.searchParams, { ip }), cacheFor(url.pathname));
     } catch (e) {
       if (!e.kind) console.error(e);
       // Beklenmeyen hataların iç ayrıntısı istemciye gönderilmez (sunucu günlüğüne yazılır).
@@ -142,6 +160,10 @@ const server = http.createServer(async (req, res) => {
 // Yavaş/yarım bırakılan bağlantılar kaynak tutmasın.
 server.requestTimeout = 30000;
 server.headersTimeout = 15000;
+
+// Uygulamalar kapalıyken de canlı maçlar tazelensin (gol bildirimi için). refreshUnsettled kendi hızını sınırlar:
+// canlı/başlamak üzere maç yoksa kaynağa istek gitmez.
+if (process.env.BACKGROUND_REFRESH !== '0') setInterval(() => core.tick().catch(() => {}), 15000).unref();
 
 server.listen(PORT, () => {
   const s = provider.state;

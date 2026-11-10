@@ -34,7 +34,7 @@ import Settings from './src/screens/Settings';
 import Team from './src/screens/Team';
 
 // Davet bağlantısı: tribun://join/ABC234 → Gruplar sekmesi, katılma formu kodla dolu.
-const LINKING: LinkingOptions<RootParams> = { prefixes: ['tribun://'], config: { screens: { Tabs: { screens: { Groups: 'join/:code' } } } } };
+const LINKING: LinkingOptions<RootParams> = { prefixes: ['tribun://', 'https://tribunapp.io', 'https://www.tribunapp.io'], config: { screens: { Tabs: { screens: { Groups: { path: 'j/:code', alias: ['join/:code'] } } } } } };
 const Stack = createNativeStackNavigator<RootParams>();
 const Tab = createBottomTabNavigator<TabParams>();
 const IOS = Platform.OS === 'ios';

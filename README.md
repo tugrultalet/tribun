@@ -59,7 +59,19 @@ Anahtarı yalnızca kendi bilgisayarındaki `server/.env` dosyasına yaz. API-Fo
 
 Highlightly'nin lig, takım ve maç numaraları API-Football'unkilerin düz bir dönüşümüdür (`hl = af × 851 + 784`; 1.000'den fazla kayıtta doğrulandı). Sunucu dışarıya her zaman API-Football numaralarını ("ortak numara") verir (`server/lib/ids.js`). Bu yüzden kaynak değişince takip edilen takımlar, gruplar ve tahminler bozulmaz. Dönüşüme uymayan bir numara gelirse çakışmasın diye negatif numarayla işlenir.
 
-Uygulamanın ilk sürümleri Highlightly numaralarını kaydetmişti; uygulama açılışta bunları bir kereliğine ortak numaraya çevirir (`app/src/store.tsx`).
+Uygulamanın ilk sürümleri Highlightly numaralarını kaydetmişti; uygulama açılışta bunları bir kereliğine ortak numaraya çevirir; yalnızca formüle uyan numaralar çevrilir, zaten ortak olanlar olduğu gibi kalır (`app/src/store.tsx`).
+
+### Kaynak değişimi (Highlightly → API-Football Pro)
+
+Render'da `DATA_PROVIDER` tanımlı değilse sunucu açılışta planı kontrol eder: API-Football hesabı ücretliyse onu, değilse Highlightly'yi seçer. Pro'ya geçince yapılacak tek şey sunucuyu yeniden başlatmak (Render → Manual Deploy). Numaralar ortak olduğu için takipler, gruplar ve tahminler aynen kalır; önbellek kaynak başına ayrı klasörde tutulur, ilk dakikalarda veriler yeni kaynaktan yeniden dolar.
+
+### Canlı yenileme ve istek bütçesi
+
+- Sunucu 15 saniyede bir arka planda canlı ya da 5 dakika içinde başlayacak maç olup olmadığına bakar (`BACKGROUND_REFRESH=0` ile kapatılır). Böyle maç yoksa kaynağa istek gitmez. Uygulamalar kapalıyken de gol bildirimi bu sayede gider. Yalnızca son 24 saatte birinin baktığı takım, lig ve gün listeleri tazelenir.
+- Uygulama yalnızca ekran açıkken yeniler. Maç ekranı canlıyken 15 sn, başlamasına 1 saatten az kala 1 dk, daha uzaksa 5 dk aralıkla sorar; bitmiş maçta hiç sormaz.
+- Yanıtlar kısa süre önbelleklenebilir (`Cache-Control`): canlı uçlar 10 sn, fikstür/takım 30 sn, puan durumu ve kadro 5 dk.
+
+API-Football Pro günde 7.500 istek verir. Canlı tazeleme tek istekte 20 maça kadar alır ve en çok 15 saniyede bir yapılır: maç olan bir günde 12 saat canlı pencere ≈ 2.900 istek (aynı anda 20'den fazla canlı maç varsa her 20 maç için bir istek daha). Kalan ~4.500 istek; günlük fikstür, puan durumu, takım ve maç detayı önbelleklerinin dolmasına yeter (bunlar saatler/günler boyunca önbellekte kalır). Sunucu kotanın son isteklerini saklı tutar ve kota bitince eldeki veriyi göstermeye devam eder.
 
 ## Takımlar ve turnuvalar
 

@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, get, League, Meta, Team } from './api';
 import { dedupeTeams, teamKey, type FollowedTeam } from './follow';
-import { toCommon } from './ids';
+import { legacyToCommon } from './ids';
 import { fbPushPermission, fbSubscribe } from './fb';
 import { pushTopics } from './version';
 import { rpc } from './social';
@@ -22,7 +22,8 @@ type Saved = { teams: FollowedTeam[]; main?: number; onboarded: boolean; me?: Me
   full?: number[];
   // Bildirimler: notify açık/kapalı (undefined: henüz sorulmadı), topics: şu an abone olunan konular.
   notify?: boolean; topics?: string[] };
-const EMPTY: Saved = { teams: [], onboarded: false, v: 3 };
+// ids: 2 boş kayıtta da bulunmalı; yoksa kayıt bir sonraki açılışta "eski" sanılıp numaraları yeniden çevrilirdi.
+const EMPTY: Saved = { teams: [], onboarded: false, v: 3, ids: 2 };
 const STORAGE_KEY = 'tribun:v1';
 
 // Grup kimliği olan cihaz sırrı iOS Keychain'de (Android Keystore) saklanır, düz AsyncStorage'da değil. Web'de (yalnızca
@@ -48,7 +49,7 @@ const toDisk = (s: Saved): Saved => (SECURE && s.me ? { ...s, me: { ...s.me, sec
 function migrate(raw: Saved): Saved {
   let s: Saved = { ...EMPTY, ...raw };
   if (s.ids !== 2) {
-    const convert = s.provider === 'apifootball' ? (id: number) => id : toCommon;
+    const convert = s.provider === 'apifootball' ? (id: number) => id : legacyToCommon;
     s = { ...s, teams: s.teams.map((t) => ({ ...t, id: convert(t.id) })), leagues: [], ids: 2, provider: undefined };
   }
   if (s.v !== 3) {

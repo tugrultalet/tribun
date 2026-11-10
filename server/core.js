@@ -382,6 +382,8 @@ export function createCore({ provider, cacheDir, notify = null }) {
   return {
     leagueIds,
     results: getResults,
+    // Arka plan zamanlayıcısı için: uygulamalar kapalıyken de canlı maçlar tazelenir ve gol bildirimi gider.
+    tick: () => refreshUnsettled(),
     meta: getMeta,
     day: getDay,
     mine: getMine,
