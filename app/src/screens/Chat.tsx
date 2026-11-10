@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiError, Fixture, Match, MatchEvent, Team, TeamData, get } from '../api';
 import { finalSummary } from '../groups/standings';
 import { ChatItem, SystemMsg, abbr, mergeTimeline, systemMessages } from '../chat/timeline';
+import { roomState } from '../chat/rooms';
 import { gradientFor } from '../teamColors';
 import { RootParams, useNav } from '../nav';
 import { GroupDetail, Message, rpc } from '../social';
@@ -32,7 +33,7 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
   const appActive = useAppActive();
   const store = useStore();
   const secret = store.me?.secret ?? '';
-  const { id, name } = route.params;
+  const { id, name, match, home, away, kickoff } = route.params;
   const [messages, setMessages] = useState<Message[]>([]);
   const [myId, setMyId] = useState<string | null>(null);
   const [text, setText] = useState('');
@@ -56,7 +57,7 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
 
   const poll = async () => {
     try {
-      const fresh = await rpc<Message[]>('get_messages', { p_secret: secret, p_group: id, p_after: last.current });
+      const fresh = await rpc<Message[]>('get_messages', { p_secret: secret, p_group: id, p_after: last.current, ...(match ? { p_match: match } : {}) });
       if (fresh.length) {
         last.current = fresh[fresh.length - 1].id;
         // Gruplar sekmesindeki okunmamış rozeti için: sohbette görülen son mesaj.
@@ -89,7 +90,22 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
   // Sunucu yanıtları önbelleğe alır; burada yalnızca birkaç hafif istek atılır, hata olursa sohbet etkilenmez.
   useEffect(() => {
     // Turnuva kapsamlı gruplarda tek bir takım yoktur (team.id 0): maç olayları sohbete girmez.
-    if (!focused || !appActive || !team || team.id <= 0) return;
+    if (!focused || !appActive) return;
+    // Maç odası: yalnızca o maçın olayları ve canlı skoru.
+    if (match) {
+      let alive = true;
+      const loadRoom = async () => {
+        try {
+          const m = await get<Match>(`/api/match/${match}`);
+          const d = m.fixture.st === 'ft' ? await rpc<GroupDetail>('group_detail', { p_secret: secret, p_group: id, p_matches: [match] }).catch(() => null) : null;
+          if (alive) { setGames([{ f: m.fixture, events: m.events ?? [] }]); setTeamFx([m.fixture]); if (d) setDetail(d); }
+        } catch { /* olaylar isteğe bağlı */ }
+      };
+      loadRoom();
+      const timer = setInterval(loadRoom, MATCH_POLL_MS);
+      return () => { alive = false; clearInterval(timer); };
+    }
+    if (!team || team.id <= 0) return;
     let alive = true;
     const load = async () => {
       try {
@@ -108,19 +124,22 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
     load();
     const timer = setInterval(load, MATCH_POLL_MS);
     return () => { alive = false; clearInterval(timer); };
-  }, [focused, appActive, team?.id]);
+  }, [focused, appActive, team?.id, match]);
   const items = useMemo(() => {
     const now = Date.now();
     return mergeTimeline(messages, games.flatMap((g) => systemMessages(g.f, g.events, now, detail ? finalSummary(detail, g.f, teamFx) : null)));
   }, [messages, games, detail, teamFx]);
   const inverted = useMemo(() => [...items].reverse(), [items]);
   const liveGame = games.find((g) => g.f.st === 'live')?.f;
+  // Oda kapandıysa (maç bitişinden 1 saat sonra) yazılamaz; mesajlar 30 gün okunur.
+  const roomClosed = !!match && roomState(games[0]?.f ?? { st: 'ns', ts: kickoff ?? Date.now() / 1000 }) === 'closed';
 
   const send = async () => {
     const body = text.trim();
     if (!body || sending) return;
     setSending(true);
-    try { await rpc('send_message', { p_secret: secret, p_group: id, p_body: body }); setText(''); await poll(); }
+    const room = match ? { p_match: match, p_kickoff: kickoff ? new Date(kickoff * 1000).toISOString() : null, p_home: home ?? null, p_away: away ?? null } : {};
+    try { await rpc('send_message', { p_secret: secret, p_group: id, p_body: body, ...room }); setText(''); await poll(); }
     catch (e) { setError((e as ApiError).message); } finally { setSending(false); }
   };
 
@@ -153,6 +172,9 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
           }}
         />
         {error ? <Text style={{ color: t.live, fontSize: 12, textAlign: 'center', paddingBottom: 4 }}>{error}</Text> : null}
+        {roomClosed ? (
+          <Text style={{ textAlign: 'center', color: t.muted, fontSize: 13, paddingTop: 10, paddingBottom: Math.max(insets.bottom, 12) }}>Oda arşivlendi · mesajlar 30 gün saklanır</Text>
+        ) : (
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 12, paddingTop: 8, paddingBottom: kbOpen ? 8 : Math.max(insets.bottom, 10) }}>
           <TextInput value={text} onChangeText={setText} placeholder="Mesaj yaz" placeholderTextColor={t.muted} multiline maxLength={500} accessibilityLabel="Mesaj yaz"
             style={{ flex: 1, minHeight: 42, maxHeight: 120, borderRadius: 21, paddingHorizontal: 16, paddingTop: 11, paddingBottom: 11, fontSize: 16, color: t.fg, backgroundColor: t.surface2 }} />
@@ -161,6 +183,7 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
             <Text style={{ fontWeight: '700', fontSize: 15, color: t.accentInk }}>Gönder</Text>
           </Pressable>
         </View>
+        )}
       </KeyboardAvoidingView>
       {liveGame ? <LiveStrip f={liveGame} top={IOS ? headerHeight + 4 : insets.top + 52} /> : null}
     </View>

@@ -18,6 +18,7 @@ import { Button, Card, Crest, Empty, GAP, Icon, Loader, Panel, Seg, Tabs } from 
 import { useRemote } from '../remoteConfig';
 import { InviteSheet } from './InviteSheet';
 import { Screen } from './Screen';
+import { MatchRooms } from './MatchRooms';
 
 // Grup sayfası: davet, sohbete giriş, haftanın maçlarına tahmin ve grup puan tablosu (hafta / sezon).
 export default function Group({ route }: NativeStackScreenProps<RootParams, 'Group'>) {
@@ -64,6 +65,7 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
                 <Text numberOfLines={1} style={{ textAlign: 'center', fontSize: 13, color: t.muted, marginTop: 10 }}>{d.group.last_message.name}: {d.group.last_message.body}</Text>
               </Pressable>
             )}
+            {chatOn && fixtures.data && <MatchRooms group={id} fixtures={fixtures.data} secret={secret} />}
             <View style={{ marginTop: 8 }}>
               <Tabs value={tab} onChange={setTab} options={[['predict', 'Tahmin'], ['table', 'Puan']]} />
             </View>
