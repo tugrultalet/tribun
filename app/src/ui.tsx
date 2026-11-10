@@ -202,9 +202,10 @@ export function LiveDot({ size = 7 }: { size?: number }) {
 
 /* ---------- Maç ---------- */
 export function statusText(f: Fixture): string {
-  if (f.st === 'live') return f.short === 'HT' ? 'DA' : f.short === 'P' ? 'Pen' : `${f.min ?? ''}${f.extra ? `+${f.extra}` : ''}'`;
-  if (f.st === 'ft') return f.short === 'PEN' ? 'Pen' : f.short === 'AET' ? 'UZ' : 'MS';
-  if (f.st === 'off') return f.short === 'PST' ? 'Ert.' : 'İptal';
+  // Kısaltma yerine tam yazı: "Devre arası", "Maç sonu" (DA / MS yerine).
+  if (f.st === 'live') return f.short === 'HT' ? 'Devre arası' : f.short === 'P' ? 'Penaltılar' : `${f.min ?? ''}${f.extra ? `+${f.extra}` : ''}'`;
+  if (f.st === 'ft') return f.short === 'PEN' ? 'Penaltılar' : f.short === 'AET' ? 'Uzatmalar' : 'Maç sonu';
+  if (f.st === 'off') return f.short === 'PST' ? 'Ertelendi' : 'İptal';
   return f.time;
 }
 // Maç satırı (Apple Sports'a yakın, kompakt): `showLeague` ise üstte küçük, ortalı lig adı; altında tek satır:
@@ -237,7 +238,7 @@ export function MatchRow({ f, onPress, showLeague, note }: { f: Fixture; onPress
           ) : (
             <Text style={{ fontWeight: '700', fontSize: 15, color: t.fg, fontVariant: ['tabular-nums'] }}>{statusText(f)}</Text>
           )}
-          {f.st === 'live' || f.st === 'ft' || f.st === 'off' ? <Text style={{ fontSize: 10, lineHeight: 12, color: live ? t.live : t.muted, fontWeight: '600' }}>{statusText(f)}</Text> : null}
+          {f.st === 'live' || f.st === 'ft' || f.st === 'off' ? <Text numberOfLines={1} style={{ fontSize: 10, lineHeight: 12, color: live ? t.live : t.muted, fontWeight: '600' }}>{statusText(f)}</Text> : null}
         </View>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, minWidth: 0 }}>
           <Text numberOfLines={1} style={[nameStyle(1, awayMine), { textAlign: 'right' }]}>{shortName(f.a.name)}</Text>
