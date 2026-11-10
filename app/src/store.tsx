@@ -103,6 +103,8 @@ type Store = Saved & {
   claimWeb: (code: string) => Promise<string | null>;
   // Hesabı ve sunucudaki tüm verileri siler (geri alınamaz); takip tercihleri telefonda kalır.
   deleteAccount: () => Promise<void>;
+  // Çıkış: yalnızca hesaba bağlı profilde. Bu telefonun anahtarı silinir; aynı ya da başka hesapla yeniden girilebilir.
+  signOut: () => Promise<void>;
   reloadMeta: () => void;
 };
 // Girişten sonra takma ad beklenirken: aynı cihaz sırrı ve oturum anahtarı (yalnızca bellekte).
@@ -230,6 +232,13 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
       deleteAccount: async () => {
         if (!saved.me) return;
         await rpc('delete_account', { p_secret: saved.me.secret });
+        await deleteSecret();
+        update((s) => ({ ...s, me: undefined }));
+      },
+      signOut: async () => {
+        if (!saved.me) return;
+        const token = await fbToken().catch(() => null);
+        await rpc('sign_out', { p_secret: saved.me.secret, p_token: token });
         await deleteSecret();
         update((s) => ({ ...s, me: undefined }));
       },
