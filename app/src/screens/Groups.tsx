@@ -39,7 +39,7 @@ export default function Groups() {
     <Screen tab title="Tribün">
       {store.me ? (
         <>
-          <Seg value={tab} onChange={setTab} options={[['friends', 'Arkadaşlarım'], ['groups', 'Tribün']]} />
+          <Seg value={tab} onChange={setTab} options={[['friends', 'Arkadaşlarım'], ['groups', 'Tribünlerim']]} />
           {!!joined && <Text style={{ fontSize: 14, fontWeight: '600', color: t.win, textAlign: 'center', marginTop: 10 }}>{joined}</Text>}
           <View style={{ marginTop: 4 }}>{tab === 'friends' ? <FriendsSection /> : <MyGroups secret={store.me.secret} />}</View>
         </>
