@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { pollMs } from '../poll';
+import { FollowLive } from './FollowLive';
 import { Pressable, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Fixture, Lineup, Lineups as LineupData, Match as MatchData, MatchEvent, Standings, Team, useApi } from '../api';
@@ -73,6 +74,7 @@ function Head({ m }: { m: MatchData }) {
       </View>
       {f.pen && <Text style={{ fontSize: 12, color: t.muted }}>Penaltılar: {f.pen[0]} – {f.pen[1]}</Text>}
       {tv && <Text style={{ fontSize: 12.5, fontWeight: '600', color: t.muted }}>Yayın: {tv}</Text>}
+      <FollowLive f={f} />
       {m.events.some((e) => e.k === 'goal') && (
         <View style={{ flexDirection: 'row', alignSelf: 'stretch', gap: 16, marginTop: 4 }}>
           <Text style={{ flex: 1, textAlign: 'right', fontSize: 12, lineHeight: 17, color: t.muted }}>{scorers('h')}</Text>

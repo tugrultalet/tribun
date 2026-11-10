@@ -18,6 +18,8 @@ import { Buckets, clientIp, dateInWindow } from './lib/limits.js';
 import { createSupa, syncMatches } from './lib/supa.js';
 import { askPage, validAskToken } from './lib/ask.js';
 import { sendPushes } from './lib/push.js';
+import { createApns, loadApnsConfig } from './lib/apns.js';
+import { createLive } from './lib/live.js';
 import { createApiFootball } from './providers/apifootball.js';
 import { createHighlightly } from './providers/highlightly.js';
 
@@ -53,7 +55,10 @@ try {
   if (sa) fcm = createFcm({ sa });
 } catch (e) { console.warn(`UYARI: Firebase hizmet hesabı okunamadı (${e.message}); bildirimler kapalı.`); }
 const notify = fcm ? (kind, f) => fcm.send(messageFor(kind, f)).catch((e) => console.warn(`Bildirim gönderilemedi: ${e.message}`)) : null;
-const core = createCore({ provider, cacheDir: path.join(CACHE_DIR, provider.id), notify });
+// Live Activity (iOS 18+): APNs yayın kanalları. APNS_KEY / APNS_KEY_ID / APNS_TEAM_ID tanımlı değilse kapalı.
+let live = null;
+const onRefresh = (fixtures) => live?.onFixtures(fixtures);
+const core = createCore({ provider, cacheDir: path.join(CACHE_DIR, provider.id), notify, onRefresh });
 
 /* ---------- HTTP ---------- */
 function leagueParam(q) {
@@ -87,6 +92,14 @@ const routes = [
   [/^\/api\/league\/(\d+)\/teams$/, (m) => core.teams(knownLeague(m))],
   [/^\/api\/team\/(-?\d{1,12})$/, (m, q, ctx) => core.team(Number(m[1]), ctx)],
   [/^\/api\/team\/(-?\d{1,12})\/squad$/, (m, q, ctx) => core.squad(Number(m[1]), ctx)],
+  // Kilit ekranında takip: maçın APNs yayın kanalı. Yalnızca canlı ya da 6 saat içinde başlayacak maç için.
+  [/^\/api\/live\/(-?\d{1,12})\/channel$/, async (m, q, ctx) => {
+    if (!live) throw fail('config', 'Kilit ekranında canlı skor şu an kapalı.');
+    const id = Number(m[1]);
+    const f = await core.watchMatch(id, ctx);
+    if (!(f.st === 'live' || (f.st === 'ns' && f.ts * 1000 - Date.now() < 6 * 3600000))) throw fail('bad', 'Bu maç için canlı takip henüz açılmadı.');
+    return { channel: await live.channelFor(id), env: apnsCfg.env };
+  }],
 ];
 const STATUS = { quota: 429, busy: 429, bad: 400, notfound: 404, config: 500, plan: 403, blocked: 503, upstream: 502 };
 
@@ -107,6 +120,9 @@ const PUBLIC_HOST = (process.env.PUBLIC_HOST || 'tribunapp.io').toLowerCase();
 const SUPABASE_URL = (process.env.SUPABASE_URL || 'https://kbekepfgbgxlyqllkkuu.supabase.co').replace(/\/$/, '');
 const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_k85M5vAXnmMtReECuvCEqg_smrFYQxd';
 const supa = createSupa({ url: SUPABASE_URL });
+let apnsCfg = null;
+try { apnsCfg = loadApnsConfig(process.env); } catch (e) { console.warn(`UYARI: APNs anahtarı okunamadı: ${e.message}`); }
+if (apnsCfg && supa) live = createLive({ apns: createApns(apnsCfg), supa });
 async function publicRpc(fn, args) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: 'POST', headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'content-type': 'application/json' },
@@ -235,5 +251,6 @@ server.listen(PORT, () => {
   const problem = provider.configError();
   if (problem) console.warn(`UYARI: ${problem} server/.env dosyasına ekleyin.`);
   console.log(supa ? 'Puanlama: açık (Supabase)' : 'Puanlama: kapalı (SUPABASE_SERVICE_ROLE_KEY tanımlı değil)');
+  console.log(live ? `Live Activity: açık (APNs ${apnsCfg.env})` : 'Live Activity: kapalı (APNS_KEY / APNS_KEY_ID / APNS_TEAM_ID tanımlı değil)');
   console.log(fcm ? `Bildirimler: açık (Firebase projesi ${fcm.projectId})` : 'Bildirimler: kapalı (FIREBASE_SERVICE_ACCOUNT tanımlı değil)');
 });
