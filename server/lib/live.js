@@ -18,7 +18,7 @@ export function nextUpdate(prev, f, now = Date.now()) {
   const scored = state.home !== prev.state.home || state.away !== prev.state.away;
   // Golü atan taraf: skoru artan (iki taraf birden artmışsa son artan sayılmaz, ev sahibi yazılır).
   const side = state.home > prev.state.home ? 'h' : state.away > prev.state.away ? 'a' : null;
-  if (scored || state.status !== prev.state.status) return { state, priority: 10, kind: state.status === 'ft' ? 'end' : scored ? 'goal' : 'status', side };
+  if (scored || state.status !== prev.state.status) return { state, priority: 10, kind: state.status === 'ft' ? 'end' : scored ? 'goal' : 'status', side, from: prev.state.status };
   if (state.minute !== prev.state.minute && now - prev.at >= 60000) return { state, priority: 5, kind: 'tick' };
   return null;
 }
@@ -28,9 +28,17 @@ export function payloadFor(u, f, now = Date.now()) {
   if (u.kind === 'goal') {
     const team = u.side === 'a' ? f.a.name : u.side === 'h' ? f.h.name : null;
     aps['content-state'].note = team ? `⚽ GOL! ${team}` : '⚽ GOL!';
-    aps.alert = { title: team ? `GOL! ${team}` : 'GOL!', body: `${f.h.name} ${u.state.home}–${u.state.away} ${f.a.name}` };
+    aps.alert = { title: team ? `GOL! ${team}` : 'GOL!', body: `${f.h.name} ${u.state.home}–${u.state.away} ${f.a.name}`, sound: 'default' };
+  }
+  // Devre arası ve maç sonu da kısa uyarı ve titreşimle bildirilir (kilit ekranı yanar, Dynamic Island genişler).
+  if (u.kind === 'status' && u.state.status === 'live') {
+    aps.alert = { title: u.from === 'ht' ? 'İkinci yarı başladı' : 'Maç başladı', body: `${f.h.name} ${u.state.home}–${u.state.away} ${f.a.name}`, sound: 'default' };
+  }
+  if (u.kind === 'status' && u.state.status === 'ht') {
+    aps.alert = { title: 'Devre arası', body: `${f.h.name} ${u.state.home}–${u.state.away} ${f.a.name}`, sound: 'default' };
   }
   if (u.kind === 'end') {
+    aps.alert = { title: 'Maç bitti', body: `${f.h.name} ${u.state.home}–${u.state.away} ${f.a.name}`, sound: 'default' };
     aps['content-state'].note = null; // "Maç sonu" üstte yazıyor
     aps['dismissal-date'] = Math.floor(now / 1000) + 3600; // maç sonucu kilit ekranında 1 saat kalır
   }
@@ -119,8 +127,14 @@ export function createLive({ apns, supa, log = console, watch = null }) {
         const hits = t.matches.map((id) => changed.get(id)).filter(Boolean);
         if (!hits.length) continue;
         const goal = hits.find((h) => h.u.kind === 'goal');
+        const ended = hits.find((h) => h.u.kind === 'end');
+        const half = hits.find((h) => h.u.kind === 'status' && h.u.state.status === 'ht');
+        const kick = hits.find((h) => h.u.kind === 'status' && h.u.state.status === 'live');
         const priority = hits.some((h) => h.u.priority === 10) ? 10 : 5;
-        const alert = goal ? { title: notes.get(goal.f.id) || 'GOL!', body: `${goal.f.h.name} ${goal.u.state.home}–${goal.u.state.away} ${goal.f.a.name}` } : null;
+        const pick = goal || ended || half || kick;
+        const title = goal ? notes.get(goal.f.id) || 'GOL!' : ended ? 'Maç bitti' : half ? 'Devre arası'
+          : kick ? (kick.u.from === 'ht' ? 'İkinci yarı başladı' : 'Maç başladı') : null;
+        const alert = pick ? { title, body: `${pick.f.h.name} ${pick.u.state.home}–${pick.u.state.away} ${pick.f.a.name}`, sound: 'default' } : null;
         try {
           await apns.toToken(t.token, multiPayload(t.matches, states, notes, { alert }, now), priority);
         } catch (e) {
