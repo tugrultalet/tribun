@@ -7,6 +7,7 @@ import { LEAGUE_GROUPS } from '../leagueGroups';
 import { useTheme } from '../theme';
 import { Card, Empty, Icon, LeagueBadge, Section, StarButton, HAIR } from '../ui';
 import { Screen } from './Screen';
+import { ExploreSections } from './ExploreSections';
 
 export function SearchBox({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
   const t = useTheme();
@@ -42,6 +43,7 @@ export default function Leagues() {
   return (
     <Screen tab title="Keşfet">
       <SearchBox value={q} onChange={setQ} placeholder="Lig, kupa veya ülke ara" />
+      {!needle && <ExploreSections />}
       {LEAGUE_GROUPS.map(([type, title]) => <React.Fragment key={type}>{group(title, all.filter((l) => l.type === type))}</React.Fragment>)}
       {!all.length && <Empty>Eşleşen lig yok.</Empty>}
     </Screen>

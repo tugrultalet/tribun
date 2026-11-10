@@ -4,7 +4,9 @@ import type { Fixture } from '../api';
 
 export type Member = { id: string; name: string };
 export type Prediction = { profile_id: string; match_id: number; h: number; a: number; updated_at: string };
-export type Detail = { me: string; members: Member[]; predictions: Prediction[]; pending?: { profile_id: string; match_id: number }[] };
+// points: veritabanı defterindeki puanlar (biten maçlar; sürpriz bonusu ve joker dahil). Varsa o geçerlidir.
+export type LedgerPoint = { profile_id: string; match_id: number; total: number; outcome: 'exact' | 'correct' | 'miss' };
+export type Detail = { me: string; members: Member[]; predictions: Prediction[]; pending?: { profile_id: string; match_id: number }[]; points?: LedgerPoint[] };
 export type Row = { member: Member; total: number; exact: number; played: number; live: number };
 
 const DAY = 86400000;
@@ -32,15 +34,18 @@ export function points(p: Prediction, f: Fixture, provisional = false): number |
 // `inScope` verilmezse tüm maçlar (sezon). Canlı maçlar geçici puanla katılır; `live` bu geçici kısmı verir.
 export function standings(detail: Detail, fixtures: Fixture[], inScope?: (f: Fixture) => boolean, provisional = true): Row[] {
   const byId = new Map(fixtures.filter((f) => !inScope || inScope(f)).map((f) => [f.id, f]));
+  const ledger = new Map((Array.isArray(detail.points) ? detail.points : []).map((l) => [`${l.profile_id}:${l.match_id}`, l]));
   return detail.members
     .map((member) => {
       let total = 0, exact = 0, played = 0, live = 0;
       for (const p of detail.predictions) {
         const f = p.profile_id === member.id ? byId.get(p.match_id) : undefined;
-        const pts = f ? points(p, f, provisional) : null;
-        if (pts === null || !f) continue;
+        if (!f) continue;
+        const l = f.st === 'ft' ? ledger.get(`${p.profile_id}:${p.match_id}`) : undefined;
+        const pts = l ? l.total : points(p, f, provisional);
+        if (pts === null) continue;
         total += pts; played += 1;
-        if (pts === 3) exact += 1;
+        if (l ? l.outcome === 'exact' : pts === 3) exact += 1;
         if (f.st === 'live') live += pts;
       }
       return { member, total, exact, played, live };
