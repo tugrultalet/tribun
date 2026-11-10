@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { useNav } from '../nav';
 import { useTheme } from '../theme';
 import { Card, Empty, GAP, HAIR, Section, Seg } from '../ui';
-import { useOpenMatches, useResults } from './hooks';
+import { useOpenMatches, usePoints, useResults } from './hooks';
 import { BADGES, Filter, PickRow, byWeek, summary } from './profile';
 import type { MyPick } from './stats';
 
@@ -15,10 +15,11 @@ function weekLabel(start: string): string {
 }
 
 // Profil özeti: sezon puanı, isabet, seri ve seri rozetleri (3/5/10 maç üst üste doğru sonuç).
-export function SummaryCard({ picks }: { picks: MyPick[] }) {
+export function SummaryCard({ picks, profile }: { picks: MyPick[]; profile?: string }) {
   const t = useTheme();
   const results = useResults(picks);
-  const s = useMemo(() => summary(picks, results), [picks, results.size]);
+  const ledger = usePoints(profile);
+  const s = useMemo(() => summary(picks, results, Date.now(), ledger), [picks, results.size, ledger]);
   const cell = (value: string, label: string, big?: boolean) => (
     <View style={{ flex: 1, alignItems: 'center', gap: 2 }}>
       <Text style={{ fontSize: big ? 30 : 22, fontWeight: '700', color: big ? t.accent : t.fg, fontVariant: ['tabular-nums'] }}>{value}</Text>
@@ -50,12 +51,13 @@ export function SummaryCard({ picks }: { picks: MyPick[] }) {
 }
 
 // Tahminler: haftalara bölünmüş liste; Tümü / Tam skor / Kaçanlar. Satıra dokununca maç açılır.
-export function PicksList({ picks, title = 'Tahminlerim' }: { picks: MyPick[]; title?: string }) {
+export function PicksList({ picks, title = 'Tahminlerim', profile }: { picks: MyPick[]; title?: string; profile?: string }) {
   const [filter, setFilter] = useState<Filter>('all');
   const [shown, setShown] = useState(6);
   const results = useResults(picks);
   const open = useOpenMatches(picks);
-  const weeks = useMemo(() => byWeek(picks, results, filter), [picks, results.size, filter]);
+  const ledger = usePoints(profile);
+  const weeks = useMemo(() => byWeek(picks, results, filter, ledger), [picks, results.size, filter, ledger]);
   const t = useTheme();
   if (!picks.length) return null;
   return (
@@ -91,7 +93,7 @@ function PickLine({ row, first, names }: { row: PickRow; first: boolean; names?:
       <View style={{ flex: 1 }}>
         <Text numberOfLines={1} style={{ fontSize: 14.5, color: t.fg }}>{m ? `${m.h.name} – ${m.a.name}` : 'Maç'}</Text>
         <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, fontVariant: ['tabular-nums'] }}>
-          Tahmin {row.pick.h}–{row.pick.a}{row.result ? ` · Sonuç ${row.result.s[0]}–${row.result.s[1]}` : ''}
+          Tahmin {row.pick.h}–{row.pick.a}{row.result ? ` · Sonuç ${row.result.s[0]}–${row.result.s[1]}` : ''}{row.bonus ? ' · sürpriz +2' : ''}{row.joker || row.pick.joker ? ' · joker ×2' : ''}
         </Text>
       </View>
       <Text style={{ fontSize: 14, fontWeight: '700', color: tone, fontVariant: ['tabular-nums'] }}>{label}</Text>

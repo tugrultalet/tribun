@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import type { ApiError, Fixture } from '../api';
 import { hasStarted, points } from '../groups/standings';
 import { rpc, useRpc } from '../social';
@@ -7,8 +7,9 @@ import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { Button, Panel } from '../ui';
 import { Field } from '../ui';
-import { MatchPicks, setPick, useMyPicks } from './hooks';
+import { Community, Dist, MatchPicks, setJoker, setPick, useMyPicks } from './hooks';
 import { Stepper } from './Stepper';
+import { possessive } from './turkish';
 import { notePickSaved } from '../review';
 import { track } from '../telemetry';
 
@@ -50,6 +51,7 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
   const t = useTheme();
   const picks = useMyPicks(30000);
   const friends = useRpc<MatchPicks>('match_picks', { p_secret: secret, p_match: f.id }, 30000);
+  const community = useRpc<Community>('match_community', { p_secret: secret, p_match: f.id }, 60000);
   const saved = picks.data?.find((p) => p.match_id === f.id);
   const [h, setH] = useState(saved?.h ?? 0);
   const [a, setA] = useState(saved?.a ?? 0);
@@ -65,7 +67,7 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
     touched.current = true; setH(nh); setA(na); setState('saving'); setError('');
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
-      try { await setPick(secret, f.id, nh, na, f.ts); setState('saved'); picks.reload(); friends.reload(); track('pick_saved', { source: 'match' }); notePickSaved(); }
+      try { await setPick(secret, f.id, nh, na, f.ts); setState('saved'); picks.reload(); friends.reload(); community.reload(); track('pick_saved', { source: 'match' }); notePickSaved(); }
       catch (e) { setState('error'); setError((e as { message?: string }).message ?? 'Kaydedilemedi.'); }
     }, 600);
   };
@@ -87,6 +89,8 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
             {state === 'saving' ? 'Kaydediliyor…' : state === 'error' ? error : saved || state === 'saved' ? 'Kaydedildi · başlama düdüğüne kadar değiştirebilirsin' : 'Tam skor 3 puan, doğru sonuç 1 puan'}
           </Text>
           {pending > 0 && <Text style={{ fontSize: 12.5, color: t.muted }}>{pending} arkadaşın tahmin girdi; maç başlayınca görürsün.</Text>}
+          {saved && <Joker secret={secret} matchId={f.id} on={!!saved.joker} onChange={picks.reload} />}
+          <CommunityLine f={f} data={community.data} />
         </View>
       </Panel>
     );
@@ -101,6 +105,8 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
           return <Line key={r.profile_id} name={r.name} pick={`${r.h} – ${r.a}`} pts={p} live={live} />;
         })}
         {!saved && <Text style={{ fontSize: 12, color: t.muted, textAlign: 'center', padding: 8 }}>Maç başladığı için tahmin kapandı.</Text>}
+        {saved?.joker && <Text style={{ fontSize: 12.5, color: t.accent, textAlign: 'center', paddingTop: 4 }}>Joker bu maçta: puanın ×2</Text>}
+        <View style={{ paddingHorizontal: 16, paddingTop: 6 }}><CommunityLine f={f} data={community.data} /></View>
       </View>
     </Panel>
   );
@@ -113,6 +119,58 @@ function Line({ name, pick, pts, live, bold, muted }: { name: string; pick: stri
       <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: bold ? '700' : '400', color: t.fg }}>{name}</Text>
       <Text style={{ fontSize: 15, color: muted ? t.muted : t.fg, fontVariant: ['tabular-nums'] }}>{pick}</Text>
       <Text style={{ width: 46, textAlign: 'right', fontSize: 15, fontWeight: '700', color: pts === 3 ? t.win : pts === 1 ? t.fg : t.muted }}>{pts === null ? '' : `${live ? '~' : ''}+${pts}`}</Text>
+    </View>
+  );
+}
+
+// Joker: haftada bir maç, puan ×2 (sürpriz bonusu dahil). Aynı haftada başka maçtaysa oraya değil buraya taşınır.
+function Joker({ secret, matchId, on, onChange }: { secret: string; matchId: number; on: boolean; onChange: () => void }) {
+  const t = useTheme();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const toggle = async () => {
+    setBusy(true); setMsg('');
+    try {
+      const r = await setJoker(secret, matchId, !on);
+      if (!on && r.moved_from) setMsg('Joker bu haftaki diğer maçından buraya taşındı.');
+      track('joker_set', { on: !on });
+      onChange();
+    } catch (e) { setMsg((e as { message?: string }).message ?? 'Kaydedilemedi.'); } finally { setBusy(false); }
+  };
+  return (
+    <View style={{ alignItems: 'center', gap: 4 }}>
+      <Pressable onPress={toggle} disabled={busy} accessibilityRole="switch" accessibilityState={{ checked: on }} accessibilityLabel="Joker"
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 14, borderRadius: 99, borderWidth: 1,
+          borderColor: on ? t.accent : t.line, backgroundColor: on ? t.accentSoft : 'transparent', opacity: busy ? 0.6 : 1 }}>
+        <Text style={{ fontSize: 14 }}>🃏</Text>
+        <Text style={{ fontSize: 13.5, fontWeight: '600', color: on ? t.fg : t.muted }}>{on ? 'Joker bu maçta · ×2' : 'Jokeri bu maçta kullan'}</Text>
+      </Pressable>
+      <Text style={{ fontSize: 11.5, color: msg ? t.fg : t.muted, textAlign: 'center' }}>{msg || 'Haftada bir maç; puanın ikiye katlanır.'}</Text>
+    </View>
+  );
+}
+
+const pct = (x: number, n: number) => `%${Math.round((x / n) * 100)}`;
+
+// Topluluk: "Tribün: GS %62 · X %21 · FB %17" (en az 20 tahminle) ve "Grubunda 5 kişiden 4'ü GS".
+function CommunityLine({ f, data }: { f: Fixture; data?: Community }) {
+  const t = useTheme();
+  if (!data || data.hidden) return null;
+  const side = (d: Dist) => {
+    const best = Math.max(d.h, d.d, d.a);
+    return { n: best, label: best === d.h ? f.h.name : best === d.a ? f.a.name : 'beraberlik' };
+  };
+  const lines: string[] = [];
+  if (data.tribun) lines.push(`Tribün: ${f.h.name} ${pct(data.tribun.h, data.tribun.n)} · X ${pct(data.tribun.d, data.tribun.n)} · ${f.a.name} ${pct(data.tribun.a, data.tribun.n)}`);
+  for (const g of (data.groups ?? []).slice(0, 3)) {
+    if (g.n < 2) continue;
+    const s = side(g);
+    lines.push(`${g.name}: ${g.n} kişiden ${possessive(s.n)} ${s.label}`);
+  }
+  if (!lines.length) return null;
+  return (
+    <View style={{ gap: 3, marginTop: 2 }}>
+      {lines.map((l) => <Text key={l} numberOfLines={1} style={{ fontSize: 12.5, color: t.muted, textAlign: 'center' }}>{l}</Text>)}
     </View>
   );
 }

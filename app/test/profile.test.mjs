@@ -36,3 +36,13 @@ assert.equal(rowOf(late, res(6, [1, 0], '2026-11-05T17:00:00Z')).pts, null, 'ba�
 const s = summary(picks, results, at('2026-11-15T12:00:00Z'));
 assert.equal(s.total, 7); assert.equal(s.exact, 2); assert.equal(s.streak, 1); assert.equal(s.best, 2);
 console.log('ok');
+
+// Defter (veritabanı puanı) varsa o geçerlidir: sürpriz bonusu ve joker dahil.
+{
+  const ledger = new Map([[1, { match_id: 1, total: 10, base: 3, bonus: 2, joker: true, outcome: 'exact', kickoff: '2026-11-02T17:00:00Z', week: '2026-11-02' }]]);
+  const s2 = summary(picks, results, at('2026-11-15T12:00:00Z'), ledger);
+  assert.equal(s2.total, 14, 'defterdeki 10 + diğerleri 1+0+3');
+  const row = byWeek(picks, results, 'all', ledger).flatMap((w) => w.rows).find((r) => r.pick.match_id === 1);
+  assert.equal(row.pts, 10); assert.equal(row.joker, true); assert.equal(row.bonus, 2);
+  console.log('ok ledger');
+}
