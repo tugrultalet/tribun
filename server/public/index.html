@@ -48,11 +48,6 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .nav{display:flex;align-items:center;gap:24px;min-height:64px}
 .logo{font-family:var(--font-display);font-weight:800;font-size:28px;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;display:flex;align-items:center;gap:10px}
 .logo i{width:28px;height:28px;border-radius:8px;background:linear-gradient(140deg,var(--accent),#5E74E8);display:grid;place-items:center;font-style:normal;color:var(--accent-ink);font-size:17px}
-.logo .lb-ball{transform-box:fill-box;transform-origin:center;animation:lb-bob 1.6s ease-in-out infinite}
-.logo .lb-s{animation:lb-zip 1.6s ease-in-out infinite}.logo .lb-s1{animation-delay:.12s}.logo .lb-s2{animation-delay:.24s}.logo .lb-s3{animation-delay:.36s}
-@keyframes lb-bob{0%,100%{transform:translate(0,0) rotate(0)}50%{transform:translate(-.9px,-.8px) rotate(-8deg)}}
-@keyframes lb-zip{0%{transform:translate(-1.3px,-1.2px);opacity:0}35%{opacity:1}100%{transform:translate(1.6px,1.4px);opacity:0}}
-@media (prefers-reduced-motion:reduce){.logo .lb-ball,.logo .lb-s{animation:none}}
 .nav ul{display:flex;gap:22px;list-style:none;margin:0 0 0 auto;padding:0;font-size:15px;color:var(--muted)}
 .nav ul a{text-decoration:none}
 .nav ul a:hover{color:var(--fg)}
@@ -308,7 +303,8 @@ footer .sp{margin-left:auto}
 
 <header>
   <div class="wrap nav">
-    <a class="logo" href="#top" aria-label="Tribün ana sayfa"><i aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="lb-ball"><circle cx="10.2" cy="10.2" r="8.2"/><path fill="currentColor" d="M10.20 6.90L13.34 9.18L12.14 12.87L8.26 12.87L7.06 9.18z"/><path stroke-width="1.5" d="M10.20 6.90L10.20 4.60M10.20 4.60L6.10 3.10M10.20 4.60L14.30 3.10M13.34 9.18L15.53 8.47M15.53 8.47L15.69 4.11M15.53 8.47L18.22 11.90M12.14 12.87L13.49 14.73M13.49 14.73L17.69 13.54M13.49 14.73L11.06 18.36M8.26 12.87L6.91 14.73M6.91 14.73L9.34 18.36M6.91 14.73L2.71 13.54M7.06 9.18L4.87 8.47M4.87 8.47L2.18 11.90M4.87 8.47L4.71 4.11"/></g><path class="lb-s lb-s0" d="M19.92 12.00L22.14 14.01"/><path class="lb-s lb-s1" d="M17.66 16.68L22.25 20.84"/><path class="lb-s lb-s2" d="M13.61 19.48L16.57 22.16"/><path class="lb-s lb-s3" d="M8.45 19.93L10.37 21.67"/></svg></i>Tribün</a>
+    <!-- Top ikonu: Phosphor Icons (MIT, © 2023 Phosphor Icons) -->
+    <a class="logo" href="#top" aria-label="Tribün ana sayfa"><i aria-hidden="true"><svg width="21" height="21" viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm8,39.38,24.79-17.05a88.41,88.41,0,0,1,36.18,27l-8,26.94c-.2,0-.41.1-.61.17l-22.82,7.41a7.59,7.59,0,0,0-1,.4L136,88.62c0-.2,0-.41,0-.62V64C136,63.79,136,63.58,136,63.38ZM95.24,46.33,120,63.38c0,.2,0,.41,0,.62V88c0,.21,0,.42,0,.62L91.44,108.29a7.59,7.59,0,0,0-1-.4l-22.82-7.41c-.2-.07-.41-.12-.61-.17l-8-26.94A88.41,88.41,0,0,1,95.24,46.33Zm-13,129.09H53.9a87.4,87.4,0,0,1-13.79-43.07l22-16.88a5.77,5.77,0,0,0,.58.22l22.83,7.42a7.83,7.83,0,0,0,.93.22l10.79,31.42c-.15.18-.3.36-.44.55L82.7,174.71A7.8,7.8,0,0,0,82.24,175.42ZM150.69,213a88.16,88.16,0,0,1-45.38,0L95.25,184.6c.13-.16.27-.31.39-.48l14.11-19.42a7.66,7.66,0,0,0,.46-.7h35.58a7.66,7.66,0,0,0,.46.7l14.11,19.42c.12.17.26.32.39.48Zm23.07-37.61a7.8,7.8,0,0,0-.46-.71L159.19,155.3c-.14-.19-.29-.37-.44-.55l10.79-31.42a7.83,7.83,0,0,0,.93-.22l22.83-7.42a5.77,5.77,0,0,0,.58-.22l22,16.88a87.4,87.4,0,0,1-13.79,43.07Z"/></svg></i>Tribün</a>
     <ul>
       <li><a href="#ozellikler">Özellikler</a></li>
       <li><a href="#nasil">Nasıl çalışır</a></li>
