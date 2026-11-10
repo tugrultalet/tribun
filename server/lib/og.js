@@ -42,7 +42,7 @@ export function matchSvg({ home, away, homeLogo, awayLogo, pick, sender, league,
   ${mid}
   ${name(home, LX)}${name(away, RX)}
   <rect x="130" y="448" width="940" height="2" fill="#ffffff" fill-opacity="0.1"/>
-  <text x="130" y="505" font-family="Inter" font-weight="600" font-size="30" fill="#ffffff">${ask}<tspan fill="#A7ABC8">&#160;· Sen ne diyorsun?</tspan></text>
+  <text x="130" y="505" font-family="Inter" font-weight="600" font-size="30" fill="#ffffff">${ask}<tspan fill="#A7ABC8">&#160;· Senin tahminin ne?</tspan></text>
   <rect x="860" y="468" width="210" height="54" rx="27" fill="#9DB1FF"/>
   <text x="965" y="504" text-anchor="middle" font-family="Inter" font-weight="700" font-size="26" fill="#0B1030">Tahmin et ›</text>
   <text x="600" y="602" text-anchor="middle" font-family="Inter" font-weight="700" font-size="24" fill="#2B2A6B" fill-opacity="0.6">Tribün</text>

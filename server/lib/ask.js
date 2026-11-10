@@ -6,9 +6,15 @@ export const validAskToken = (t) => TOKEN.test(String(t || '').toUpperCase());
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const TR = new Intl.DateTimeFormat('tr-TR', { timeZone: 'Europe/Istanbul', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 
+// Önizleme kartının başlığı kısa: asıl cümle ("… maçı 1-1 biter dedim. Senin skor tahminin ne?") mesajın kendisinde.
 export function askText(info) {
-  const match = `${info.home}–${info.away}`;
-  return info.pick ? `${info.sender} ${match} için ${info.pick.h}–${info.pick.a} dedi. Sen ne diyorsun?` : `${info.sender} ${match} için tahmin yaptı. Sen ne diyorsun?`;
+  return `${info.home} - ${info.away} · Skor tahmini`;
+}
+// Web sayfasındaki tam cümle (uygulaması olmayan kişi bunu okur).
+export function askLead(info) {
+  return info.pick
+    ? `${info.sender}, ${info.home} - ${info.away} maçı ${info.pick.h}-${info.pick.a} biter dedi. Senin skor tahminin ne?`
+    : `${info.sender}, ${info.home} - ${info.away} maçı için tahminini yaptı. Senin skor tahminin ne?`;
 }
 
 export function askPage({ token, info, supabaseUrl, supabaseKey, storeUrl, image }) {
@@ -17,6 +23,7 @@ export function askPage({ token, info, supabaseUrl, supabaseKey, storeUrl, image
     return shell('Bağlantı bulunamadı', 'Bu tahmin isteği silinmiş ya da bağlantı hatalı.', '<h1>Bağlantı bulunamadı</h1><p>Bu tahmin isteği silinmiş ya da bağlantı hatalı.</p>', '');
   }
   const title = esc(askText(info));
+  const lead = esc(askLead(info));
   const kick = info.kickoff ? Date.parse(info.kickoff) : NaN;
   const closed = Number.isFinite(kick) && kick <= Date.now();
   const when = Number.isFinite(kick) ? esc(TR.format(kick)) : '';
@@ -26,7 +33,7 @@ export function askPage({ token, info, supabaseUrl, supabaseKey, storeUrl, image
 <p class="eyebrow">Tahmin isteği</p>
 <h1>${esc(info.home)} – ${esc(info.away)}</h1>
 <p class="small">${when}</p>
-<p class="lead">${title}</p>
+<p class="lead">${lead}</p>
 ${closed ? '<p class="lead">Maç başladı, tahminler kapandı.</p>' : `
 <form id="f" autocomplete="off">
   <div class="score">
