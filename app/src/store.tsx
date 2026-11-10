@@ -24,6 +24,8 @@ type Saved = { teams: FollowedTeam[]; main?: number; onboarded: boolean; me?: Me
   full?: number[];
   // Bildirimler: notify açık/kapalı (undefined: henüz sorulmadı), topics: şu an abone olunan konular.
   notify?: boolean; topics?: string[];
+  // remind: maçtan 1 saat önce tahmin hatırlatması (undefined: maç bildirimleriyle aynı).
+  remind?: boolean;
   // Kilit ekranında canlı skor (Live Activity): takip edilen tüm takımlar için tek anahtar (varsayılan açık).
   liveOn?: boolean };
 // ids: 2 boş kayıtta da bulunmalı; yoksa kayıt bir sonraki açılışta "eski" sanılıp numaraları yeniden çevrilirdi.
@@ -76,6 +78,8 @@ type Store = Saved & {
   setMain: (id: number) => void;
   // Ana takım bildirimlerini açar (iOS izni istenir; verilmezse false döner) ya da kapatır.
   setNotify: (on: boolean) => Promise<boolean>;
+  remind: boolean;
+  setRemind: (on: boolean) => Promise<boolean>;
   // Takip edilen takımların maçları kilit ekranında kendiliğinden açılsın mı (varsayılan: evet).
   liveFor: (teamId: number) => boolean;
   setLiveOn: (on: boolean) => void;
@@ -166,6 +170,12 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
       setNotify: async (on) => {
         if (on && !(await fbPushPermission())) { update((s) => ({ ...s, notify: false })); return false; }
         update((s) => ({ ...s, notify: on }));
+        return true;
+      },
+      remind: !!(saved.remind ?? saved.notify),
+      setRemind: async (on) => {
+        if (on && !(await fbPushPermission())) { update((s) => ({ ...s, remind: false })); return false; }
+        update((s) => ({ ...s, remind: on }));
         return true;
       },
       liveFor: () => saved.liveOn !== false,

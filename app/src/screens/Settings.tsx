@@ -47,6 +47,15 @@ export default function Settings() {
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: HAIR, borderColor: t.line }}>
             <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, color: t.fg }}>Tahmin hatırlatması</Text>
+              <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 18 }}>Takımlarının maçından 1 saat önce: "Skoru tahmin et"</Text>
+            </View>
+            <Switch value={store.remind} disabled={!firebaseAvailable() || !store.teams.length}
+              onValueChange={(on) => store.setRemind(on).then((ok) => { if (on && !ok) Alert.alert('Bildirim izni yok', 'iPhone Ayarlar → Tribün → Bildirimler bölümünden izin verebilirsin.'); })}
+              accessibilityLabel="Tahmin hatırlatması" />
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: HAIR, borderColor: t.line }}>
+            <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 15, color: t.fg }}>Kilit ekranında canlı skor</Text>
               <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 18 }}>
                 {liveSupported() ? "Takımlarının maçı başlayınca kilit ekranında ve Dynamic Island'da kendiliğinden açılır" : 'iOS 18 ve üzeri gerekir (iPhone Ayarlar → Tribün → Canlı Etkinlikler açık olmalı).'}

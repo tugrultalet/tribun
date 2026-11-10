@@ -163,6 +163,28 @@ export function createCore({ provider, cacheDir, notify = null, onRefresh = null
     }
     if (changed) save('notified', [...notified].slice(-3000), 30 * DAY);
   }
+  // Tahmin hatırlatması: başlamasına 10–60 dakika kalan maçlar için bir kez (önbellekteki tüm liste ve takım
+  // fikstürlerinden; API isteği harcamaz). Dakikada bir bakılır.
+  let lastRemind = 0;
+  function remindUpcoming(now = Date.now()) {
+    if (!notify || now - lastRemind < 60000) return;
+    lastRemind = now;
+    const seen = new Set();
+    let changed = false;
+    for (const k of [...keys('season:'), ...keys('teamfx:'), ...keys('day:')]) {
+      for (const f of load(k)?.data.fixtures || []) {
+        if (f.st !== 'ns' || seen.has(f.id)) continue;
+        seen.add(f.id);
+        const left = f.ts * 1000 - now;
+        if (left > HOUR || left < 10 * MIN) continue;
+        const key = `${f.id}:pre`;
+        if (notified.has(key)) continue;
+        notified.add(key); changed = true;
+        Promise.resolve().then(() => notify('pre', f)).catch(() => {});
+      }
+    }
+    if (changed) save('notified', [...notified].slice(-3000), 30 * DAY);
+  }
   function refreshUnsettled() {
     if (refreshing) return refreshing;
     // Önce zaman kontrolü: tarama (tüm önbellekteki maçlar) en çok liveTtl'de bir ve boşsa 15 sn'de bir yapılır.
@@ -416,7 +438,7 @@ export function createCore({ provider, cacheDir, notify = null, onRefresh = null
     leagueIds,
     results: getResults,
     // Arka plan zamanlayıcısı için: uygulamalar kapalıyken de canlı maçlar tazelenir ve gol bildirimi gider.
-    tick: () => refreshUnsettled(),
+    tick: () => { remindUpcoming(); return refreshUnsettled(); },
     // Live Activity: maçı izlemeye al ve güncel maç bilgisini döndür (bilinmeyen maç için kota kuralları geçerli).
     watchMatch: async (id, ctx) => { gateMatch(id, ctx); const m = await getMatch(id); watch(id); return m.fixture; },
     meta: getMeta,
