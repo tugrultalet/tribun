@@ -173,39 +173,42 @@ export function statusText(f: Fixture): string {
   if (f.st === 'off') return f.short === 'PST' ? 'Ert.' : 'İptal';
   return f.time;
 }
-// Maç satırı, tek satır: solda saat (ve takip edilen takım için EV / DEP), ortada "ev sahibi  skor  deplasman" yan yana.
-// Ev sahibi solda (ad, sonra arma), deplasman sağda (arma, sonra ad); skor arada. Adlar kısaltılmış halleriyle tek satırdadır.
+// Maç satırı (Apple Sports'a yakın, kompakt): `showLeague` ise üstte küçük, ortalı lig adı; altında tek satır:
+// [arma] Ev sahibi ........ saat / skor ........ Deplasman [arma]. Armalar kenarlara dayalı, adlar armayla aynı hizada.
+// Ev sahibi hep solda olduğundan iç saha / deplasman satırın düzeninden okunur; takip edilen takım kalın yazılır.
 export function MatchRow({ f, onPress, showLeague }: { f: Fixture; onPress: () => void; showLeague?: boolean }) {
   const t = useTheme();
-  const { followsTeam } = useStore();
+  const { followsTeam, league } = useStore();
   const done = f.st === 'ft';
   const live = f.st === 'live';
   const homeMine = followsTeam(f.h.id), awayMine = followsTeam(f.a.id);
-  // Takip edilen tek bir takım varsa onun iç sahada mı deplasmanda mı oynadığı yazılır; derbide (ikisi de takipte) yazılmaz.
-  const venue = homeMine !== awayMine ? (homeMine ? 'EV' : 'DEP') : null;
+  const lgName = league(f.lg)?.name ?? f.lgName;
   const nameStyle = (i: 0 | 1, mine: boolean) => {
     const won = done && f.s && f.s[i] > f.s[1 - i], lost = done && f.s && f.s[i] < f.s[1 - i];
-    return { fontSize: 13.5, fontWeight: (won || (mine && !done) ? '700' : '500') as '700' | '500', color: lost ? t.muted : t.fg, flexShrink: 1, minWidth: 0 };
+    return { fontSize: 14, fontWeight: (won || (mine && !done) ? '700' : '500') as '700' | '500', color: lost ? t.muted : t.fg, flexShrink: 1, minWidth: 0 };
   };
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${f.h.name} ${f.a.name}${venue ? (venue === 'EV' ? ', iç saha' : ', deplasman') : ''}`}
-      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, paddingHorizontal: 14, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
-      <View style={{ width: 40, alignItems: 'center' }}>
-        <Text style={{ fontSize: 12.5, fontWeight: '700', color: live ? t.live : done ? t.muted : t.fg }}>{statusText(f)}</Text>
-        {venue ? <Text style={{ fontSize: 9.5, lineHeight: 11, fontWeight: '800', letterSpacing: 0.6, color: t.accent }}>{venue}</Text> : null}
-      </View>
-      <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 5, minWidth: 0 }}>
-          <Text numberOfLines={1} style={[nameStyle(0, homeMine), { textAlign: 'right' }]}>{shortName(f.h.name)}</Text>
-          <Crest uri={f.h.logo} size={22} />
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${f.h.name} ${f.a.name}, ${statusText(f)}`}
+      style={({ pressed }) => ({ paddingTop: showLeague && lgName ? 4 : 8, paddingBottom: 8, paddingHorizontal: 14, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+      {showLeague && lgName ? <Text numberOfLines={1} style={{ textAlign: 'center', fontSize: 10.5, color: t.muted, marginBottom: 3 }}>{lgName}{f.round ? ` · ${f.round}` : ''}</Text> : null}
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <Crest uri={f.h.logo} size={26} />
+          <Text numberOfLines={1} style={nameStyle(0, homeMine)}>{shortName(f.h.name)}</Text>
         </View>
-        <Text style={{ minWidth: f.s ? 28 : 14, textAlign: 'center', fontWeight: '700', fontSize: 16, color: live ? t.live : t.fg, fontVariant: ['tabular-nums'] }}>{f.s ? `${f.s[0]}–${f.s[1]}` : '–'}</Text>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5, minWidth: 0 }}>
-          <Crest uri={f.a.logo} size={22} />
-          <Text numberOfLines={1} style={nameStyle(1, awayMine)}>{shortName(f.a.name)}</Text>
+        <View style={{ minWidth: 64, alignItems: 'center', paddingHorizontal: 6 }}>
+          {f.s && f.st !== 'ns' ? (
+            <Text style={{ fontWeight: '700', fontSize: 16, color: live ? t.live : t.fg, fontVariant: ['tabular-nums'] }}>{f.s[0]}–{f.s[1]}</Text>
+          ) : (
+            <Text style={{ fontWeight: '700', fontSize: 15, color: t.fg, fontVariant: ['tabular-nums'] }}>{statusText(f)}</Text>
+          )}
+          {f.st === 'live' || f.st === 'ft' || f.st === 'off' ? <Text style={{ fontSize: 10, lineHeight: 12, color: live ? t.live : t.muted, fontWeight: '600' }}>{statusText(f)}</Text> : null}
+        </View>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, minWidth: 0 }}>
+          <Text numberOfLines={1} style={[nameStyle(1, awayMine), { textAlign: 'right' }]}>{shortName(f.a.name)}</Text>
+          <Crest uri={f.a.logo} size={26} />
         </View>
       </View>
-      {showLeague && <LeagueBadge id={f.lg} size={20} logo={f.lgLogo} />}
     </Pressable>
   );
 }
