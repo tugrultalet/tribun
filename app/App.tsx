@@ -34,10 +34,11 @@ import Picker from './src/screens/Picker';
 import Settings from './src/screens/Settings';
 import Profile from './src/screens/Profile';
 import Member from './src/screens/Member';
+import AskLink from './src/screens/AskLink';
 import Team from './src/screens/Team';
 
 // Davet bağlantısı: tribun://join/ABC234 → Gruplar sekmesi, katılma formu kodla dolu.
-const LINKING: LinkingOptions<RootParams> = { prefixes: ['tribun://', 'https://tribunapp.io', 'https://www.tribunapp.io'], config: { screens: { Tabs: { screens: { Groups: { path: 'j/:code', alias: ['join/:code'] } } } } } };
+const LINKING: LinkingOptions<RootParams> = { prefixes: ['tribun://', 'https://tribunapp.io', 'https://www.tribunapp.io'], config: { screens: { Tabs: { screens: { Groups: { path: 'j/:code', alias: ['join/:code'] } } }, Ask: 't/:token' } } };
 const Stack = createNativeStackNavigator<RootParams>();
 const Tab = createBottomTabNavigator<TabParams>();
 const IOS = Platform.OS === 'ios';
@@ -124,6 +125,7 @@ function Root() {
           <Stack.Screen name="Chat" component={Chat} />
           <Stack.Screen name="Settings" component={Settings} options={{ title: 'Ayarlar' }} />
           <Stack.Screen name="Member" component={Member} />
+          <Stack.Screen name="Ask" component={AskLink} />
           <Stack.Screen name="Feedback" component={Feedback} options={{ title: 'Geri bildirim' }} />
         </>
       ) : (

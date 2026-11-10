@@ -6,7 +6,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { ApiError, get, League, Meta, Team } from './api';
 import { dedupeTeams, teamKey, type FollowedTeam } from './follow';
 import { legacyToCommon } from './ids';
-import { fbPushPermission, fbSubscribe } from './fb';
+import { fbPushPermission, fbSubscribe, fbToken } from './fb';
 import { pushTopics } from './version';
 import { rpc } from './social';
 import { signIn, type Provider } from './auth';
@@ -89,6 +89,8 @@ type Store = Saved & {
   // 'new': bu hesapla hiç profil yok; takma ad sorulup `setName` çağrılınca hesaba bağlanır.
   linkAccount: (provider: Provider) => Promise<'linked' | 'restored' | 'new'>;
   setProvider: (provider: Provider | undefined) => void;
+  // Web'de (tribunapp.io/t/…) yapılmış tahmini ve grubu bu cihaza alır (geçiş kodu). Başarılıysa davet edenin adı.
+  claimWeb: (code: string) => Promise<string | null>;
   // Hesabı ve sunucudaki tüm verileri siler (geri alınamaz); takip tercihleri telefonda kalır.
   deleteAccount: () => Promise<void>;
   reloadMeta: () => void;
@@ -198,6 +200,14 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
         update((s) => ({ ...s, me: { secret, name: r.name ?? s.me?.name ?? '', provider } }));
         return r.status;
       },
+      claimWeb: async (code) => {
+        const secret = Crypto.randomUUID() + Crypto.randomUUID();
+        const r = await rpc<{ name?: string; inviter?: string; error?: string }>('claim_web', { p_code: code, p_secret: secret });
+        if (r.error || !r.name) return null;
+        await writeSecret(secret);
+        update((s) => ({ ...s, me: { secret, name: r.name! } }));
+        return r.inviter ?? '';
+      },
       setProvider: (provider) => update((s) => (s.me ? { ...s, me: { ...s.me, provider } } : s)),
       deleteAccount: async () => {
         if (!saved.me) return;
@@ -217,6 +227,13 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
     const next = wanted ? wanted.split(',') : [];
     fbSubscribe(next, saved.topics ?? []).then((ok) => { if (ok) update((s) => ({ ...s, topics: next })); });
   }, [wanted, current]);
+
+  // Kişiye özel bildirimler (tahmin istekleri) için bu cihazın anahtarı profile kaydedilir (oturum başına bir kez).
+  const mySecret = saved?.me?.secret;
+  useEffect(() => {
+    if (!mySecret) return;
+    fbToken().then((token) => { if (token) rpc('register_push', { p_secret: mySecret, p_token: token }).catch(() => {}); });
+  }, [mySecret]);
 
   if (!store) return <>{fallback(error, reloadMeta)}</>;
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;

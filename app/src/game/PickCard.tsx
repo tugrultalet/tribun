@@ -10,6 +10,7 @@ import { Field } from '../ui';
 import { Community, Dist, MatchPicks, setJoker, setPick, useMyPicks } from './hooks';
 import { Stepper } from './Stepper';
 import { possessive } from './turkish';
+import { AskFriends } from './AskFriends';
 import { notePickSaved } from '../review';
 import { track } from '../telemetry';
 
@@ -90,6 +91,7 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
           </Text>
           {pending > 0 && <Text style={{ fontSize: 12.5, color: t.muted }}>{pending} arkadaşın tahmin girdi; maç başlayınca görürsün.</Text>}
           {saved && <Joker secret={secret} matchId={f.id} on={!!saved.joker} onChange={picks.reload} />}
+          {saved && <AskFriends f={f} secret={secret} pick={{ h: saved.h, a: saved.a }} />}
           <CommunityLine f={f} data={community.data} />
         </View>
       </Panel>

@@ -45,7 +45,12 @@ export function createFcm({ sa, fetchImpl = fetch }) {
         method: 'POST', headers: { authorization: `Bearer ${await accessToken()}`, 'content-type': 'application/json' },
         body: JSON.stringify({ message }), signal: AbortSignal.timeout(15000),
       });
-      if (!res.ok) throw new Error(`FCM gönderimi başarısız (HTTP ${res.status})`);
+      if (!res.ok) {
+        // Uygulaması silinmiş cihazın anahtarı: UNREGISTERED (404) ya da INVALID_ARGUMENT (400). Çağıran anahtarı siler.
+        const body = await res.json().catch(() => ({}));
+        const code = body?.error?.details?.find?.((d) => d.errorCode)?.errorCode || body?.error?.status || '';
+        throw Object.assign(new Error(`FCM gönderimi başarısız (HTTP ${res.status} ${code})`), { status: res.status, code });
+      }
       return res.json().catch(() => ({}));
     },
   };

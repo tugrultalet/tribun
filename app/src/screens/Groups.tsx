@@ -11,6 +11,7 @@ import { track } from '../telemetry';
 import { MAX_SCOPE_LEAGUES } from '../groups/scope';
 import { Button, Card, Crest, Empty, GAP, Icon, Loader, Panel, Seg } from '../ui';
 import { Screen } from './Screen';
+import { fbPushPermission } from '../fb';
 import { RestoreBlock, SignInButtons, useCanSignIn } from './SignIn';
 
 import { Field } from '../ui';
@@ -83,6 +84,8 @@ function MyGroups({ secret }: { secret: string }) {
       nav.setParams({ code: undefined } as never);
       state.reload();
       track(form === 'join' ? 'group_joined' : 'group_created', form === 'join' ? undefined : { scope: kind });
+      // Gruptan tahmin isteği ve mesaj bildirimi gelebilsin (sistem izni bir kez sorulur).
+      fbPushPermission().catch(() => {});
       nav.navigate('Group', { id: group.id });
     } catch (e) { setError((e as ApiError).message); } finally { setBusy(false); }
   };
