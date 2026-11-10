@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { Resvg } from '@resvg/resvg-js';
 
 const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'assets');
-const FONTS = ['Inter-Bold.ttf', 'Inter-SemiBold.ttf'].map((f) => path.join(dir, f));
+// Inter: yazılar; Outfit: skor rakamları (yuvarlak, bayraksız "1"). İkisi de SIL Open Font License.
+const FONTS = ['Inter-Bold.ttf', 'Inter-SemiBold.ttf', 'Outfit-Bold.ttf'].map((f) => path.join(dir, f));
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // Uzun adlar küçülür (ör. "Manchester United"); çok uzunsa kesilir.
@@ -21,7 +22,7 @@ export function matchSvg({ home, away, homeLogo, awayLogo, pick, sender, league,
   const logo = (uri, cx) => (uri ? `<image href="${uri}" x="${cx - LOGO / 2}" y="${LY - LOGO / 2 - 20}" width="${LOGO}" height="${LOGO}" preserveAspectRatio="xMidYMid meet"/>` : `<circle cx="${cx}" cy="${LY - 20}" r="70" fill="#ffffff" fill-opacity="0.08"/>`);
   const name = (n, cx) => `<text x="${cx}" y="${LY + 100}" text-anchor="middle" font-family="Inter" font-weight="600" font-size="${Math.min(nameSize(n), 40)}" fill="#ffffff">${esc(clip(n))}</text>`;
   // Skor: rakamlar ayrı yerleştirilir (sol rakam sağa, sağ rakam sola yaslı), arada ince yuvarlak tire.
-  const digit = (n, x, anchor) => `<text x="${x}" y="${LY + 32}" text-anchor="${anchor}" font-family="Inter" font-weight="700" font-size="150" fill="#ffffff">${n}</text>`;
+  const digit = (n, x, anchor) => `<text x="${x}" y="${LY + 32}" text-anchor="${anchor}" font-family="Outfit" font-weight="700" font-size="156" fill="#ffffff">${n}</text>`;
   const mid = pick
     ? `${digit(pick.h, 552, 'end')}<rect x="578" y="${LY - 25}" width="44" height="12" rx="6" fill="#A7ABC8"/>${digit(pick.a, 648, 'start')}`
     : `<text x="600" y="${LY + 25}" text-anchor="middle" font-family="Inter" font-weight="700" font-size="110" fill="#A7ABC8">?</text>`;
