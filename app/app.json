@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Tribün",
+    "name": "Tribun",
     "slug": "tribun",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -14,7 +14,8 @@
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
           "remote-notification"
-        ]
+        ],
+        "CFBundleDisplayName": "Tribün"
       },
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
@@ -51,6 +52,12 @@
       "expo-dev-client"
     ],
     "scheme": "tribun",
-    "backgroundColor": "#0B1030"
+    "backgroundColor": "#0B1030",
+    "owner": "tgrltl",
+    "extra": {
+      "eas": {
+        "projectId": "0e6c89b0-4605-4feb-b92a-cbd4e0de32c2"
+      }
+    }
   }
 }
