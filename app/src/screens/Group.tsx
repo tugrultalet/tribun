@@ -46,7 +46,7 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
   const leave = () => {
     const go = () => rpc('leave_group', { p_secret: secret, p_group: id }).then(() => nav.goBack(), () => {});
     if (Platform.OS === 'web') return void go();
-    Alert.alert('Gruptan çık', 'Tahminlerin bu gruptan silinir.', [{ text: 'Vazgeç', style: 'cancel' }, { text: 'Çık', style: 'destructive', onPress: go }]);
+    Alert.alert('Tribünden çık', 'Tahminlerin bu tribünden silinir.', [{ text: 'Vazgeç', style: 'cancel' }, { text: 'Çık', style: 'destructive', onPress: go }]);
   };
 
   return (
@@ -58,7 +58,7 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
               <Crest uri={d.group.team.logo} size={56} />
               <Text style={{ fontSize: 24, fontWeight: '700', letterSpacing: -0.3, color: t.fg, textAlign: 'center' }}>{d.group.name}{d.group.verified ? ' ✓' : ''}</Text>
               <Text style={{ fontSize: 13, color: t.muted }}>{open ? `Açık lig · ${d.group.members} üye` : `${d.members.length} üye`} · Davet kodu {d.group.code}</Text>
-              {d.group.expires_at ? <Text style={{ fontSize: 12.5, color: t.accent, textAlign: 'center' }}>Bu maça özel grup · {new Date(d.group.expires_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} tarihinde silinir</Text> : null}
+              {d.group.expires_at ? <Text style={{ fontSize: 12.5, color: t.accent, textAlign: 'center' }}>Bu maça özel tribün · {new Date(d.group.expires_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} tarihinde silinir</Text> : null}
               {d.group.verified && <Text style={{ fontSize: 12, color: t.accent }}>Doğrulanmış kurucu</Text>}
               {d.owner && d.arrivals != null && open && <Text style={{ fontSize: 13, color: t.fg }}>Bu linkle gelen: {d.arrivals} kişi</Text>}
             </View>
@@ -83,7 +83,7 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
             </Loader>
             {inviting && <InviteSheet group={d.group} memberIds={d.members.map((m) => m.id)} onAdded={state.reload} onClose={() => setInviting(false)} />}
             <Pressable onPress={leave} accessibilityRole="button" style={{ alignSelf: 'center', padding: 14, marginTop: 10 }}>
-              <Text style={{ color: t.live, fontSize: 14, fontWeight: '600' }}>Gruptan çık</Text>
+              <Text style={{ color: t.live, fontSize: 14, fontWeight: '600' }}>Tribünden çık</Text>
             </Pressable>
           </>
         )}

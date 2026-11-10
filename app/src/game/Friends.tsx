@@ -32,7 +32,7 @@ export function FriendsSection() {
 
   const remove = (f: Friend) => {
     const go = () => rpc('remove_friend', { p_secret: secret, p_profile: f.id }).then(() => { track('friend_removed'); state.reload(); }, () => {});
-    const msg = `${f.name} arkadaşlarından çıkarılsın mı? Ortak bir grubunuz yoksa birbirinizin tahminlerini görmezsiniz.`;
+    const msg = `${f.name} arkadaşlarından çıkarılsın mı? Ortak bir tribününüz yoksa birbirinizin tahminlerini görmezsiniz.`;
     if (Platform.OS === 'web') { if (globalThis.confirm?.(msg)) go(); return; }
     Alert.alert('Arkadaşlıktan çıkar', msg, [{ text: 'Vazgeç', style: 'cancel' }, { text: 'Çıkar', style: 'destructive', onPress: go }]);
   };

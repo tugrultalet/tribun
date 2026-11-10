@@ -48,7 +48,7 @@ export default function Profile() {
             <Icon.chevron color={t.fg} />
           </Pressable>
         </Card>
-      ) : <><Empty>Tahmin yapmak ve puan toplamak için Arkadaşlar sekmesinden bir takma ad seç.</Empty><RestoreBlock /></>}
+      ) : <><Empty>Tahmin yapmak ve puan toplamak için Tribün sekmesinden bir takma ad seç.</Empty><RestoreBlock /></>}
 
       {store.me && <View style={{ marginTop: 12 }}><SummaryCard picks={all} /></View>}
 

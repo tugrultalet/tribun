@@ -36,8 +36,8 @@ export function AskFriends({ f, secret, pick }: { f: Fixture; secret: string; pi
   const chatGroup = async () => {
     if (!store.me?.provider) {
       const go = () => nav.navigate('Account');
-      if (Platform.OS === 'web') { if (globalThis.confirm?.('Sohbet grubu kurmak için hesabını bağla. Hesap ekranına gidilsin mi?')) go(); return; }
-      Alert.alert('Hesabını bağla', 'Sohbet grubu kurmak için Apple ya da e-postayla hesabını bağla.', [{ text: 'Vazgeç', style: 'cancel' }, { text: 'Hesap', onPress: go }]);
+      if (Platform.OS === 'web') { if (globalThis.confirm?.('Maç tribünü kurmak için hesabını bağla. Hesap ekranına gidilsin mi?')) go(); return; }
+      Alert.alert('Hesabını bağla', 'Maç tribünü kurmak için Apple ya da e-postayla hesabını bağla.', [{ text: 'Vazgeç', style: 'cancel' }, { text: 'Hesap', onPress: go }]);
       return;
     }
     setBusy('group'); setMsg('');
@@ -49,7 +49,7 @@ export function AskFriends({ f, secret, pick }: { f: Fixture; secret: string; pi
       });
       track('match_group_created');
       nav.navigate('Group', { id: g.id, invite: true });
-    } catch (e) { setMsg((e as { message?: string }).message ?? 'Grup kurulamadı.'); } finally { setBusy(''); }
+    } catch (e) { setMsg((e as { message?: string }).message ?? 'Tribün kurulamadı.'); } finally { setBusy(''); }
   };
 
   return (
@@ -64,13 +64,13 @@ export function AskFriends({ f, secret, pick }: { f: Fixture; secret: string; pi
         </View>
         <Text style={{ fontSize: 22, fontWeight: '700', color: '#05301A' }}>›</Text>
       </Pressable>
-      <Pressable onPress={chatGroup} disabled={!!busy} accessibilityRole="button" accessibilityLabel="Bu maça özel sohbet grubu oluştur"
+      <Pressable onPress={chatGroup} disabled={!!busy} accessibilityRole="button" accessibilityLabel="Bu maça özel tribün kur"
         style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 11, borderRadius: 14,
           backgroundColor: pressed ? t.line : t.surface2, borderWidth: 1, borderColor: t.line, opacity: busy === 'group' ? 0.6 : 1 })}>
         <Text style={{ fontSize: 15 }}>🗨️</Text>
-        <Text style={{ fontSize: 14.5, fontWeight: '700', color: t.fg }}>{busy === 'group' ? 'Kuruluyor…' : 'Sohbet grubu oluştur'}</Text>
+        <Text style={{ fontSize: 14.5, fontWeight: '700', color: t.fg }}>{busy === 'group' ? 'Kuruluyor…' : 'Maç tribünü kur'}</Text>
       </Pressable>
-      <Text style={{ fontSize: 11.5, color: t.muted, textAlign: 'center' }}>{msg || 'Sadece bu maça özel; maç bitince kapanır, 7 gün sonra silinir.'}</Text>
+      <Text style={{ fontSize: 11.5, color: t.muted, textAlign: 'center' }}>{msg || 'Sadece bu maça özel tribün; maç bitince kapanır, 7 gün sonra silinir.'}</Text>
     </View>
   );
 }

@@ -35,7 +35,7 @@ function NoAccount() {
   };
   return (
     <Screen title="Hesap">
-      <Empty>Henüz hesabın yok. Tahmin yapmak, grup kurmak ve sohbet etmek için bir takma ad seç.</Empty>
+      <Empty>Henüz hesabın yok. Tahmin yapmak, tribün kurmak ve sohbet etmek için bir takma ad seç.</Empty>
       <Card style={{ padding: 16, gap: 12 }}>
         <Field value={name} onChange={setValue} placeholder="Takma adın" maxLength={30} />
         {error ? <Text style={{ color: t.live, fontSize: 13 }}>{error}</Text> : null}
@@ -78,7 +78,7 @@ function Details({ secret }: { secret: string }) {
   const nav = useNav();
   const confirmSignOut = () => {
     const go = () => store.signOut().then(() => { track('signed_out'); nav.goBack(); }, (e) => Alert.alert('Çıkış yapılamadı', (e as Error).message));
-    const msg = `Bu telefondan çıkış yapılır. Tekrar ${providerName(provider)} ile girince puanların, grupların ve tahminlerin geri gelir. Başka bir hesapla da girebilirsin.`;
+    const msg = `Bu telefondan çıkış yapılır. Tekrar ${providerName(provider)} ile girince puanların, tribünlerin ve tahminlerin geri gelir. Başka bir hesapla da girebilirsin.`;
     if (Platform.OS === 'web') { if (globalThis.confirm?.(msg)) go(); return; }
     Alert.alert('Çıkış yap', msg, [{ text: 'Vazgeç', style: 'cancel' }, { text: 'Çıkış yap', style: 'destructive', onPress: go }]);
   };
@@ -101,7 +101,7 @@ function Details({ secret }: { secret: string }) {
       </View>
       {a && (
         <Card style={{ marginTop: GAP, paddingVertical: 12, flexDirection: 'row' }}>
-          {stat(a.picks, 'Tahmin')}{stat(a.groups, 'Grup')}{stat(a.devices, a.devices === 1 ? 'Cihaz' : 'Cihaz')}
+          {stat(a.picks, 'Tahmin')}{stat(a.groups, 'Tribün')}{stat(a.devices, a.devices === 1 ? 'Cihaz' : 'Cihaz')}
         </Card>
       )}
 
@@ -123,7 +123,7 @@ function Details({ secret }: { secret: string }) {
             </Pressable>
           )}
         </Card>
-        <Text style={{ fontSize: 12, color: t.muted, marginTop: 6, marginHorizontal: 4 }}>Gruplarında ve sıralamalarda bu ad görünür. E-posta ya da telefon numarası paylaşılmaz.</Text>
+        <Text style={{ fontSize: 12, color: t.muted, marginTop: 6, marginHorizontal: 4 }}>Tribünlerinde ve sıralamalarda bu ad görünür. E-posta ya da telefon numarası paylaşılmaz.</Text>
       </Section>
 
       <Section eyebrow="Giriş">
@@ -132,7 +132,7 @@ function Details({ secret }: { secret: string }) {
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 15, color: t.fg }}>{provider ? `${providerName(provider)} hesabına bağlı` : 'Hesap bağlı değil'}</Text>
               <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 18 }}>
-                {provider ? 'Telefon değişirse aynı hesapla girince puanların, grupların ve tahminlerin geri gelir.' : 'Veriler yalnızca bu telefonda. Bağlarsan telefon değişince kaybolmaz.'}
+                {provider ? 'Telefon değişirse aynı hesapla girince puanların, tribünlerin ve tahminlerin geri gelir.' : 'Veriler yalnızca bu telefonda. Bağlarsan telefon değişince kaybolmaz.'}
               </Text>
             </View>
           </View>
@@ -166,7 +166,7 @@ function Details({ secret }: { secret: string }) {
           <Pressable onPress={() => { setDeleting((v) => !v); setWord(''); }} accessibilityRole="button" style={[line, { borderTopWidth: 0, borderColor: t.line }]}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 15, color: t.live, fontWeight: '600' }}>Hesabımı sil</Text>
-              <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 18 }}>Takma ad, gruplar, mesajlar ve tahminler kalıcı olarak silinir. Takip ettiğin takımlar telefonda kalır.</Text>
+              <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 18 }}>Takma ad, tribünler, mesajlar ve tahminler kalıcı olarak silinir. Takip ettiğin takımlar telefonda kalır.</Text>
             </View>
           </Pressable>
           {deleting && (

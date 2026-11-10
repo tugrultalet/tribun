@@ -8,7 +8,7 @@ export const validCode = (code) => CODE.test(String(code || '').toUpperCase());
 export function invitePage({ code, name, storeUrl, image }) {
   const c = esc(String(code).toUpperCase());
   const group = name ? esc(String(name).slice(0, 40)) : '';
-  const title = group ? `${group} · Gruba katıl` : 'Tribün grubuna davetlisin';
+  const title = group ? `${group} · Tribüne katıl` : 'Tribüne davetlisin';
   const desc = 'TribünApp · Davet kodu ' + c;
   const store = storeUrl && /^https:\/\//.test(storeUrl)
     ? `<a class="btn sec" href="${esc(storeUrl)}">Uygulamayı indir</a>`

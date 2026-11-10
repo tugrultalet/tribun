@@ -36,10 +36,10 @@ export default function Groups() {
       .then((r) => { if (r.ok && r.name) { setTab('friends'); setJoined(`${r.name} ile artık arkadaşsınız 🤝`); } }).catch(() => {});
   }, [store.me?.secret, store.friendCode]);
   return (
-    <Screen tab title="Arkadaşlar">
+    <Screen tab title="Tribün">
       {store.me ? (
         <>
-          <Seg value={tab} onChange={setTab} options={[['friends', 'Arkadaşlar'], ['groups', 'Gruplar']]} />
+          <Seg value={tab} onChange={setTab} options={[['friends', 'Arkadaşlarım'], ['groups', 'Tribün']]} />
           {!!joined && <Text style={{ fontSize: 14, fontWeight: '600', color: t.win, textAlign: 'center', marginTop: 10 }}>{joined}</Text>}
           <View style={{ marginTop: 4 }}>{tab === 'friends' ? <FriendsSection /> : <MyGroups secret={store.me.secret} />}</View>
         </>
@@ -136,7 +136,7 @@ function MyGroups({ secret }: { secret: string }) {
                 <Crest uri={g.team.logo} size={36} />
                 <View style={{ flex: 1 }}>
                   <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: '600', color: t.fg }}>{g.name}{g.verified ? ' ✓' : ''}</Text>
-                  <Text numberOfLines={1} style={{ fontSize: 13, color: t.muted }}>{g.kind === 'open' ? `Açık lig · ${g.members} üye` : g.scope?.type === 'match' ? `Tek maç · ${g.members} üye` : `${g.members} üye · ${g.team.name}`}</Text>
+                  <Text numberOfLines={1} style={{ fontSize: 13, color: t.muted }}>{g.kind === 'open' ? `Açık lig · ${g.members} üye` : g.scope?.type === 'match' ? `Maç tribünü · ${g.members} üye` : `${g.members} üye · ${g.team.name}`}</Text>
                 </View>
                 {unread[g.id] ? (
                   <View accessibilityLabel={`${unread[g.id]} okunmamış mesaj`} style={{ minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: t.live }}>
@@ -147,24 +147,24 @@ function MyGroups({ secret }: { secret: string }) {
               </Pressable>
             ))}
           </Panel>
-        ) : <Empty>Henüz bir grubun yok. Bir grup kur ya da arkadaşının gönderdiği kodla katıl.</Empty>}
+        ) : <Empty>Henüz bir tribünün yok. Tribün kur ya da arkadaşının gönderdiği kodla tribüne katıl.</Empty>}
       </Loader>
 
       <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-        <View style={{ flex: 1 }}><Button kind={form === 'create' ? 'pri' : 'sec'} label="Grup kur" onPress={() => open('create')} /></View>
-        <View style={{ flex: 1 }}><Button kind={form === 'join' ? 'pri' : 'sec'} label="Gruba katıl" onPress={() => open('join')} /></View>
+        <View style={{ flex: 1 }}><Button kind={form === 'create' ? 'pri' : 'sec'} label="Tribün kur" onPress={() => open('create')} /></View>
+        <View style={{ flex: 1 }}><Button kind={form === 'join' ? 'pri' : 'sec'} label="Tribüne katıl" onPress={() => open('join')} /></View>
       </View>
 
       {form === 'create' && needsAccount && (
         <Card style={{ marginTop: GAP, padding: 16, gap: 12 }}>
-          <Text style={{ fontSize: 15, fontWeight: '600', color: t.fg }}>Grup kurmak için hesabını bağla</Text>
-          <Text style={{ fontSize: 13, color: t.muted, lineHeight: 18 }}>Grubun ve üyelerin telefon değişse de kaybolmaz. Takma adın aynı kalır; e-posta ya da telefon numarası paylaşılmaz.</Text>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: t.fg }}>Tribün kurmak için hesabını bağla</Text>
+          <Text style={{ fontSize: 13, color: t.muted, lineHeight: 18 }}>Tribünün ve üyelerin telefon değişse de kaybolmaz. Takma adın aynı kalır; e-posta ya da telefon numarası paylaşılmaz.</Text>
           <SignInButtons />
         </Card>
       )}
       {form === 'create' && !needsAccount && (
         <Card style={{ marginTop: GAP, padding: 16, gap: 12 }}>
-          <Field value={name} onChange={setName} placeholder="Grup adı" maxLength={40} />
+          <Field value={name} onChange={setName} placeholder="Tribün adı" maxLength={40} />
           <Text style={{ fontSize: 14, fontWeight: '600', color: t.fg }}>Hangi takımların maçlarını tahmin edeceksiniz?</Text>
           {uniqueTeams.length ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -182,7 +182,7 @@ function MyGroups({ secret }: { secret: string }) {
             </View>
           ) : <Text style={{ color: t.muted, fontSize: 13 }}>Önce Profil → Takımlarım'dan takım ekle.</Text>}
           <Text style={{ color: t.muted, fontSize: 12.5, lineHeight: 18 }}>
-            En fazla {MAX_SCOPE_TEAMS} takım. Örneğin Galatasaray ve Fenerbahçe seçersen ikisinin bütün maçları, derbiler dahil, grupta tahmin edilir. Grubun sohbeti maçlara özel: her maçın odası başlamadan 1 saat önce açılır.
+            En fazla {MAX_SCOPE_TEAMS} takım. Örneğin Galatasaray ve Fenerbahçe seçersen ikisinin bütün maçları, derbiler dahil, tribünde tahmin edilir. Tribünün sohbeti maçlara özel: her maçın odası başlamadan 1 saat önce açılır.
           </Text>
           {error ? <Text style={{ color: t.live, fontSize: 13 }}>{error}</Text> : null}
           <Button label={busy ? 'Kuruluyor…' : 'Kur'} disabled={busy || !canCreate} onPress={create} />

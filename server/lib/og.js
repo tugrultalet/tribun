@@ -48,8 +48,8 @@ export function matchSvg({ home, away, homeLogo, awayLogo, pick, sender, league,
 </svg>`;
 }
 
-// Grup daveti kartı: aynı tasarım; ortada grubun logoları (maç grubunda iki takım, takım grubunda 1–3 takım) ve adı,
-// altta "Gruba katıl". Maç grubunda sağ üstte maç saati.
+// Tribün daveti kartı: aynı tasarım; ortada grubun logoları (maç grubunda iki takım, takım grubunda 1–3 takım) ve adı,
+// altta "Tribüne katıl". Maç grubunda sağ üstte maç saati.
 export function groupSvg({ name, logos, kicker, when, members }) {
   const n = Math.max(1, Math.min(logos.length || 1, 3));
   const size = n === 1 ? 170 : n === 2 ? 150 : 120;
@@ -76,7 +76,7 @@ export function groupSvg({ name, logos, kicker, when, members }) {
   ${imgs}${vs}
   <text x="600" y="412" text-anchor="middle" font-family="Inter" font-weight="700" font-size="${name.length > 24 ? 36 : 44}" fill="#ffffff">${esc(clip(name))}</text>
   <rect x="130" y="448" width="940" height="2" fill="#ffffff" fill-opacity="0.1"/>
-  <text x="130" y="505" font-family="Inter" font-weight="700" font-size="32" fill="#ffffff">Gruba katıl, birlikte tahmin edelim<tspan fill="#A7ABC8" font-weight="600">${members ? `&#160;· ${members} üye` : ''}</tspan></text>
+  <text x="130" y="505" font-family="Inter" font-weight="700" font-size="32" fill="#ffffff">Tribüne katıl, birlikte tahmin edelim<tspan fill="#A7ABC8" font-weight="600">${members ? `&#160;· ${members} üye` : ''}</tspan></text>
   <rect x="890" y="468" width="180" height="54" rx="27" fill="#9DB1FF"/>
   <text x="980" y="504" text-anchor="middle" font-family="Inter" font-weight="700" font-size="26" fill="#0B1030">Katıl ›</text>
   <text x="600" y="602" text-anchor="middle" font-family="Inter" font-weight="700" font-size="24" fill="#2B2A6B" fill-opacity="0.6">Tribün</text>
