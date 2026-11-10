@@ -81,7 +81,7 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
                 ? <Predict detail={d} fixtures={list} today={store.meta.today} secret={secret} onSaved={state.reload} />
                 : open ? <LeagueTable group={id} secret={secret} /> : <Table detail={d} fixtures={list} today={store.meta.today} />}
             </Loader>
-            {inviting && <InviteSheet group={d.group} onClose={() => setInviting(false)} />}
+            {inviting && <InviteSheet group={d.group} memberIds={d.members.map((m) => m.id)} onAdded={state.reload} onClose={() => setInviting(false)} />}
             <Pressable onPress={leave} accessibilityRole="button" style={{ alignSelf: 'center', padding: 14, marginTop: 10 }}>
               <Text style={{ color: t.live, fontSize: 14, fontWeight: '600' }}>Gruptan çık</Text>
             </Pressable>

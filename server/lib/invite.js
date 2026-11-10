@@ -5,11 +5,11 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 
 export const validCode = (code) => CODE.test(String(code || '').toUpperCase());
 
-export function invitePage({ code, name, storeUrl }) {
+export function invitePage({ code, name, storeUrl, image }) {
   const c = esc(String(code).toUpperCase());
   const group = name ? esc(String(name).slice(0, 40)) : '';
-  const title = group ? `${group} grubuna davetlisin` : 'Tribün grubuna davetlisin';
-  const desc = 'Maçları birlikte takip edip skor tahmini yapalım. Davet kodu: ' + c;
+  const title = group ? `${group} · Gruba katıl` : 'Tribün grubuna davetlisin';
+  const desc = 'TribünApp · Davet kodu ' + c;
   const store = storeUrl && /^https:\/\//.test(storeUrl)
     ? `<a class="btn sec" href="${esc(storeUrl)}">Uygulamayı indir</a>`
     : '<p class="note">Uygulama yakında App Store\'da. Şimdilik davet koduyla katılabilirsin.</p>';
@@ -17,6 +17,7 @@ export function invitePage({ code, name, storeUrl }) {
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title} · Tribün</title>
 <meta property="og:title" content="${title}"><meta property="og:description" content="${desc}"><meta name="description" content="${desc}">
+${image ? `<meta property="og:image" content="${esc(image)}"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">` : ''}
 <meta name="robots" content="noindex">
 <style>
 :root{color-scheme:dark}*{box-sizing:border-box}
