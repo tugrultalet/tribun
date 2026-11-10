@@ -19,6 +19,8 @@ export type RootParams = {
   Ask: { token: string };
   Account: undefined;
   PickHistory: undefined;
+  // E-postadaki giriş bağlantısı: h = Supabase token_hash.
+  EmailLink: { h?: string } | undefined;
 };
 // Groups.code: davet bağlantısından (tribun://join/KOD) gelen kod; katılma formu bununla açılır.
 export type TabParams = { Home: undefined; Groups: { code?: string } | undefined; Leagues: undefined; Profile: undefined };

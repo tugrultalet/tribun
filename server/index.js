@@ -17,6 +17,7 @@ import { messageFor } from './lib/notify.js';
 import { Buckets, clientIp, dateInWindow } from './lib/limits.js';
 import { createSupa, syncMatches } from './lib/supa.js';
 import { askPage, validAskToken } from './lib/ask.js';
+import { loginPage } from './lib/login.js';
 import { logoUri, matchSvg, renderPng } from './lib/og.js';
 import { nationalName } from './lib/national.js';
 import { sendPushes } from './lib/push.js';
@@ -145,7 +146,7 @@ async function askImage(token) {
   return png;
 }
 
-const AASA = JSON.stringify({ applinks: { details: [{ appIDs: [`${process.env.APPLE_TEAM_ID || 'M93BM8ZSQH'}.com.sportvisor.tribun`], components: [{ '/': '/j/*' }, { '/': '/t/*' }] }] } });
+const AASA = JSON.stringify({ applinks: { details: [{ appIDs: [`${process.env.APPLE_TEAM_ID || 'M93BM8ZSQH'}.com.sportvisor.tribun`], components: [{ '/': '/j/*' }, { '/': '/t/*' }, { '/': '/giris' }] }] } });
 const PUBLIC_HOST = (process.env.PUBLIC_HOST || 'tribunapp.io').toLowerCase();
 // Supabase: sunucu yetkili istemci (service role, ortam değişkeninden) ve herkese açık anahtarla çağrı (web sayfaları).
 // Publishable anahtar gizli değildir; uygulamada da durur.
@@ -207,6 +208,15 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/gizlilik') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600', ...SECURITY_HEADERS, 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'" });
     return res.end(privacyPage({ contact: process.env.CONTACT_EMAIL }));
+  }
+  // E-postadaki giriş bağlantısı (uygulama Universal Link ile açmadıysa): /giris?h=…
+  if (url.pathname === '/giris') {
+    res.writeHead(200, {
+      'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...SECURITY_HEADERS,
+      'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      'x-frame-options': 'DENY', 'referrer-policy': 'no-referrer',
+    });
+    return res.end(loginPage({ hash: url.searchParams.get('h') }));
   }
   // Davet bağlantısı: /j/ABC123?n=Grup+adı  (WhatsApp'tan gelen kişi için karşılama sayfası)
   const invite = /^\/j\/([A-Za-z0-9]{6})$/.exec(url.pathname);

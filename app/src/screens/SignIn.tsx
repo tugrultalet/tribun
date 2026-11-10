@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { ApiError } from '../api';
-import { Cancelled, availableProviders, type Provider } from '../auth';
+import { Cancelled, availableProviders, sendEmailCode, validEmail, verifyEmail, type Provider } from '../auth';
 import { useStore } from '../store';
 import { track } from '../telemetry';
 import { useTheme } from '../theme';
 import { Button, Card, Field } from '../ui';
 
-// Apple / Google ile devam et. Başarıyla bağlanınca `onDone` çağrılır. Bu hesapla hiç profil yoksa önce takma ad sorulur.
-// Giriş bu cihazda kullanılamıyorsa (web, Expo Go) hiçbir şey göstermez.
+// Apple ile ya da e-postayla (6 haneli kod) devam et. Başarıyla bağlanınca `onDone` çağrılır. Bu hesapla hiç profil yoksa
+// önce takma ad sorulur. E-posta her yerde çalışır; Apple yalnızca iOS derlemesinde görünür.
 export function SignInButtons({ onDone }: { onDone?: () => void }) {
   const t = useTheme();
   const store = useStore();
@@ -17,18 +17,32 @@ export function SignInButtons({ onDone }: { onDone?: () => void }) {
   const [error, setError] = useState('');
   const [askName, setAskName] = useState(false);
   const [name, setName] = useState('');
+  const [email, setEmail] = useState<'off' | 'form' | 'code'>('off');
+  const [address, setAddress] = useState('');
+  const [code, setCode] = useState('');
+  const [sentTo, setSentTo] = useState('');
   useEffect(() => { availableProviders().then(setProviders); }, []);
-  if (!providers.length) return null;
 
-  const go = async (p: Provider) => {
+  const go = async (p: Provider, token?: string) => {
     setBusy(true); setError('');
     try {
-      const r = await store.linkAccount(p);
+      const r = await store.linkAccount(p, token);
       track('account_linked', { provider: p, status: r });
       if (r === 'new') setAskName(true); else onDone?.();
     } catch (e) {
       if (!(e instanceof Cancelled)) setError((e as ApiError).message);
     } finally { setBusy(false); }
+  };
+  const send = async () => {
+    setBusy(true); setError('');
+    try { await sendEmailCode(address); setSentTo(address.trim()); setCode(''); setEmail('code'); track('email_code_sent'); }
+    catch (e) { setError((e as ApiError).message); } finally { setBusy(false); }
+  };
+  const verify = async () => {
+    setBusy(true); setError('');
+    let token: string;
+    try { token = await verifyEmail({ email: sentTo, code }); } catch (e) { setError((e as ApiError).message); setBusy(false); return; }
+    await go('email', token);
   };
   const saveName = async () => {
     setBusy(true); setError('');
@@ -45,24 +59,53 @@ export function SignInButtons({ onDone }: { onDone?: () => void }) {
       </View>
     );
   }
+  if (email === 'form' || email === 'code') {
+    return (
+      <View style={{ gap: 10 }}>
+        {email === 'form' ? (
+          <>
+            <Text style={{ color: t.muted, fontSize: 13.5, textAlign: 'center' }}>E-postana 6 haneli bir giriş kodu gönderelim.</Text>
+            <Field value={address} onChange={setAddress} placeholder="E-posta adresin" maxLength={120} autoCapitalize="none" keyboardType="email-address" textContentType="emailAddress" onSubmit={send} />
+            <Button label={busy ? 'Gönderiliyor…' : 'Kod gönder'} disabled={busy || !validEmail(address)} onPress={send} />
+          </>
+        ) : (
+          <>
+            <Text style={{ color: t.muted, fontSize: 13.5, textAlign: 'center', lineHeight: 19 }}>
+              <Text style={{ color: t.fg, fontWeight: '600' }}>{sentTo}</Text> adresine kod gönderdik. Kodu yaz ya da e-postadaki bağlantıya dokun.
+            </Text>
+            <Field value={code} onChange={(v) => setCode(v.replace(/\D/g, ''))} placeholder="Giriş kodu" maxLength={10} autoCapitalize="none" keyboardType="number-pad" textContentType="oneTimeCode" onSubmit={verify} />
+            <Button label={busy ? 'Kontrol ediliyor…' : 'Giriş yap'} disabled={busy || code.length < 6} onPress={verify} />
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18 }}>
+              <Pressable onPress={send} disabled={busy} hitSlop={8}><Text style={{ color: t.accent, fontSize: 13.5, fontWeight: '600' }}>Kodu tekrar gönder</Text></Pressable>
+              <Pressable onPress={() => { setEmail('form'); setError(''); }} hitSlop={8}><Text style={{ color: t.muted, fontSize: 13.5 }}>E-postayı değiştir</Text></Pressable>
+            </View>
+          </>
+        )}
+        {error ? <Text style={{ color: t.live, fontSize: 13, textAlign: 'center' }}>{error}</Text> : null}
+        <Pressable onPress={() => { setEmail('off'); setError(''); }} hitSlop={8} style={{ alignSelf: 'center' }}><Text style={{ color: t.muted, fontSize: 13 }}>Vazgeç</Text></Pressable>
+      </View>
+    );
+  }
   return (
     <View style={{ gap: 10 }}>
-      {providers.map((p) => (
+      {providers.filter((p) => p !== 'email').map((p) => (
         <Pressable key={p} disabled={busy} onPress={() => go(p)} accessibilityRole="button"
           style={({ pressed }) => ({ height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: p === 'apple' ? '#fff' : t.surface2, opacity: busy || pressed ? 0.7 : 1 })}>
           <Text style={{ fontSize: 16, fontWeight: '600', color: p === 'apple' ? '#000' : t.fg }}>{p === 'apple' ? ' Apple ile devam et' : 'Google ile devam et'}</Text>
         </Pressable>
       ))}
+      <Pressable disabled={busy} onPress={() => { setEmail('form'); setError(''); }} accessibilityRole="button"
+        style={({ pressed }) => ({ height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surface2, borderWidth: 1, borderColor: t.line, opacity: busy || pressed ? 0.7 : 1 })}>
+        <Text style={{ fontSize: 16, fontWeight: '600', color: t.fg }}>✉️  E-posta ile devam et</Text>
+      </Pressable>
       {error ? <Text style={{ color: t.live, fontSize: 13, textAlign: 'center' }}>{error}</Text> : null}
     </View>
   );
 }
 
-// Giriş bu cihazda kullanılabiliyor mu (iOS derlemesi). Web ve Expo Go'da false.
+// E-postayla giriş her yerde çalıştığı için artık her zaman true (Apple düğmesi yalnızca iOS derlemesinde çıkar).
 export function useCanSignIn(): boolean {
-  const [has, setHas] = useState(false);
-  useEffect(() => { availableProviders().then((l) => setHas(l.length > 0)); }, []);
-  return has;
+  return true;
 }
 
 // Takma ad formunun altında: başka telefonda kullanmış olan kişi hesabıyla verilerini geri yükler.

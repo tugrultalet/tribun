@@ -10,7 +10,7 @@ import { Button, Card, Empty, Field, GAP, HAIR, Section } from '../ui';
 import { Screen } from './Screen';
 import { RestoreBlock, SignInButtons } from './SignIn';
 
-type Account = { name: string; provider: 'apple' | 'google' | null; hide_global: boolean; created_at: string; groups: number; picks: number; devices: number };
+type Account = { name: string; provider: 'apple' | 'google' | 'email' | null; hide_global: boolean; created_at: string; groups: number; picks: number; devices: number };
 
 const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 const since = (iso: string) => { const d = new Date(iso); return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
