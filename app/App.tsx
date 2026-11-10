@@ -24,6 +24,7 @@ import { APP_VERSION } from './src/config';
 import { fbOnNotificationOpen } from './src/fb';
 import { startRemoteConfig, useRemote } from './src/remoteConfig';
 import { versionLess } from './src/version';
+import { useTabBadges } from './src/badges';
 
 const navRef = createNavigationContainerRef<RootParams>();
 import Group from './src/screens/Group';
@@ -31,6 +32,8 @@ import Groups from './src/screens/Groups';
 import Onboarding from './src/screens/Onboarding';
 import Picker from './src/screens/Picker';
 import Settings from './src/screens/Settings';
+import Profile from './src/screens/Profile';
+import Member from './src/screens/Member';
 import Team from './src/screens/Team';
 
 // Davet bağlantısı: tribun://join/ABC234 → Gruplar sekmesi, katılma formu kodla dolu.
@@ -47,11 +50,13 @@ const TABS = [
   { name: 'Home', title: 'Maçlarım', component: Home, symbol: 'soccerball', icon: Icon.tabHome },
   { name: 'Groups', title: 'Gruplar', component: Groups, symbol: 'person.3.fill', icon: Icon.tabGroups },
   { name: 'Leagues', title: 'Keşfet', component: Leagues, symbol: 'trophy.fill', icon: Icon.tabLeagues },
-  { name: 'Settings', title: 'Ayarlar', component: Settings, symbol: 'gearshape.fill', icon: Icon.tabSettings },
+  { name: 'Profile', title: 'Profil', component: Profile, symbol: 'person.crop.circle.fill', icon: Icon.tabProfile },
 ] as const;
 
 function TabsScreen() {
   const t = useTheme();
+  const badges = useTabBadges();
+  const badgeOf = (name: string) => (name === 'Home' ? badges.home : name === 'Groups' ? badges.groups : undefined);
   const startTab = useStore().startTab;
   const insets = useSafeAreaInsets();
   if (NativeTab) {
@@ -64,7 +69,7 @@ function TabsScreen() {
       }}>
         {TABS.map((tab) => (
           <NativeTab.Screen key={tab.name} name={tab.name} component={tab.component}
-            options={{ title: tab.title, tabBarIcon: { type: 'sfSymbol', name: tab.symbol } }} />
+            options={{ title: tab.title, tabBarIcon: { type: 'sfSymbol', name: tab.symbol }, tabBarBadge: badgeOf(tab.name) }} />
         ))}
       </NativeTab.Navigator>
     );
@@ -86,7 +91,7 @@ function TabsScreen() {
     }}>
       {TABS.map((tab) => (
         <Tab.Screen key={tab.name} name={tab.name} component={tab.component}
-          options={{ title: tab.title, tabBarIcon: ({ color }) => <tab.icon color={color} /> }} />
+          options={{ title: tab.title, tabBarIcon: ({ color }) => <tab.icon color={color} />, tabBarBadge: badgeOf(tab.name) }} />
       ))}
     </Tab.Navigator>
   );
@@ -117,6 +122,8 @@ function Root() {
           <Stack.Screen name="MyTeams" component={MyTeams} options={{ title: 'Takımlarım' }} />
           <Stack.Screen name="Group" component={Group} />
           <Stack.Screen name="Chat" component={Chat} />
+          <Stack.Screen name="Settings" component={Settings} options={{ title: 'Ayarlar' }} />
+          <Stack.Screen name="Member" component={Member} />
           <Stack.Screen name="Feedback" component={Feedback} options={{ title: 'Geri bildirim' }} />
         </>
       ) : (

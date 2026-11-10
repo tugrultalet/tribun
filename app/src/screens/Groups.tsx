@@ -7,7 +7,6 @@ import { TabParams, useNav } from '../nav';
 import { Group, rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { ScoreCard } from '../game/ScoreCard';
 import { track } from '../telemetry';
 import { MAX_SCOPE_LEAGUES } from '../groups/scope';
 import { Button, Card, Crest, Empty, GAP, Icon, Loader, Panel, Seg } from '../ui';
@@ -27,7 +26,7 @@ export default function Groups() {
   const store = useStore();
   return (
     <Screen tab title="Gruplar">
-      {store.me ? <><ScoreCard /><MyGroups secret={store.me.secret} /></> : <NameForm />}
+      {store.me ? <MyGroups secret={store.me.secret} /> : <NameForm />}
     </Screen>
   );
 }
@@ -59,6 +58,8 @@ function MyGroups({ secret }: { secret: string }) {
   const nav = useNav();
   const store = useStore();
   const state = useRpc<Group[]>('my_groups', { p_secret: secret }, 20000);
+  const unreadRaw = useRpc<Record<string, number>>('unread_counts', { p_secret: secret }, 20000).data;
+  const unread = unreadRaw && typeof unreadRaw === 'object' && !Array.isArray(unreadRaw) ? unreadRaw : {};
   // Davet bağlantısından gelen kod varsa katılma formu onunla açılır.
   const linked = cleanCode(useRoute<RouteProp<TabParams, 'Groups'>>().params?.code);
   const [form, setForm] = useState<'none' | 'create' | 'join'>(linked ? 'join' : 'none');
@@ -116,6 +117,11 @@ function MyGroups({ secret }: { secret: string }) {
                   <Text numberOfLines={1} style={{ fontSize: 16, fontWeight: '600', color: t.fg }}>{g.name}</Text>
                   <Text numberOfLines={1} style={{ fontSize: 13, color: t.muted }}>{g.last_message ? `${g.last_message.name}: ${g.last_message.body}` : `${g.members} üye · ${g.team.name}`}</Text>
                 </View>
+                {unread[g.id] ? (
+                  <View accessibilityLabel={`${unread[g.id]} okunmamış mesaj`} style={{ minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: t.live }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#fff' }}>{unread[g.id] > 9 ? '9+' : unread[g.id]}</Text>
+                  </View>
+                ) : null}
                 <Icon.chevron color={t.fg} />
               </Pressable>
             ))}

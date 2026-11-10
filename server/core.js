@@ -361,20 +361,28 @@ export function createCore({ provider, cacheDir, notify = null }) {
   async function getResults(ids, ctx) {
     const want = new Set(ids);
     const found = new Map();
+    // Bitmemiş maçlar yalnızca önbellekte varsa döner (kaynağa istek gitmez): Profil'de takım adlarını göstermek için.
+    const open = new Map();
     for (const k of [...keys('season:'), ...keys('teamfx:'), ...keys('day:')]) {
-      for (const f of load(k)?.data.fixtures || []) if (want.has(f.id) && f.st === 'ft' && f.s) found.set(f.id, slim(f));
+      for (const f of load(k)?.data.fixtures || []) {
+        if (!want.has(f.id)) continue;
+        if (f.st === 'ft' && f.s) found.set(f.id, slim(f));
+        else open.set(f.id, slim(f));
+      }
     }
+    for (const id of found.keys()) open.delete(id);
     let asked = 0;
     for (const id of ids) {
-      if (found.has(id) || asked >= 8) continue;
+      if (found.has(id) || open.has(id) || asked >= 8) continue;
       if (!isKnownMatch(id) && !allowUnknown(ctx)) continue;
       asked++;
       try {
         const m = await getMatch(id);
         if (m.fixture.st === 'ft' && m.fixture.s) found.set(id, slim(m.fixture));
+        else open.set(id, slim(m.fixture));
       } catch { /* sonuç şimdilik alınamadı; sonraki çağrıda yeniden denenir */ }
     }
-    return { results: [...found.values()], pending: ids.filter((id) => !found.has(id)) };
+    return { results: [...found.values()], open: [...open.values()].filter((f) => !found.has(f.id)), pending: ids.filter((id) => !found.has(id)) };
   }
 
   function gateMatch(id, ctx) { if (!isKnownMatch(id) && !allowUnknown(ctx)) throw busy(); }

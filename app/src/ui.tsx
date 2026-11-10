@@ -31,6 +31,7 @@ export const Icon = {
   tabLeagues: ({ size = 24, color }: IconProps) => <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="M7 4h10v5a5 5 0 01-10 0z" {...stroke(color)} /><Path d="M7 6H4v1.5A3.5 3.5 0 007.5 11M17 6h3v1.5a3.5 3.5 0 01-3.5 3.5M12 14v3M8.5 20.5h7l-.8-3.5H9.3z" {...stroke(color)} /></Svg>,
   tabGroups: ({ size = 24, color }: IconProps) => <Svg width={size} height={size} viewBox="0 0 24 24"><Circle cx={9} cy={8.5} r={3.2} {...stroke(color)} /><Path d="M2.8 19.5c.5-3.3 3-5.2 6.2-5.2s5.7 1.9 6.2 5.2M16 5.6a3.2 3.2 0 010 5.8M17.6 14.6c2 .6 3.3 2.2 3.6 4.9" {...stroke(color)} /></Svg>,
   tabTeams: ({ size = 24, color }: IconProps) => <Svg width={size} height={size} viewBox="0 0 24 24"><Path d="M8.5 3.5L4 6l-1.5 5 3 1.2V20.5h13V12.2l3-1.2L20 6l-4.5-2.5c-.6 1.6-2 2.5-3.5 2.5s-2.9-.9-3.5-2.5z" {...stroke(color)} /></Svg>,
+  tabProfile: ({ size = 24, color }: IconProps) => <Svg width={size} height={size} viewBox="0 0 24 24"><Circle cx={12} cy={9} r={3.6} {...stroke(color)} /><Path d="M5 19.5c.8-3.4 3.6-5.3 7-5.3s6.2 1.9 7 5.3" {...stroke(color)} /></Svg>,
   tabSettings: ({ size = 24, color }: IconProps) => <Svg width={size} height={size} viewBox="0 0 24 24"><Circle cx={12} cy={12} r={3} {...stroke(color)} /><Path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" {...stroke(color)} /></Svg>,
 };
 

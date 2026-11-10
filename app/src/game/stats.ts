@@ -5,7 +5,9 @@ import { points } from '../groups/standings.ts';
 
 export type MyPick = { match_id: number; h: number; a: number; updated_at: string; kickoff: string | null };
 // /api/results yanıtındaki biten maç.
-export type Result = { id: number; st: 'ft'; s: [number, number]; ts: number };
+export type Result = { id: number; st: 'ft'; s: [number, number]; ts: number; date?: string; lg?: number; h?: { id: number; name: string }; a?: { id: number; name: string } };
+// /api/results yanıtındaki henüz bitmemiş maç (yalnızca adlar ve saat için).
+export type OpenMatch = { id: number; st: string; s?: [number, number] | null; ts: number; date: string; lg: number; h: { id: number; name: string }; a: { id: number; name: string } };
 export type Stats = { total: number; exact: number; correct: number; played: number; rate: number };
 
 const asFixture = (r: Result) => ({ st: 'ft', s: r.s, ts: r.ts }) as unknown as Fixture;
