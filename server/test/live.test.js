@@ -19,13 +19,14 @@ test('nextUpdate: gol hemen, dakika en çok dakikada bir', () => {
   assert.equal(nextUpdate(prev, f({ min: 68 }), now + 30000), null);
   assert.equal(nextUpdate(prev, f({ min: 68 }), now + 61000).priority, 5);
   const goal = nextUpdate(prev, f({ s: [2, 0] }), now + 1000);
-  assert.equal(goal.kind, 'goal'); assert.equal(goal.priority, 10);
+  assert.equal(goal.kind, 'goal'); assert.equal(goal.priority, 10); assert.equal(goal.side, 'h');
+  assert.equal(nextUpdate(prev, f({ s: [1, 1] }), now + 1000).side, 'a');
   assert.equal(nextUpdate(prev, f({ st: 'ft' }), now + 1000).kind, 'end');
 });
 
 test('payloadFor: gol uyarısı, maç sonu kapanış', () => {
-  const g = payloadFor({ kind: 'goal', state: { home: 2, away: 0, minute: "70'", status: 'live' } }, f(), 1_000_000_000);
-  assert.equal(g.aps.event, 'update'); assert.equal(g.aps.alert.title, 'GOL!'); assert.equal(g.aps['content-state'].note, 'GOL! 2–0');
+  const g = payloadFor({ kind: 'goal', side: 'h', state: { home: 2, away: 0, minute: "70'", status: 'live' } }, f(), 1_000_000_000);
+  assert.equal(g.aps.event, 'update'); assert.equal(g.aps.alert.title, 'GOL! GS'); assert.equal(g.aps['content-state'].note, '⚽ GOL! GS');
   const e = payloadFor({ kind: 'end', state: { home: 2, away: 0, minute: 'MS', status: 'ft' } }, f(), 1_000_000_000);
   assert.equal(e.aps.event, 'end'); assert.equal(e.aps['dismissal-date'], 1_000_000 + 3600);
 });

@@ -1,6 +1,7 @@
 import ActivityKit
 import ExpoModulesCore
 import Foundation
+import UIKit
 
 final class LiveUnsupportedException: Exception {
   override var reason: String { "Canlı skor kilit ekranında yalnızca iOS 18 ve üzerinde, Live Activity izni açıkken gösterilir." }
@@ -46,6 +47,30 @@ public class TribunLiveModule: Module {
       for activity in Activity<MatchActivityAttributes>.activities where activity.attributes.matchId == matchId {
         await activity.update(ActivityContent(state: state, staleDate: Date().addingTimeInterval(4 * 3600)))
       }
+    }
+
+    // Takım logolarını indirip küçültür ve App Group'a kaydeder ({ takımNo: adres }). Widget ve Live Activity buradan okur.
+    // 30 günden yeni dosya yeniden indirilmez. Kaydedilen dosya sayısını döner.
+    AsyncFunction("saveLogos") { (logos: [String: String]) async -> Int in
+      guard let group = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.sportvisor.tribun") else { return 0 }
+      let dir = group.appendingPathComponent("logos", isDirectory: true)
+      try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+      var saved = 0
+      for (id, address) in logos {
+        guard Int(id) != nil, let url = URL(string: address), url.scheme == "https" else { continue }
+        let file = dir.appendingPathComponent("\(id).png")
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: file.path),
+           let date = attrs[.modificationDate] as? Date, Date().timeIntervalSince(date) < 30 * 86400 { saved += 1; continue }
+        guard let (data, _) = try? await URLSession.shared.data(from: url), let image = UIImage(data: data) else { continue }
+        // En uzun kenar 150 px (kilit ekranında 48 pt @3x); dosya küçük kalır.
+        let scale = min(1, 150 / max(image.size.width, image.size.height))
+        let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let small = UIGraphicsImageRenderer(size: size, format: format).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
+        if let png = small.pngData(), (try? png.write(to: file, options: .atomic)) != nil { saved += 1 }
+      }
+      return saved
     }
 
     AsyncFunction("end") { (matchId: Int) async in

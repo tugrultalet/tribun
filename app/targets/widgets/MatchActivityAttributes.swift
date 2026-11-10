@@ -13,6 +13,8 @@ struct MatchActivityAttributes: ActivityAttributes {
   }
 
   var matchId: Int
+  var homeId: Int      // logo dosyası: App Group/logos/<id>.png (uygulama kaydeder)
+  var awayId: Int
   var homeName: String
   var awayName: String
   var homeAbbr: String

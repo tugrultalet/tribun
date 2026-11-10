@@ -14,7 +14,9 @@ export function nextUpdate(prev, f, now = Date.now()) {
   const state = liveState(f);
   if (!prev) return { state, priority: 10, kind: 'start' };
   const scored = state.home !== prev.state.home || state.away !== prev.state.away;
-  if (scored || state.status !== prev.state.status) return { state, priority: 10, kind: state.status === 'ft' ? 'end' : scored ? 'goal' : 'status' };
+  // Golü atan taraf: skoru artan (iki taraf birden artmışsa son artan sayılmaz, ev sahibi yazılır).
+  const side = state.home > prev.state.home ? 'h' : state.away > prev.state.away ? 'a' : null;
+  if (scored || state.status !== prev.state.status) return { state, priority: 10, kind: state.status === 'ft' ? 'end' : scored ? 'goal' : 'status', side };
   if (state.minute !== prev.state.minute && now - prev.at >= 60000) return { state, priority: 5, kind: 'tick' };
   return null;
 }
@@ -22,8 +24,9 @@ export function nextUpdate(prev, f, now = Date.now()) {
 export function payloadFor(u, f, now = Date.now()) {
   const aps = { timestamp: Math.floor(now / 1000), event: u.kind === 'end' ? 'end' : 'update', 'content-state': { ...u.state, note: null } };
   if (u.kind === 'goal') {
-    aps['content-state'].note = `GOL! ${u.state.home}–${u.state.away}`;
-    aps.alert = { title: 'GOL!', body: `${f.h.name} ${u.state.home}–${u.state.away} ${f.a.name}` };
+    const team = u.side === 'a' ? f.a.name : u.side === 'h' ? f.h.name : null;
+    aps['content-state'].note = team ? `⚽ GOL! ${team}` : '⚽ GOL!';
+    aps.alert = { title: team ? `GOL! ${team}` : 'GOL!', body: `${f.h.name} ${u.state.home}–${u.state.away} ${f.a.name}` };
   }
   if (u.kind === 'end') {
     aps['content-state'].note = 'Maç bitti';

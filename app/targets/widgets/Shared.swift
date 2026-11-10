@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // Ortak görünüm yardımcıları (widget ve Live Activity).
 extension Color {
@@ -27,5 +28,25 @@ struct TeamBadge: View {
       Text(abbr).font(.system(size: size * 0.32, weight: .heavy)).foregroundStyle(.white).minimumScaleFactor(0.6).lineLimit(1).padding(3)
     }
     .frame(width: size, height: size)
+  }
+}
+
+// Takım logosu: uygulamanın App Group'a kaydettiği küçük PNG (widget'lar ağdan resim yükleyemez). Yoksa renkli rozet.
+func teamLogoImage(_ id: Int) -> UIImage? {
+  guard let dir = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.sportvisor.tribun") else { return nil }
+  return UIImage(contentsOfFile: dir.appendingPathComponent("logos/\(id).png").path)
+}
+
+struct TeamLogo: View {
+  let id: Int
+  let abbr: String
+  let color: String
+  var size: CGFloat = 34
+  var body: some View {
+    if let image = teamLogoImage(id) {
+      Image(uiImage: image).resizable().scaledToFit().frame(width: size, height: size)
+    } else {
+      TeamBadge(abbr: abbr, color: color, size: size)
+    }
   }
 }
