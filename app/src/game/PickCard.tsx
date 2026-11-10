@@ -60,6 +60,8 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [error, setError] = useState('');
   const touched = useRef(false);
+  // Kayıtlı tahmin kilitli görünür; "Düzenle" ile açılır, "Onayla" ile kaydedilip yeniden kilitlenir.
+  const [editing, setEditing] = useState(false);
   useEffect(() => { if (!touched.current && saved) { setH(saved.h); setA(saved.a); } }, [saved?.h, saved?.a]);
 
   const started = hasStarted(f);
@@ -68,11 +70,9 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
     touched.current = true; setH(nh); setA(na); setError('');
     if (state !== 'saving') setState('idle');
   };
-  // Kaydedildikten sonra liste yenilenene kadar da kaydedilmiş sayılır.
-  const dirty = state !== 'saved' && (!saved || saved.h !== h || saved.a !== a);
   const confirm = async () => {
     setState('saving'); setError('');
-    try { await setPick(secret, f.id, h, a, f.ts); setState('saved'); picks.reload(); friends.reload(); community.reload(); track('pick_saved', { source: 'match' }); notePickSaved(); }
+    try { await setPick(secret, f.id, h, a, f.ts); setState('saved'); setEditing(false); picks.reload(); friends.reload(); community.reload(); track('pick_saved', { source: 'match' }); notePickSaved(); }
     catch (e) { setState('error'); setError((e as { message?: string }).message ?? 'Kaydedilemedi.'); }
   };
   const pred = saved ? { profile_id: '', match_id: f.id, h: saved.h, a: saved.a, updated_at: saved.updated_at } : null;
@@ -82,21 +82,43 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
   if (!started) {
     const pending = friends.data?.pending ?? 0;
     return (
-      <Panel title="Tahminin" style={{ marginBottom: 12, paddingBottom: 12 }}>
+      <Panel title="Skor Tahminin" style={{ marginBottom: 12, paddingBottom: 12 }}>
         <View style={{ alignItems: 'center', gap: 10, paddingTop: 12, paddingHorizontal: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Stepper value={h} onChange={(n) => change(n, a)} label={f.h.name} dim={!saved && !touched.current} />
-            <Text style={{ fontSize: 22, color: t.muted }}>–</Text>
-            <Stepper value={a} onChange={(n) => change(h, n)} label={f.a.name} dim={!saved && !touched.current} />
-          </View>
-          {(dirty || state === 'saving') && (
-            <View style={{ alignSelf: 'stretch' }}>
-              <Button label={state === 'saving' ? 'Kaydediliyor…' : saved ? `Tahmini güncelle · ${h}–${a}` : `Tahmini kaydet · ${h}–${a}`} onPress={confirm} disabled={state === 'saving'} />
-            </View>
+          {(saved || state === 'saved') && !editing ? (
+            <>
+              <View accessibilityLabel={`Tahminin ${h}–${a}, kaydedildi`} style={{ flexDirection: 'row', alignItems: 'center', gap: 18 }}>
+                <Text style={{ fontSize: 44, fontWeight: '700', color: t.fg, fontVariant: ['tabular-nums'] }}>{h}</Text>
+                <Text style={{ fontSize: 26, color: t.muted }}>–</Text>
+                <Text style={{ fontSize: 44, fontWeight: '700', color: t.fg, fontVariant: ['tabular-nums'] }}>{a}</Text>
+              </View>
+              <Text style={{ fontSize: 12.5, color: t.win, fontWeight: '600' }}>✓ Tahminin kaydedildi</Text>
+              <View style={{ alignSelf: 'stretch' }}>
+                <Button kind="sec" label="Düzenle" onPress={() => { setEditing(true); setState('idle'); }} />
+              </View>
+              <Text style={{ fontSize: 12, color: t.muted, textAlign: 'center' }}>Başlama düdüğüne kadar değiştirebilirsin.</Text>
+            </>
+          ) : (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Stepper value={h} onChange={(n) => change(n, a)} label={f.h.name} dim={!saved && !touched.current} />
+                <Text style={{ fontSize: 22, color: t.muted }}>–</Text>
+                <Stepper value={a} onChange={(n) => change(h, n)} label={f.a.name} dim={!saved && !touched.current} />
+              </View>
+              <View style={{ alignSelf: 'stretch', flexDirection: 'row', gap: 10 }}>
+                {saved && (
+                  <View style={{ flex: 1 }}>
+                    <Button kind="sec" label="Vazgeç" onPress={() => { setH(saved.h); setA(saved.a); setEditing(false); setState('idle'); setError(''); }} />
+                  </View>
+                )}
+                <View style={{ flex: 2 }}>
+                  <Button label={state === 'saving' ? 'Kaydediliyor…' : `Onayla · ${h}–${a}`} onPress={confirm} disabled={state === 'saving'} />
+                </View>
+              </View>
+              <Text style={{ fontSize: 12.5, color: state === 'error' ? t.live : t.muted, textAlign: 'center' }}>
+                {state === 'error' ? error : saved ? `Kayıtlı tahminin ${saved.h}–${saved.a}` : 'Tam skor 3 puan, doğru sonuç 1 puan'}
+              </Text>
+            </>
           )}
-          <Text style={{ fontSize: 12.5, color: state === 'error' ? t.live : t.muted, textAlign: 'center' }}>
-            {state === 'error' ? error : !dirty ? `✓ ${h}–${a} kaydedildi · başlama düdüğüne kadar değiştirebilirsin` : saved ? `Kayıtlı tahminin ${saved.h}–${saved.a}; değiştirmek için onayla` : 'Tam skor 3 puan, doğru sonuç 1 puan'}
-          </Text>
           <FavoriteHint f={f} h={h} a={a} picked={!!saved || touched.current} crowd={community.data} />
           {pending > 0 && <Text style={{ fontSize: 12.5, color: t.muted }}>{pending} arkadaşın tahmin girdi; maç başlayınca görürsün.</Text>}
           {saved && <Joker secret={secret} matchId={f.id} on={!!saved.joker} onChange={picks.reload} />}
@@ -108,7 +130,7 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
   }
   const revealed = friends.data?.revealed ?? [];
   return (
-    <Panel title="Tahminin" style={{ marginBottom: 12, paddingBottom: 8 }}>
+    <Panel title="Skor Tahminin" style={{ marginBottom: 12, paddingBottom: 8 }}>
       <View style={{ paddingTop: 10 }}>
         <Line name="Sen" bold pick={saved ? `${saved.h} – ${saved.a}` : 'Tahmin yok'} pts={pts} live={live} muted={!saved} />
         {revealed.map((r) => {
