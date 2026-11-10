@@ -73,23 +73,41 @@ struct MatchBackground: View {
   }
 }
 
-// Süre çubuğu: canlıyken iOS kendi saatiyle ilerletir (sunucu güncellemesi beklemez). Devre arasında yarıda, maç sonunda dolu.
+// Süre barı (A): kartın içinde, skorun altında yuvarlak bar; ortada devre arası çizgisi, ucunda parlayan nokta.
+// Konum maçın 0. dakikası sayılan andan (clock) hesaplanır; görünüm her güncellemede (yaklaşık dakikada bir) yeniden çizilir.
 struct MatchProgress: View {
   let state: MatchActivityAttributes.ContentState
+
+  var fraction: Double {
+    switch state.status {
+    case "ft": return 1
+    case "ht": return 0.5
+    case "live":
+      guard let clock = state.clock else { return 0 }
+      return min(max((Date().timeIntervalSince1970 - clock) / (90 * 60), 0), 1)
+    default: return 0
+    }
+  }
+
   var body: some View {
-    ZStack {
-      if state.status == "live", let clock = state.clock {
-        ProgressView(timerInterval: Date(timeIntervalSince1970: clock)...Date(timeIntervalSince1970: clock + 90 * 60), countsDown: false,
-                     label: { EmptyView() }, currentValueLabel: { EmptyView() })
-      } else {
-        ProgressView(value: state.status == "ft" ? 1.0 : state.status == "ht" ? 0.5 : 0.0)
-      }
-      GeometryReader { g in
-        Rectangle().fill(Color.black.opacity(0.45)).frame(width: 2, height: g.size.height).position(x: g.size.width / 2, y: g.size.height / 2)
+    GeometryReader { g in
+      let w = g.size.width
+      let x = w * fraction
+      let mid = g.size.height / 2
+      ZStack {
+        Capsule().fill(Color.white.opacity(0.18)).frame(width: w, height: 6).position(x: w / 2, y: mid)
+        if x > 0 {
+          Capsule().fill(Color.white).frame(width: max(6, x), height: 6).position(x: max(6, x) / 2, y: mid)
+        }
+        Rectangle().fill(Color.white.opacity(0.55)).frame(width: 2, height: 12).position(x: w / 2, y: mid)
+        if state.status == "live" || state.status == "ht" {
+          Circle().fill(Color.white).frame(width: 13, height: 13)
+            .overlay(Circle().stroke(tribunLive.opacity(0.6), lineWidth: 3))
+            .shadow(color: tribunLive.opacity(0.9), radius: 5)
+            .position(x: min(max(x, 6.5), w - 6.5), y: mid)
+        }
       }
     }
-    .progressViewStyle(.linear)
-    .tint(.white)
-    .frame(height: 4)
+    .frame(height: 14)
   }
 }

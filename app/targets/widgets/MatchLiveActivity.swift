@@ -35,7 +35,11 @@ struct MatchLiveActivity: Widget {
           }
         }
         DynamicIslandExpandedRegion(.bottom) {
-          NoteRow(attributes: a, state: s).padding(.horizontal, 6)
+          VStack(spacing: 8) {
+            if s.status != "ns" { MatchProgress(state: s) }
+            NoteRow(attributes: a, state: s)
+          }
+          .padding(.horizontal, 6)
         }
       } compactLeading: {
         // Sıkı tutulur: Dynamic Island kameraya yakın, dar kalır.
@@ -80,16 +84,13 @@ struct NoteRow: View {
 }
 
 // Kilit ekranı (seçenek B): takım renklerinde zemin, logolar yanda, kısa adlar, ortada büyük skor; üstte lig ve dakika
-// (devre arası / maç sonu yazıyla), altta son olay ve tahmin, en altta kendiliğinden ilerleyen süre çubuğu.
+// (devre arası / maç sonu yazıyla), skorun altında süre barı, en altta son olay ve tahmin.
 struct LockScreenMatchView: View {
   let attributes: MatchActivityAttributes
   let state: MatchActivityAttributes.ContentState
   var body: some View {
-    VStack(spacing: 0) {
-      content
-      MatchProgress(state: state)
-    }
-    .background(MatchBackground(homeColor: attributes.homeColor, awayColor: attributes.awayColor))
+    content
+      .background(MatchBackground(homeColor: attributes.homeColor, awayColor: attributes.awayColor))
   }
 
   var content: some View {
@@ -112,13 +113,15 @@ struct LockScreenMatchView: View {
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
       }
+      if state.status != "ns" {
+        MatchProgress(state: state).padding(.horizontal, 2)
+      }
       if state.note != nil || attributes.pick != nil {
         NoteRow(attributes: attributes, state: state)
       }
     }
     .foregroundStyle(.white)
     .padding(.horizontal, 16)
-    .padding(.top, 14)
-    .padding(.bottom, 12)
+    .padding(.vertical, 14)
   }
 }
