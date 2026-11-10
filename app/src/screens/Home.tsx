@@ -277,7 +277,7 @@ function Hero({ f, today, note, onPress }: { f: Fixture; today: string; note?: R
       <Text numberOfLines={2} style={{ fontWeight: '600', fontSize: 15, textAlign: 'center', color: t.fg }}>{team.name}</Text>
       {live && goals(s).length > 0 && (
         <View style={{ alignItems: 'center', marginTop: -4 }}>
-          {goals(s).slice(0, 5).map((g, i) => <Text key={i} numberOfLines={1} style={{ fontSize: 11.5, lineHeight: 15, color: t.muted }}>⚽ {g}</Text>)}
+          {goals(s).slice(0, 5).map((g, i) => <Text key={i} numberOfLines={1} style={{ fontSize: 11.5, lineHeight: 15, color: t.muted }}>{s === 'h' ? `⚽ ${g}` : `${g} ⚽`}</Text>)}
         </View>
       )}
     </View>
