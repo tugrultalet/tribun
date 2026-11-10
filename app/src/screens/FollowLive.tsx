@@ -22,7 +22,13 @@ export function FollowLive({ f }: { f: Fixture }) {
     setBusy(true); setError('');
     try {
       if (on) { await stopFollowing(f.id); setOn(false); track('live_activity', { on: false }); }
-      else { await followOnLockScreen(f, league(f.lg)?.name ?? '', pick ? { h: pick.h, a: pick.a } : null); setOn(true); track('live_activity', { on: true }); }
+      else {
+        const r = await followOnLockScreen(f, league(f.lg)?.name ?? '', pick ? { h: pick.h, a: pick.a } : null);
+        track('live_activity', { on: true, result: r });
+        setOn(r !== 'closed');
+        if (r === 'local') setError('Teşhis: kanalla açılınca iPhone kapattı; kanalsız açıldı (skor yalnızca uygulama açıkken güncellenir).');
+        if (r === 'closed') setError('Teşhis: iPhone etkinliği kanallı da kanalsız da hemen kapattı.');
+      }
     } catch (e) { setError((e as { message?: string }).message ?? 'Başlatılamadı.'); } finally { setBusy(false); }
   };
   return (
