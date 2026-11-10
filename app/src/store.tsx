@@ -46,6 +46,8 @@ type Store = Saved & {
   followsTeam: (id: number) => boolean;
   toggleTeam: (team: Team, kind?: 'club' | 'national') => void;
   setMain: (id: number) => void;
+  // Numarası sunucuyla eşleşmeyen takımı doğru kayıtla değiştirir (kind ve turnuva seçimi korunur).
+  replaceTeam: (oldId: number, team: Team) => void;
   followsFull: (id: number) => boolean;
   toggleFull: (id: number) => void;
   setTeamSel: (id: number, sel: number[] | undefined) => void;
@@ -112,6 +114,11 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
         return { ...s, teams: [...s.teams, added], main: s.main ?? team.id };
       }),
       setMain: (id) => update((s) => ({ ...s, main: id })),
+      replaceTeam: (oldId, team) => update((s) => {
+        const teams = s.teams.map((t) => (t.id === oldId ? { ...t, id: team.id, name: team.name, logo: team.logo } : t));
+        const d = dedupeTeams(teams, s.main === oldId ? team.id : s.main);
+        return { ...s, teams: d.teams, main: d.main };
+      }),
       followsFull: (id) => (saved.full ?? []).includes(id),
       toggleFull: (id) => update((s) => ({ ...s, full: (s.full ?? []).includes(id) ? (s.full ?? []).filter((x) => x !== id) : [...(s.full ?? []), id] })),
       setTeamSel: (id, sel) => update((s) => ({ ...s, teams: s.teams.map((t) => (t.id === id ? { ...t, sel } : t)) })),
