@@ -131,7 +131,8 @@ async function askImage(token) {
     home: f?.h.name || info.home, away: f?.a.name || info.away,
     homeLogo: await logoUri(f?.h.logo), awayLogo: await logoUri(f?.a.logo),
     pick: info.pick, sender: info.sender,
-    league: [lg, f?.round].filter(Boolean).join(' · '),
+    // Lig ve tur birlikte sığmıyorsa yalnızca lig adı.
+    league: lg && f?.round && `${lg} · ${f.round}`.length <= 28 ? `${lg} · ${f.round}` : lg || '',
     when: Number.isFinite(kick) ? DAY_FMT.format(kick).replace(/\s(\d{2}:\d{2})$/, ' · $1') : '',
   }));
   ogCache.set(key, png);
