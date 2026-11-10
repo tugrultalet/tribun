@@ -1,6 +1,6 @@
 // Kilit ekranı / Dynamic Island canlı skor (Live Activity, iOS 18+) ve ana ekran widget'ı verisi.
 import { Platform } from 'react-native';
-import { endLive, liveMatches, liveSupported, startLive } from '../modules/tribun-live';
+import { endLive, liveMatches, liveSupported, startLive, updateLive } from '../modules/tribun-live';
 import { Fixture, get } from './api';
 import { abbr } from './chat/timeline';
 import { gradientFor } from './teamColors';
@@ -30,6 +30,18 @@ export async function followOnLockScreen(f: Fixture, league: string, pick?: { h:
   return liveMatches().includes(f.id) ? 'local' : 'closed';
 }
 export const stopFollowing = (id: number) => endLive(id);
+
+// Kanalsız (yerel) açılmış etkinliği uygulama açıkken günceller; kanallı etkinliği sunucu zaten günceller, aynı içerik
+// gönderilmesinin zararı yok. Maç bitince etkinlik kapanır.
+const lastLocal = new Map<number, string>();
+export function refreshLocal(f: Fixture): void {
+  if (!liveMatches().includes(f.id)) return;
+  const s = liveStateOf(f);
+  const key = JSON.stringify(s);
+  if (lastLocal.get(f.id) === key) return;
+  lastLocal.set(f.id, key);
+  updateLive(f.id, s).catch(() => {});
+}
 
 /* ---------- Ana ekran widget'ı ---------- */
 // Widget deposu yalnızca iOS'ta yüklenir (modül web'de çalışmaz).
