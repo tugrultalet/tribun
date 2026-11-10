@@ -7,7 +7,7 @@ type Invitable = { name: string; code: string };
 // `s`: paylaşıma özel ek; WhatsApp önizlemeyi (kart görseli) bağlantı başına sakladığı için her paylaşım güncel kartı getirir.
 export const inviteLink = (g: Invitable) => `${PUBLIC_URL}/j/${g.code}?n=${encodeURIComponent(g.name)}&s=${Date.now().toString(36)}`;
 // Mesaj kısa: kartı (logolar, grup adı, "Gruba katıl") WhatsApp bağlantıdan kurar; kod da yazar (bağlantı açılmazsa).
-export const inviteText = (g: Invitable) => `"${g.name}" grubuna katıl ⚽ Davet kodu: ${g.code}\n${inviteLink(g)}`;
+export const inviteText = (g: Invitable) => `"${g.name}" tribününe katıl ⚽ Davet kodu: ${g.code}\n${inviteLink(g)}`;
 
 // WhatsApp'ta doğrudan mesaj açar; yüklü değilse ya da açılamazsa sistem paylaşım menüsüne düşer.
 export async function sendViaWhatsApp(g: Invitable): Promise<void> {

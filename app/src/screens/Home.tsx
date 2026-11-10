@@ -143,7 +143,7 @@ export default function Home() {
       });
       if (!items.length) continue;
       const first = items.find((i) => i.wait) ?? items[0];
-      out.set(f.id, { wait: first.wait, text: items.length > 1 ? `${first.text} · +${items.length - 1} grup` : first.text });
+      out.set(f.id, { wait: first.wait, text: items.length > 1 ? `${first.text} · +${items.length - 1} tribün` : first.text });
     }
     return out;
   }, [candidates, groups, status]);

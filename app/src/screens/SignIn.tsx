@@ -137,7 +137,7 @@ export function KeepAccountCard() {
   return (
     <Card style={{ marginTop: 16, padding: 16, gap: 12 }}>
       <Text style={{ fontSize: 15, fontWeight: '600', color: t.fg }}>Telefon değişirse tahminlerin kaybolmasın</Text>
-      <Text style={{ fontSize: 13, color: t.muted, lineHeight: 18 }}>Hesabını bağla; yeni telefonda aynı hesapla girince puanların, grupların ve tahminlerin geri gelir.</Text>
+      <Text style={{ fontSize: 13, color: t.muted, lineHeight: 18 }}>Hesabını bağla; yeni telefonda aynı hesapla girince puanların, tribünlerin ve tahminlerin geri gelir.</Text>
       <SignInButtons />
     </Card>
   );

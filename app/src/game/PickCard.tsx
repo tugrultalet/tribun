@@ -272,7 +272,7 @@ function LinkHint() {
         <Text style={{ fontSize: 22 }}>🔒</Text>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 14.5, fontWeight: '700', color: t.fg }}>Puanların kaybolmasın</Text>
-          <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 17 }}>Hesabını bağla; telefon değişse de tahminlerin ve grupların seninle gelsin.</Text>
+          <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 17 }}>Hesabını bağla; telefon değişse de tahminlerin ve tribünlerin seninle gelsin.</Text>
         </View>
       </View>
       <View style={{ flexDirection: 'row', gap: 8 }}>

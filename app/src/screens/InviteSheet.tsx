@@ -78,7 +78,7 @@ function FriendPicker({ group, memberIds, onAdded }: { group: Group; memberIds: 
     setBusy(true); setMsg('');
     try {
       const r = await rpc<{ added: number }>('add_to_group', { p_secret: secret, p_group: group.id, p_profiles: picked });
-      setMsg(`${r.added} arkadaşın gruba eklendi.`); setPicked([]); track('friends_added', { n: r.added }); onAdded?.(); state.reload();
+      setMsg(`${r.added} arkadaşın tribüne eklendi.`); setPicked([]); track('friends_added', { n: r.added }); onAdded?.(); state.reload();
     } catch (e) { setMsg((e as { message?: string }).message ?? 'Eklenemedi.'); } finally { setBusy(false); }
   };
   return (
@@ -98,7 +98,7 @@ function FriendPicker({ group, memberIds, onAdded }: { group: Group; memberIds: 
           );
         })}
       </ScrollView>
-      {picked.length > 0 && <Button label={busy ? 'Ekleniyor…' : `${picked.length} arkadaşını gruba ekle`} disabled={busy} onPress={add} />}
+      {picked.length > 0 && <Button label={busy ? 'Ekleniyor…' : `${picked.length} arkadaşını tribüne ekle`} disabled={busy} onPress={add} />}
       {!!msg && <Text style={{ fontSize: 12.5, color: t.win, textAlign: 'center' }}>{msg}</Text>}
     </View>
   );

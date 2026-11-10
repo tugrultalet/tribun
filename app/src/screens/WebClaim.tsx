@@ -54,7 +54,7 @@ export function WebClaim() {
   return (
     <Card style={{ padding: 14, marginBottom: 12, gap: 10 }}>
       <Text style={{ color: t.fg, fontSize: 15, fontWeight: '600', textAlign: 'center' }}>{offer.inviter ? `Seni ${offer.inviter} mi davet etti?` : 'Davetle mi geldin?'}</Text>
-      <Text style={{ color: t.muted, fontSize: 13, textAlign: 'center' }}>Web'de yaptığın tahmin ve grubun uygulamaya aktarılsın.</Text>
+      <Text style={{ color: t.muted, fontSize: 13, textAlign: 'center' }}>Web'de yaptığın tahmin ve tribünün uygulamaya aktarılsın.</Text>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <View style={{ flex: 1 }}><Button kind="sec" label="Hayır" onPress={() => setOffer(null)} /></View>
         <View style={{ flex: 1 }}><Button label={busy ? 'Aktarılıyor…' : 'Evet'} disabled={busy} onPress={yes} /></View>

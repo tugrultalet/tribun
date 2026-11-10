@@ -24,7 +24,7 @@ export function MatchRooms({ group, fixtures, secret, derby }: { group: string; 
       <View style={{ marginTop: 16 }}>
         <Text style={{ fontSize: 12, fontWeight: '700', letterSpacing: 0.6, color: t.muted, marginBottom: 6, marginLeft: 4 }}>MAÇ SOHBETİ</Text>
         <Card style={{ padding: 14 }}>
-          <Text style={{ fontSize: 13.5, color: t.muted, lineHeight: 19 }}>💬 Grubun sohbeti maçlara özel: her maçın odası başlamadan 1 saat önce açılır, maç bitince kapanır.</Text>
+          <Text style={{ fontSize: 13.5, color: t.muted, lineHeight: 19 }}>💬 Tribünün sohbeti maçlara özel: her maçın odası başlamadan 1 saat önce açılır, maç bitince kapanır.</Text>
         </Card>
       </View>
     );

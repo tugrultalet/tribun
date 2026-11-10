@@ -132,9 +132,9 @@ async function groupImage(code) {
   const key = `g:${code}:${info.members}`;
   if (ogCache.has(key)) return ogCache.get(key);
   const scope = info.scope || null;
-  let logos = [], kicker = 'Tribün grubu', when = '';
+  let logos = [], kicker = 'Tribün', when = '';
   if (scope?.type === 'match') {
-    kicker = 'Maç sohbeti';
+    kicker = 'Maç tribünü';
     try {
       const f = (await core.match(Number(scope.ids[0]))).fixture;
       logos = [await logoUri(f.h.logo), await logoUri(f.a.logo)];
