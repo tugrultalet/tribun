@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Fixture, Mine, useApi } from '../api';
+import { Fixture, Match, Mine, useApi } from '../api';
 import { followOnLockScreen, liveMatches, liveSupported, saveWidget, stopFollowing, widgetSnapshot, type WidgetRank } from '../live';
 import { dayLabel, daysBetween } from '../dates';
 import { euroIds, followedFixtures } from '../follow';
@@ -267,10 +267,19 @@ function Hero({ f, today, note, onPress }: { f: Fixture; today: string; note?: R
   const t = useTheme();
   const league = useStore().league(f.lg);
   const live = f.st === 'live';
-  const side = (team: Fixture['h']) => (
+  // Canlı maçta golü atanlar her takımın altında küçük yazıyla (maç ayrıntısı sunucu önbelleğinden, 30 sn'de bir).
+  const detail = useApi<Match>(live ? `/api/match/${f.id}` : null, 30000);
+  const goals = (s: 'h' | 'a') => (detail.data?.events ?? []).filter((e) => e.k === 'goal' && e.side === s)
+    .map((e) => `${e.p} ${e.min}${e.extra ? `+${e.extra}` : ''}'${e.x === 'Penaltı' ? ' (P)' : e.x === 'Kendi kalesine' ? ' (K.K.)' : ''}`);
+  const side = (team: Fixture['h'], s: 'h' | 'a') => (
     <View style={{ flex: 1, alignItems: 'center', gap: 10 }}>
       <Crest uri={team.logo} size={56} />
       <Text numberOfLines={2} style={{ fontWeight: '600', fontSize: 15, textAlign: 'center', color: t.fg }}>{team.name}</Text>
+      {live && goals(s).length > 0 && (
+        <View style={{ alignItems: 'center', marginTop: -4 }}>
+          {goals(s).slice(0, 5).map((g, i) => <Text key={i} numberOfLines={1} style={{ fontSize: 11.5, lineHeight: 15, color: t.muted }}>⚽ {g}</Text>)}
+        </View>
+      )}
     </View>
   );
   return (
@@ -280,13 +289,13 @@ function Hero({ f, today, note, onPress }: { f: Fixture; today: string; note?: R
           {live && <LiveDot />}
           <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '600', color: live ? t.live : t.fg }}>{live ? `Canlı · ${statusText(f)}` : countdown(f.date, today)}</Text>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          {side(f.h)}
-          <View style={{ alignItems: 'center', minWidth: 104, gap: 2 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6 }}>
+          {side(f.h, 'h')}
+          <View style={{ alignItems: 'center', minWidth: 104, gap: 2, paddingTop: 6 }}>
             <Text style={{ fontWeight: '600', fontSize: 38, lineHeight: 44, letterSpacing: -0.8, color: t.fg, fontVariant: ['tabular-nums'] }}>{live && f.s ? `${f.s[0]} – ${f.s[1]}` : f.time}</Text>
             {!live && <Text style={{ fontSize: 13, color: t.muted }}>{dayLabel(f.date, today)}</Text>}
           </View>
-          {side(f.a)}
+          {side(f.a, 'a')}
         </View>
         <Text style={{ textAlign: 'center', fontSize: 13, color: t.muted }}>{[league?.name ?? f.lgName, f.round, league?.tv && `Yayın: ${league.tv}`].filter(Boolean).join(' · ')}</Text>
         {note ? <Text numberOfLines={1} style={{ textAlign: 'center', fontSize: 12.5, marginTop: -8, fontWeight: note.wait ? '700' : '500', color: note.wait ? t.accent : t.muted }}>{note.text}</Text> : null}
