@@ -13,6 +13,8 @@ import { useTheme } from '../theme';
 import { Button, Card, Crest, Empty, Icon, LiveDot, Loader, MatchList, RowNote, Seg, statusText } from '../ui';
 import { resolveTeam } from '../healTeams';
 import { useAppActive } from '../appState';
+import { firebaseAvailable } from '../fb';
+import { useRemote } from '../remoteConfig';
 import { Screen } from './Screen';
 
 // Bir takımın sezon boyunca tüm yarışmalardaki maçları rahatça sığar.
@@ -142,6 +144,23 @@ export default function Home() {
     </Pressable>
   );
   const filter = <View style={{ marginTop: 4 }}><Seg value={scope} onChange={setScope} options={[['mine', 'Takiplerim'], ['all', 'Tüm ligler']]} /></View>;
+  // Uzak ayarlardan gelen bakım/duyuru bandı ve (bir kez) ana takım bildirim izni kartı.
+  const rc = useRemote();
+  const bannerText = rc.maintenance || rc.announcement;
+  const banner = bannerText ? (
+    <Card style={{ marginTop: 12, padding: 14, borderColor: rc.maintenance ? t.live : t.line }}>
+      <Text style={{ fontSize: 14, lineHeight: 20, color: t.fg }}>{bannerText}</Text>
+    </Card>
+  ) : null;
+  const askNotify = firebaseAvailable() && store.notify === undefined && store.mainTeam ? (
+    <Card style={{ marginTop: 12, padding: 14, gap: 10 }}>
+      <Text style={{ fontSize: 14, lineHeight: 20, color: t.fg }}>{store.mainTeam.name} maçlarında gol, maç başlangıcı ve maç sonucunu bildirelim mi?</Text>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flex: 1 }}><Button label="Bildirimleri aç" onPress={() => { store.setNotify(true); }} /></View>
+        <View style={{ flex: 1 }}><Button kind="sec" label="Şimdi değil" onPress={() => { store.setNotify(false); }} /></View>
+      </View>
+    </Card>
+  ) : null;
   const dropped = (store.droppedLeagues ?? []).map((id) => store.league(id)?.name).filter(Boolean) as string[];
   const notice = dropped.length ? (
     <Card style={{ marginTop: 12, padding: 14, gap: 10 }}>
@@ -172,6 +191,8 @@ export default function Home() {
   return (
     <Screen tab title="Maçlarım" right={addButton} team={store.mainTeam?.name} onRefresh={state.reload}>
       {filter}
+      {banner}
+      {askNotify}
       {notice}
       <Loader state={state}>
         {(d) => {

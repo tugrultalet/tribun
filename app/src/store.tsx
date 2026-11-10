@@ -6,6 +6,8 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { ApiError, get, League, Meta, Team } from './api';
 import { dedupeTeams, teamKey, type FollowedTeam } from './follow';
 import { toCommon } from './ids';
+import { fbPushPermission, fbSubscribe } from './fb';
+import { pushTopics } from './version';
 import { rpc } from './social';
 
 // `me`: gruplar için kimlik. `secret` yalnızca bu cihazda durur; veritabanında özeti tutulur.
@@ -17,7 +19,9 @@ type Me = { secret: string; name: string };
 // kaldırılan liglerin numaraları.
 type Saved = { teams: FollowedTeam[]; main?: number; onboarded: boolean; me?: Me; ids?: number; provider?: string; v?: number; leagues?: number[]; droppedLeagues?: number[];
   // Gelişmiş: "Tüm maçlarını takip et" işaretlenen turnuvalar (ana ekranda yakın tarihli tüm maçları görünür).
-  full?: number[] };
+  full?: number[];
+  // Bildirimler: notify açık/kapalı (undefined: henüz sorulmadı), topics: şu an abone olunan konular.
+  notify?: boolean; topics?: string[] };
 const EMPTY: Saved = { teams: [], onboarded: false, v: 3 };
 const STORAGE_KEY = 'tribun:v1';
 
@@ -65,6 +69,8 @@ type Store = Saved & {
   followsTeam: (id: number) => boolean;
   toggleTeam: (team: Team, kind?: 'club' | 'national') => void;
   setMain: (id: number) => void;
+  // Ana takım bildirimlerini açar (iOS izni istenir; verilmezse false döner) ya da kapatır.
+  setNotify: (on: boolean) => Promise<boolean>;
   // Numarası sunucuyla eşleşmeyen takımı doğru kayıtla değiştirir (kind ve turnuva seçimi korunur).
   replaceTeam: (oldId: number, team: Team) => void;
   followsFull: (id: number) => boolean;
@@ -141,6 +147,11 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
         return { ...s, teams: [...s.teams, added], main: s.main ?? team.id };
       }),
       setMain: (id) => update((s) => ({ ...s, main: id })),
+      setNotify: async (on) => {
+        if (on && !(await fbPushPermission())) { update((s) => ({ ...s, notify: false })); return false; }
+        update((s) => ({ ...s, notify: on }));
+        return true;
+      },
       replaceTeam: (oldId, team) => update((s) => {
         const teams = s.teams.map((t) => (t.id === oldId ? { ...t, id: team.id, name: team.name, logo: team.logo } : t));
         const d = dedupeTeams(teams, s.main === oldId ? team.id : s.main);
@@ -172,6 +183,15 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
       reloadMeta,
     };
   }, [saved, meta, startTab, update, reloadMeta]);
+
+  // Bildirim konularını (ana takım) istenen duruma eşitle: ana takım değişince ya da bildirim açılıp kapanınca.
+  const wanted = saved ? pushTopics(saved).join(',') : '';
+  const current = saved?.topics?.join(',') ?? '';
+  useEffect(() => {
+    if (!saved || wanted === current) return;
+    const next = wanted ? wanted.split(',') : [];
+    fbSubscribe(next, saved.topics ?? []).then((ok) => { if (ok) update((s) => ({ ...s, topics: next })); });
+  }, [wanted, current]);
 
   if (!store) return <>{fallback(error, reloadMeta)}</>;
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;

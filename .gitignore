@@ -8,3 +8,7 @@ app/dist/
 app/web-build/
 *.log
 .DS_Store
+
+# Firebase hizmet hesabı anahtarı (gizli; asla repoya girmez). app/firebase.json ise uygulama ayarıdır ve repoda kalır.
+*firebase-adminsdk*.json
+*service-account*.json

@@ -72,6 +72,18 @@ Uygulamanın ilk sürümleri Highlightly numaralarını kaydetmişti; uygulama a
 - **Grup kapsamı** kişisel takipten bağımsızdır: grup kurarken "Bu grupta hangi maçları tahmin edeceksiniz?" sorulur. Bir takımın maçları (kapsamsız mevcut gruplar böyledir) ya da en çok 5 turnuva (`groups.scope = {"type":"leagues","ids":[..]}`). Kapsam mantığı `app/src/groups/scopeRules.ts` (testli).
 - Ana ekran sunucuda `/api/mine?teams=..` (en çok 30 takım). Katalogdaki turnuvalar (`server/lib/common.js`) Turnuvalar sekmesinde puan durumu ve fikstürle görülebilir.
 
+### Firebase (bildirim, analiz, çökme raporu, Remote Config) ve geliştirme derlemesi
+
+- **Uygulama:** `@react-native-firebase` (app, analytics, crashlytics, remote-config, messaging). Firebase'e tek erişim `app/src/fb.native.ts`; web önizlemesinde ve Expo Go'da (`app/src/fb.ts`) her şey sessizce kapalıdır, uygulama çökmez. Yapılandırma: `app/GoogleService-Info.plist`, `app/firebase.json` (reklam kimliği toplanmaz), `app.json` (dinamik framework, bildirim izni).
+- **Analiz:** `telemetry.ts` olayları ve ekran görüntülemeleri Firebase Analytics'e, hatalar (çökme ekranı dahil) Crashlytics'e gider.
+- **Remote Config** (Firebase konsolu → Remote Config): `min_version` (altındaki sürümler güncelleme ekranı görür), `store_url`, `announcement` ve `maintenance` (ana ekranda bant), `feature_group_chat` (`false` ise grup sohbeti gizlenir).
+- **Bildirimler:** Kullanıcı Ayarlar'dan ya da ana ekrandaki karttan açar; telefon ana takımın konusuna (`team_<numara>`) abone olur. Sunucu canlı yenilemede maç başlangıcı, gol ve maç sonunu yakalayıp konuya gönderir (aynı olay bir kez). Bildirime dokununca maç açılır. Sunucuda Firebase hizmet hesabı gerekir: `FIREBASE_SERVICE_ACCOUNT` (base64 JSON) ya da yerelde `FIREBASE_SERVICE_ACCOUNT_FILE`; dosya asla repoya girmez.
+- **Geliştirme derlemesi:** Firebase yerel kod istediği için Expo Go yerine bir kez kurulan geliştirme derlemesi kullanılır (`app/eas.json`):
+  1. `npm install -g eas-cli` ve `eas login`
+  2. `cd app && eas device:create` (telefonu Apple'a tanıtır)
+  3. `eas build --profile development --platform ios` (bulutta derlenir; bitince QR ile telefona kurulur)
+  4. Sonrası eskisi gibi: `EXPO_PUBLIC_API_URL=http://<mac-ip>:8787 npx expo start --dev-client`
+
 ### Mağaza şartları ve destek
 
 - **Hesabımı sil** (Ayarlar): takma ad, üyelikler, mesajlar ve tahminler kalıcı silinir; kurulan grup başka üye varsa en eski üyeye devredilir (`delete_account`). App Store, hesap açılan uygulamalarda bunu zorunlu tutar.

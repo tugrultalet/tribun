@@ -1,8 +1,8 @@
 import React from 'react';
-import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, Text, View } from 'react-native';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { StatusBar } from 'expo-status-bar';
-import { DarkTheme, LinkingOptions, NavigationContainer } from '@react-navigation/native';
+import { createNavigationContainerRef, DarkTheme, LinkingOptions, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/unstable';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -20,6 +20,12 @@ import MyTeams from './src/screens/MyTeams';
 import Chat from './src/screens/Chat';
 import Feedback from './src/screens/Feedback';
 import { reportError, screen } from './src/telemetry';
+import { APP_VERSION } from './src/config';
+import { fbOnNotificationOpen } from './src/fb';
+import { startRemoteConfig, useRemote } from './src/remoteConfig';
+import { versionLess } from './src/version';
+
+const navRef = createNavigationContainerRef<RootParams>();
 import Group from './src/screens/Group';
 import Groups from './src/screens/Groups';
 import Onboarding from './src/screens/Onboarding';
@@ -173,18 +179,48 @@ function Splash({ error, retry }: { error: ApiError | null; retry: () => void })
   );
 }
 
+// Remote Config'teki en düşük sürümün altındaysa uygulama yerine güncelleme ekranı.
+function UpdateGate({ children }: { children: React.ReactNode }) {
+  const t = useTheme();
+  const rc = useRemote();
+  if (!versionLess(APP_VERSION, rc.min_version)) return <>{children}</>;
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 14, backgroundColor: t.bg }}>
+      <Text style={{ fontSize: 20, fontWeight: '700', color: t.fg }}>Güncelleme gerekli</Text>
+      <Text style={{ textAlign: 'center', color: t.muted, lineHeight: 21 }}>Tribün'ün bu sürümü artık desteklenmiyor. Devam etmek için uygulamayı güncelle.</Text>
+      {rc.store_url ? (
+        <Pressable onPress={() => Linking.openURL(rc.store_url).catch(() => {})} accessibilityRole="button" style={{ paddingVertical: 12, paddingHorizontal: 20, borderRadius: 12, backgroundColor: t.accent }}>
+          <Text style={{ fontWeight: '700', color: t.accentInk }}>App Store'da güncelle</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 export default function App() {
   const t = useTheme();
+  // Uzak ayarlar açılışta bir kez alınır; bildirime dokunulunca ilgili maç açılır.
+  React.useEffect(() => {
+    startRemoteConfig();
+    return fbOnNotificationOpen((data) => {
+      const id = Number(data.matchId);
+      if (!Number.isSafeInteger(id) || id === 0) return;
+      const go = () => (navRef.isReady() ? navRef.navigate('Match', { id }) : setTimeout(go, 300));
+      go();
+    });
+  }, []);
   const navTheme = { ...DarkTheme, colors: { ...DarkTheme.colors, background: t.bg, card: t.bg, text: t.fg, border: t.line, primary: t.accent } };
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
       <StoreProvider fallback={(error, retry) => <Splash error={error} retry={retry} />}>
         <ErrorBoundary>
-          <NavigationContainer theme={navTheme} linking={Platform.OS === 'web' ? undefined : LINKING}
+          <UpdateGate>
+          <NavigationContainer ref={navRef} theme={navTheme} linking={Platform.OS === 'web' ? undefined : LINKING}
             onStateChange={(s) => { const name = currentRoute(s); if (name) screen(name); }}>
             <Root />
           </NavigationContainer>
+          </UpdateGate>
         </ErrorBoundary>
       </StoreProvider>
     </SafeAreaProvider>

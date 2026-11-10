@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert, Linking, Platform, Pressable, Text, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, Switch, Text, View } from 'react-native';
+import { firebaseAvailable } from '../fb';
 import { useFocusEffect } from '@react-navigation/native';
 import { API_URL, PUBLIC_URL } from '../api';
 import { APP_VERSION } from '../config';
@@ -40,7 +41,22 @@ export default function Settings() {
   return (
     <Screen tab title="Ayarlar">
       <Section eyebrow="Bildirimler">
-        <Card>{row('Gol bildirimi ve kilit ekranında canlı skor', 'Sonraki sürümde. Sunucudan anlık bildirim ve iOS Live Activity gerektiriyor.', true)}</Card>
+        <Card>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, color: t.fg }}>Ana takım bildirimleri</Text>
+              <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 18 }}>
+                {firebaseAvailable()
+                  ? `${store.mainTeam?.name ?? 'Ana takımın'} maç başlangıcı, golleri ve maç sonucu`
+                  : 'Bu derlemede kullanılamıyor (Expo Go / web). Geliştirme ya da mağaza derlemesinde açılır.'}
+              </Text>
+            </View>
+            <Switch value={!!store.notify} disabled={!firebaseAvailable() || !store.mainTeam}
+              onValueChange={(on) => store.setNotify(on).then((ok) => { if (on && !ok) Alert.alert('Bildirim izni yok', 'iPhone Ayarlar → Tribün → Bildirimler bölümünden izin verebilirsin.'); })}
+              accessibilityLabel="Ana takım bildirimleri" />
+          </View>
+          {row('Kilit ekranında canlı skor', 'Sonraki sürümde (iOS Live Activity).')}
+        </Card>
       </Section>
       <Section eyebrow="Uygulama">
         <Card>

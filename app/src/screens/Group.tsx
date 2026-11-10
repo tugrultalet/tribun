@@ -15,6 +15,7 @@ import { Stepper } from '../game/Stepper';
 import { notePickSaved } from '../review';
 import { track } from '../telemetry';
 import { Button, Card, Crest, Empty, Icon, Loader, Panel, Seg, Tabs } from '../ui';
+import { useRemote } from '../remoteConfig';
 import { InviteSheet } from './InviteSheet';
 import { Screen } from './Screen';
 
@@ -27,6 +28,8 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
   const id = route.params.id;
   const [tab, setTab] = useState<'predict' | 'table'>('predict');
   const [inviting, setInviting] = useState(false);
+  // Grup sohbeti uzak ayarla kapatılabilir (ör. bir sorun olursa).
+  const chatOn = useRemote().feature_group_chat !== 'false';
   // Grup ayrıntısı önce maç listesi olmadan (son 60 günün tahminleri) gelir; grubun maçları bilinince yalnızca o maçların
   // tahminleri istenir (üyelerin tüm tahminlerini taşımamak için).
   const [matchIds, setMatchIds] = useState<number[] | null>(null);
@@ -53,10 +56,10 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
               <Text style={{ fontSize: 13, color: t.muted }}>{d.members.length} üye · Davet kodu {d.group.code}</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <View style={{ flex: 1 }}><Button label="Sohbet" onPress={() => nav.navigate('Chat', { id, name: d.group.name })} /></View>
+              {chatOn && <View style={{ flex: 1 }}><Button label="Sohbet" onPress={() => nav.navigate('Chat', { id, name: d.group.name })} /></View>}
               <View style={{ flex: 1 }}><Button kind="sec" label="Davet et" onPress={() => setInviting(true)} /></View>
             </View>
-            {d.group.last_message && (
+            {chatOn && d.group.last_message && (
               <Pressable onPress={() => nav.navigate('Chat', { id, name: d.group.name })} accessibilityRole="button">
                 <Text numberOfLines={1} style={{ textAlign: 'center', fontSize: 13, color: t.muted, marginTop: 10 }}>{d.group.last_message.name}: {d.group.last_message.body}</Text>
               </Pressable>
