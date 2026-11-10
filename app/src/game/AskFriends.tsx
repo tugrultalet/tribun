@@ -56,11 +56,23 @@ export function AskFriends({ f, secret, pick }: { f: Fixture; secret: string; pi
           </View>
           <Text style={{ fontSize: 22, fontWeight: '700', color: '#05301A' }}>›</Text>
         </Pressable>
-        {msg ? <Text style={{ fontSize: 12, color: t.fg, textAlign: 'center' }}>{msg}</Text> : (
-          <Pressable onPress={() => setOpen(true)} accessibilityRole="button" hitSlop={6} style={{ alignSelf: 'center', paddingVertical: 2 }}>
-            <Text style={{ fontSize: 12.5, color: t.muted }}>Seçenekler: tahminini gizle, gruplarına bildir</Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {groups.length > 0 && (
+            <Pressable onPress={() => { ask(); }} disabled={busy} accessibilityRole="button" accessibilityLabel="Gruplarıma bildir"
+              style={({ pressed }) => ({ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 12,
+                backgroundColor: pressed ? t.line : t.surface2, borderWidth: 1, borderColor: t.line })}>
+              <Text style={{ fontSize: 13 }}>🔔</Text>
+              <Text style={{ fontSize: 13.5, fontWeight: '700', color: t.fg }}>Gruplarıma bildir</Text>
+            </Pressable>
+          )}
+          <Pressable onPress={() => setOpen(true)} accessibilityRole="button" accessibilityLabel="Seçenekler"
+            style={({ pressed }) => ({ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 12,
+              backgroundColor: pressed ? t.line : t.surface2, borderWidth: 1, borderColor: t.line })}>
+            <Text style={{ fontSize: 13.5, fontWeight: '700', color: t.fg }}>Seçenekler</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: t.muted }}>›</Text>
           </Pressable>
-        )}
+        </View>
+        {!!msg && <Text style={{ fontSize: 12, color: t.fg, textAlign: 'center' }}>{msg}</Text>}
       </View>
     );
   }
