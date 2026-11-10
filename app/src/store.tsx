@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, get, League, Meta, Team } from './api';
 import { dedupeTeams, teamKey, type FollowedTeam } from './follow';
@@ -18,6 +20,20 @@ type Saved = { teams: FollowedTeam[]; main?: number; onboarded: boolean; me?: Me
   full?: number[] };
 const EMPTY: Saved = { teams: [], onboarded: false, v: 3 };
 const STORAGE_KEY = 'tribun:v1';
+
+// Grup kimliği olan cihaz sırrı iOS Keychain'de (Android Keystore) saklanır, düz AsyncStorage'da değil. Web'de (yalnızca
+// geliştirme önizlemesi) güvenli depo olmadığından eski yerinde kalır. Keychain kaydı şifreli yedekle yeni cihaza taşınır.
+const SECRET_KEY = 'tribun.secret';
+const SECURE = Platform.OS !== 'web';
+async function readSecret(): Promise<string | null> {
+  if (!SECURE) return null;
+  try { return await SecureStore.getItemAsync(SECRET_KEY); } catch { return null; }
+}
+async function writeSecret(secret: string): Promise<void> {
+  if (SECURE) await SecureStore.setItemAsync(SECRET_KEY, secret, { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK });
+}
+// Diske (AsyncStorage) yazılan kopya: sır çıkarılır.
+const toDisk = (s: Saved): Saved => (SECURE && s.me ? { ...s, me: { ...s.me, secret: '' } } : s);
 
 // Eski kayıtları bir kereliğine ortak numaralara çevirir. Takip edilen ligler de temizlenir: eski sürümde ilk açılışta
 // takımların ligleri kendiliğinden eklenirdi ve ana ekran onları kullanmazdı; artık takip edilen lig tüm maçlarıyla
@@ -69,15 +85,21 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
   const [startTab, setStartTab] = useState<'Groups' | undefined>(undefined);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
-        if (!raw) return setSaved({ ...EMPTY, ids: 2 });
-        const stored: Saved = JSON.parse(raw);
-        const migrated = migrate(stored);
-        if (JSON.stringify(migrated) !== raw) AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated)).catch(() => {});
-        setSaved(migrated);
-      })
-      .catch(() => setSaved({ ...EMPTY, ids: 2 }));
+    (async () => {
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      if (!raw) return setSaved({ ...EMPTY, ids: 2 });
+      const stored: Saved = JSON.parse(raw);
+      let next = migrate(stored);
+      if (next.me) {
+        if (next.me.secret) await writeSecret(next.me.secret); // eski sürümden: sır Keychain'e taşınır
+        const secret = next.me.secret || (await readSecret());
+        // Sır bulunamazsa (ör. Keychain silinmiş) takma ad yeniden sorulur.
+        next = secret ? { ...next, me: { ...next.me, secret } } : { ...next, me: undefined };
+      }
+      const disk = JSON.stringify(toDisk(next));
+      if (disk !== JSON.stringify(stored)) AsyncStorage.setItem(STORAGE_KEY, disk).catch(() => {});
+      setSaved(next);
+    })().catch(() => setSaved({ ...EMPTY, ids: 2 }));
   }, []);
   const reloadMeta = useCallback(() => {
     setError(null);
@@ -88,7 +110,7 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
   const update = useCallback((fn: (s: Saved) => Saved) => {
     setSaved((prev) => {
       const next = fn(prev || EMPTY);
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toDisk(next))).catch(() => {});
       return next;
     });
   }, []);
@@ -133,6 +155,7 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
       setName: async (name) => {
         const secret = saved.me?.secret ?? Crypto.randomUUID() + Crypto.randomUUID();
         const profile = await rpc<{ name: string }>('register', { p_secret: secret, p_name: name });
+        await writeSecret(secret);
         update((s) => ({ ...s, me: { secret, name: profile.name } }));
       },
       reloadMeta,

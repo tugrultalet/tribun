@@ -29,7 +29,7 @@ function Row({ team, first }: { team: FollowedTeam; first: boolean }) {
   const nav = useNav();
   const { meta, league, main, setMain, setTeamSel, toggleTeam } = useStore();
   const isMain = team.id === main;
-  const { data } = useApi<TeamData>(`/api/team/${team.id}`, 60000);
+  const { data } = useApi<TeamData>(`/api/team/${team.id}`);
   const euro = React.useMemo(() => euroIds(meta.leagues), [meta.leagues]);
   const next = data?.fixtures.find((f) => f.st === 'live') || data?.fixtures.find((f) => f.st === 'ns');
   const rival = next && (next.h.id === team.id ? next.a : next.h);

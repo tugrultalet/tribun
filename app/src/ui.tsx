@@ -140,7 +140,8 @@ export function Loader<T>({ state, children }: { state: { data?: T; error: ApiEr
 }
 export function errorText(e: ApiError): string {
   if (e.kind === 'config') return 'Sunucuda veri kaynağı anahtarı eksik ya da geçersiz.';
-  if (e.kind === 'quota') return 'Günlük API isteği limiti doldu. Veriler yarın yenilenecek.';
+  if (e.kind === 'quota') return 'Günlük veri kotası doldu; kayıtlı veriler gösteriliyor, yeni veriler daha sonra gelecek.';
+  if (e.kind === 'busy') return 'Çok fazla istek gönderildi. Biraz bekleyip tekrar dene.';
   return e.message;
 }
 export function Button({ label, onPress, kind = 'pri', disabled }: { label: string; onPress: () => void; kind?: 'pri' | 'sec'; disabled?: boolean }) {

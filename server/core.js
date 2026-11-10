@@ -1,6 +1,7 @@
 // Sunucunun çekirdeği: önbellek, canlı maç tazeleme ve uygulamanın kullandığı tüm veri işlemleri.
 // Veri kaynağına özgü her şey `provider` bağdaştırıcısındadır; burası kaynaktan bağımsızdır.
 import { CATALOG, DAY, HOUR, MIN, currentSeason, fail, today } from './lib/common.js';
+import { Windows } from './lib/limits.js';
 import { createCache } from './lib/cache.js';
 import { nationalName } from './lib/national.js';
 
@@ -29,6 +30,35 @@ export function createCore({ provider, cacheDir }) {
   const dayTtl = (date) => (date < today() ? 30 * DAY : date === today() ? 30 * MIN : 6 * HOUR);
   const tableTtl = () => (isFree() ? 3 * HOUR : 15 * MIN);
 
+  /* ---------- Kota koruması ---------- */
+  // Bilinen numaralar: sunucunun kendi yanıtlarında geçmiş takım ve maç numaraları. Uygulamaya numaralar yalnızca bu
+  // yanıtlardan ulaşır; bilinmeyen (rastgele) bir numara için kaynağa gitmek "soğuk" istektir ve bütçeye bağlıdır.
+  // Böylece sunucu herkese açıkken bile rastgele numaralarla günlük kota tüketilemez.
+  const knownSaved = load('known')?.data || {};
+  const knownTeams = new Set(knownSaved.teams || []), knownMatches = new Set(knownSaved.matches || []);
+  let knownDirty = false;
+  function rememberTeam(id) { if (id && !knownTeams.has(id)) { knownTeams.add(id); knownDirty = true; } }
+  function remember(f) {
+    if (f?.id && !knownMatches.has(f.id)) { knownMatches.add(f.id); knownDirty = true; }
+    rememberTeam(f?.h?.id); rememberTeam(f?.a?.id);
+  }
+  const isKnownTeam = (id) => knownTeams.has(id) || !!teamIndex[id] || !!load(`teamfx:${id}`);
+  const isKnownMatch = (id) => knownMatches.has(id) || !!load(`match:${id}`);
+  // Soğuk istek bütçesi: IP başına saatte 20, sunucu genelinde saatte 60 (ortam değişkenleriyle değiştirilebilir).
+  // `ctx` verilmezse (iç çağrılar, testler) sınır uygulanmaz.
+  const coldPerIp = new Windows({ max: Number(process.env.COLD_PER_IP || 20), windowMs: HOUR });
+  const coldGlobal = new Windows({ max: Number(process.env.COLD_GLOBAL || 60), windowMs: HOUR });
+  const allowUnknown = (ctx) => !ctx || (coldPerIp.hit(ctx.ip) && coldGlobal.hit('*'));
+  const busy = () => fail('busy', 'Çok fazla yeni istek geldi; biraz sonra tekrar dene.');
+  setInterval(() => { coldPerIp.sweep(); coldGlobal.sweep(); }, 10 * MIN).unref();
+  // Günlük kota azaldıysa (son QUOTA_RESERVE istek) yalnızca canlı skor yenilemesi kaynağa gider; diğer üretimler hata
+  // verir ve önbellekteki eski veri gösterilir.
+  const RESERVE = Number(process.env.QUOTA_RESERVE ?? 10);
+  function spendGuard() {
+    const r = provider.state.remaining;
+    if (r != null && r <= RESERVE) throw fail('quota', 'Günlük veri kotası azaldı; kayıtlı veri gösteriliyor.');
+  }
+
   // Takım → ana lig eşlemesi; gördükçe öğrenilir, takım sayfasında puan durumunu bulmak için kullanılır.
   const teamIndex = load('teams')?.data || {};
   let indexDirty = false;
@@ -41,10 +71,11 @@ export function createCore({ provider, cacheDir }) {
   }
   setInterval(() => {
     if (indexDirty) { indexDirty = false; save('teams', teamIndex, 3650 * DAY); }
+    if (knownDirty) { knownDirty = false; save('known', { teams: [...knownTeams], matches: [...knownMatches] }, 3650 * DAY); }
   }, 5000).unref();
   // Milli takımların Türkçe adları (milli takım listesi yüklenince bilinir; önbellekte duruyorsa baştan bilinir).
   const nationalNames = new Map();
-  const indexNational = (teams) => { for (const t of teams) nationalNames.set(t.id, t.name); };
+  const indexNational = (teams) => { for (const t of teams) { nationalNames.set(t.id, t.name); rememberTeam(t.id); } };
   indexNational(load('national')?.data.teams || []);
   const localized = (t) => (nationalNames.has(t.id) ? { ...t, name: nationalNames.get(t.id) } : t);
   const norm = (list) => {
@@ -53,6 +84,7 @@ export function createCore({ provider, cacheDir }) {
       f.a = localized(f.a);
       learn(f.h, f.lg);
       learn(f.a, f.lg);
+      remember(f);
     }
     return list;
   };
@@ -79,14 +111,14 @@ export function createCore({ provider, cacheDir }) {
   // Bir ligin tüm sezon fikstürü. Günlük maç listeleri buradan süzülür; böylece tarih başına istek harcanmaz.
   function getSeason(lg) {
     touch(`season:${lg}`);
-    return cached(`season:${lg}`, slowTtl, async () => ({
+    return cached(`season:${lg}`, slowTtl, async () => (spendGuard(), {
       league: lg, updated: Date.now(), fixtures: (await withNationalNames(await provider.seasonFixtures(lg, await seasonFor(lg)))).sort(byTime),
     }));
   }
   // Takımın katıldığı tüm yarışmalardaki sezon maçları (lig, kupalar, milli takımlarda turnuvalar ve hazırlıklar).
   function teamSeason(id) {
     touch(`teamfx:${id}`);
-    return cached(`teamfx:${id}`, teamTtl, async () => ({
+    return cached(`teamfx:${id}`, teamTtl, async () => (spendGuard(), {
       updated: Date.now(),
       fixtures: (await withNationalNames((await provider.teamSeason(id, currentSeason())).filter(keepFixture))).sort(byTime),
     }));
@@ -94,7 +126,7 @@ export function createCore({ provider, cacheDir }) {
 
   // Başlamış ya da başlamak üzere olan, henüz sonuçlanmamış tüm maçları tek seferde tazeler ve
   // yüklü bütün fikstür önbelleklerine (lig ve takım) işler. `liveTtl`den sık istek göndermez.
-  let lastRefresh = 0, refreshing = null, refreshError = null;
+  let lastRefresh = 0, lastScan = 0, refreshing = null, refreshError = null;
   // Canlı yenileme yalnızca son 24 saatte istenen önbellekler için yapılır; kimsenin bakmadığı takım ve ligler kota harcamaz.
   const seenAt = new Map();
   function touch(key) { seenAt.set(key, Date.now()); }
@@ -107,8 +139,11 @@ export function createCore({ provider, cacheDir }) {
   }
   function refreshUnsettled() {
     if (refreshing) return refreshing;
+    // Önce zaman kontrolü: tarama (tüm önbellekteki maçlar) en çok liveTtl'de bir ve boşsa 15 sn'de bir yapılır.
+    if (Date.now() - lastRefresh < liveTtl() || Date.now() - lastScan < Math.min(15000, liveTtl())) return Promise.resolve();
+    lastScan = Date.now();
     const pending = pendingFixtures();
-    if (!pending.length || Date.now() - lastRefresh < liveTtl()) return Promise.resolve();
+    if (!pending.length) return Promise.resolve();
     lastRefresh = Date.now();
     refreshing = (async () => {
       try {
@@ -146,13 +181,15 @@ export function createCore({ provider, cacheDir }) {
   function dayAll(date) {
     touch(`day:${date}`);
     return cached(`day:${date}`, () => dayTtl(date), async () => {
+      spendGuard();
       const list = (await provider.day(date)).filter((f) => leagueIds.has(f.lg) && keepFixture(f));
       return { date, updated: Date.now(), fixtures: (await withNationalNames(list)).sort(byTime) };
     });
   }
 
   // `teamIds`: takip edilen takımların, istenen liglerin dışında kalan maçlarını da ekler (ör. Avrupa kupaları).
-  async function getDay(date, leagueList, teamIds = []) {
+  async function getDay(date, leagueList, teamIds = [], ctx) {
+    teamIds = teamIds.filter((id) => isKnownTeam(id) || allowUnknown(ctx));
     // Tüm ligler istendiyse gün listesi tek seferde çekilir; lig başına sezon çekmek yüzlerce istek tutardı.
     if (provider.day && !teamIds.length && leagueList.length === leagues.length) {
       try {
@@ -172,7 +209,8 @@ export function createCore({ provider, cacheDir }) {
     return { date, stale: !!failed || undefined, fixtures: [...byId.values()].sort(byTime) };
   }
 
-  async function getTeam(id) {
+  async function getTeam(id, ctx) {
+    if (!isKnownTeam(id) && !allowUnknown(ctx)) throw busy();
     const base = await teamSeason(id);
     await refreshUnsettled();
     const fixtures = (load(`teamfx:${id}`)?.data || base).fixtures;
@@ -183,7 +221,9 @@ export function createCore({ provider, cacheDir }) {
 
   // Ana ekran: takip edilen takımların tüm maçları (katıldıkları bütün yarışmalarda). Hangi turnuvaların gösterileceği
   // istemcide süzülür; böylece takım fikstürü herkes için tek ortak önbellekten gelir. Lig takibi yoktur.
-  async function getMine(teamIds) {
+  async function getMine(teamIds, ctx) {
+    // Bilinmeyen numaralar soğuk bütçeye bağlıdır; bütçe dolduysa o takım bu sefer atlanır.
+    teamIds = teamIds.filter((id) => isKnownTeam(id) || allowUnknown(ctx));
     let failures = 0, lastError = null;
     for (const id of teamIds) {
       try { await teamSeason(id); } catch (e) { failures++; lastError = e; }
@@ -199,6 +239,7 @@ export function createCore({ provider, cacheDir }) {
   // Tüm milli takımlar, Türkçe adlarıyla (Türkiye başta). Haftada bir yenilenir.
   function getNational() {
     return cached('national', 7 * DAY, async () => {
+      spendGuard();
       const seen = new Map();
       for (const t of await provider.nationalTeams()) if (!seen.has(t.id)) seen.set(t.id, { id: t.id, name: nationalName(t.name), logo: t.logo });
       const teams = [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, 'tr'));
@@ -216,8 +257,15 @@ export function createCore({ provider, cacheDir }) {
       if (f.st === 'ft') return age > 6 * HOUR ? 30 * DAY : 30 * MIN;
       return age > -90 * MIN ? Math.max(liveTtl(), 5 * MIN) : 6 * HOUR;
     };
+    if (load(`missing:${id}`)?.exp > Date.now()) return Promise.reject(fail('notfound', 'Maç bulunamadı.'));
     return cached(`match:${id}`, ttl, async () => {
-      const data = await provider.match(id);
+      spendGuard();
+      let data;
+      try { data = await provider.match(id); } catch (e) {
+        // Kaynakta olmayan maç 6 saat tekrar sorulmaz.
+        if (e.kind === 'notfound') save(`missing:${id}`, true, 6 * HOUR);
+        throw e;
+      }
       norm([data.fixture]);
       return { updated: Date.now(), ...data };
     });
@@ -229,16 +277,17 @@ export function createCore({ provider, cacheDir }) {
     const f = match.fixture;
     if (f.st === 'off' || (f.st === 'ns' && f.ts * 1000 - Date.now() > 75 * MIN)) return { lineups: [] };
     if (match.lineups) return { lineups: match.lineups };
-    return cached(`lineups:${id}`, (d) => (d.lineups.length ? (f.st === 'ft' ? 30 * DAY : HOUR) : 10 * MIN), async () => ({
+    return cached(`lineups:${id}`, (d) => (d.lineups.length ? (f.st === 'ft' ? 30 * DAY : HOUR) : 10 * MIN), async () => (spendGuard(), {
       updated: Date.now(), lineups: await provider.lineups(id),
     }));
   }
 
   function getStandings(lg) {
     return cached(`std:${lg}`, tableTtl, async () => {
+      spendGuard();
       const season = await seasonFor(lg);
       const groups = await provider.standings(lg, season);
-      for (const g of groups) for (const r of g.rows) learn(r.team, lg);
+      for (const g of groups) for (const r of g.rows) { learn(r.team, lg); rememberTeam(r.team.id); }
       return { league: lg, season, current: true, updated: Date.now(), groups };
     });
   }
@@ -256,8 +305,9 @@ export function createCore({ provider, cacheDir }) {
   }
 
   // Kaynak kadro veriyorsa onu, vermiyorsa takımın son maçının ilk 11'ini ve yedeklerini gösterir.
-  async function getSquad(id) {
-    if (provider.squad) return { ...(await cached(`squad:${id}`, DAY, () => provider.squad(id))), from: null };
+  async function getSquad(id, ctx) {
+    if (!isKnownTeam(id) && !allowUnknown(ctx)) throw busy();
+    if (provider.squad) return { ...(await cached(`squad:${id}`, DAY, () => (spendGuard(), provider.squad(id)))), from: null };
     const { team: info, fixtures } = await getTeam(id);
     const last = fixtures.filter((f) => f.st === 'ft').pop();
     if (!last) return { team: info, players: [], from: null };
@@ -290,7 +340,7 @@ export function createCore({ provider, cacheDir }) {
   // önbelleği (biten maç 30 gün saklanır) kullanılır ve tek çağrıda en çok 8 maç kaynağa sorulur, kalanı sonraki çağrıya
   // kalır. Böylece bir sonuç herkes için yalnızca bir kez istek tutar.
   const slim = (f) => ({ id: f.id, st: f.st, s: f.s, ts: f.ts, date: f.date, lg: f.lg, h: { id: f.h.id, name: f.h.name }, a: { id: f.a.id, name: f.a.name } });
-  async function getResults(ids) {
+  async function getResults(ids, ctx) {
     const want = new Set(ids);
     const found = new Map();
     for (const k of [...keys('season:'), ...keys('teamfx:'), ...keys('day:')]) {
@@ -299,6 +349,7 @@ export function createCore({ provider, cacheDir }) {
     let asked = 0;
     for (const id of ids) {
       if (found.has(id) || asked >= 8) continue;
+      if (!isKnownMatch(id) && !allowUnknown(ctx)) continue;
       asked++;
       try {
         const m = await getMatch(id);
@@ -308,6 +359,8 @@ export function createCore({ provider, cacheDir }) {
     return { results: [...found.values()], pending: ids.filter((id) => !found.has(id)) };
   }
 
+  function gateMatch(id, ctx) { if (!isKnownMatch(id) && !allowUnknown(ctx)) throw busy(); }
+
   return {
     leagueIds,
     results: getResults,
@@ -315,8 +368,8 @@ export function createCore({ provider, cacheDir }) {
     day: getDay,
     mine: getMine,
     national: getNational,
-    match: async (id) => { const { lineups, ...rest } = await getMatch(id); return rest; }, // ilk 11'ler ayrı uçtan gelir
-    lineups: getLineups,
+    match: async (id, ctx) => { gateMatch(id, ctx); const { lineups, ...rest } = await getMatch(id); return rest; }, // ilk 11'ler ayrı uçtan gelir
+    lineups: (id, ctx) => { gateMatch(id, ctx); return getLineups(id); },
     standings: getStandings,
     leagueFixtures: getLeagueFixtures,
     teams: getTeams,

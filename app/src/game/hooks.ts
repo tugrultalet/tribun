@@ -6,9 +6,11 @@ import { useStore } from '../store';
 import { MyPick, Result, needsResult } from './stats';
 
 // Benim tüm tahminlerim (kişisel puan ve ana ekran etiketleri için).
+// Beklenmeyen (dizi olmayan) yanıt boş liste sayılır; ekranlar çökmesin.
 export function useMyPicks(refreshMs = 60000) {
   const secret = useStore().me?.secret;
-  return useRpc<MyPick[]>('my_picks', secret ? { p_secret: secret } : null, refreshMs);
+  const state = useRpc<MyPick[]>('my_picks', secret ? { p_secret: secret } : null, refreshMs);
+  return { ...state, data: state.data === undefined ? undefined : Array.isArray(state.data) ? state.data : [] };
 }
 
 // Biten maçların sonuçları. Biten maç değişmez; bir kez alınınca bellekte kalır ve sunucu da herkes için önbellekte tutar.

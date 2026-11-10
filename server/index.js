@@ -4,11 +4,13 @@
 // Veri kaynağı: API_FOOTBALL_KEY tanımlı ve hesap ücretli plandaysa API-Football, aksi halde Highlightly.
 // `DATA_PROVIDER=highlightly` ile API-Football devre dışı bırakılabilir.
 import http from 'node:http';
+import zlib from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fail, today } from './lib/common.js';
 import { createCore } from './core.js';
 import { invitePage, validCode } from './lib/invite.js';
+import { Buckets, clientIp, dateInWindow } from './lib/limits.js';
 import { createApiFootball } from './providers/apifootball.js';
 import { createHighlightly } from './providers/highlightly.js';
 
@@ -45,7 +47,9 @@ function leagueParam(q) {
   if (raw == null) return [...core.leagueIds];
   return [...new Set(raw.split(',').map(Number).filter((id) => core.leagueIds.has(id)))];
 }
-const teamParam = (q) => [...new Set((q.get('teams') || '').split(',').map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 30);
+// Ortak numaralar pozitif; formüle uymayan kayıtlar negatif numara alır (bkz. lib/ids.js), ikisi de geçerlidir.
+const validId = (n) => Number.isSafeInteger(n) && n !== 0;
+const teamParam = (q) => [...new Set((q.get('teams') || '').split(',').map(Number).filter(validId))].slice(0, 30);
 const knownLeague = (m) => {
   const id = Number(m[1]);
   if (!core.leagueIds.has(id)) throw fail('notfound', 'Bu lig desteklenmiyor.');
@@ -53,55 +57,76 @@ const knownLeague = (m) => {
 };
 const routes = [
   [/^\/api\/meta$/, () => core.meta()],
-  [/^\/api\/fixtures$/, (m, q) => {
+  [/^\/api\/fixtures$/, (m, q, ctx) => {
     const date = q.get('date') || today();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw fail('bad', 'Geçersiz tarih.');
-    return core.day(date, leagueParam(q), teamParam(q));
+    // Gerçek bir tarih ve bugünden en çok 30 gün uzakta olmalı (her yeni tarih kaynağa istek demektir).
+    if (!dateInWindow(date, today(), 30)) throw fail('bad', 'Geçersiz tarih.');
+    return core.day(date, leagueParam(q), teamParam(q), ctx);
   }],
-  [/^\/api\/mine$/, (m, q) => core.mine(teamParam(q))],
+  [/^\/api\/mine$/, (m, q, ctx) => core.mine(teamParam(q), ctx)],
   [/^\/api\/national$/, () => core.national()],
-  [/^\/api\/results$/, (m, q) => core.results([...new Set((q.get('ids') || '').split(',').map(Number).filter((n) => Number.isInteger(n) && n !== 0))].slice(0, 40))],
-  [/^\/api\/match\/(\d+)$/, (m) => core.match(Number(m[1]))],
-  [/^\/api\/match\/(\d+)\/lineups$/, (m) => core.lineups(Number(m[1]))],
+  [/^\/api\/results$/, (m, q, ctx) => core.results([...new Set((q.get('ids') || '').split(',').map(Number).filter(validId))].slice(0, 40), ctx)],
+  [/^\/api\/match\/(-?\d{1,12})$/, (m, q, ctx) => core.match(Number(m[1]), ctx)],
+  [/^\/api\/match\/(-?\d{1,12})\/lineups$/, (m, q, ctx) => core.lineups(Number(m[1]), ctx)],
   [/^\/api\/standings\/(\d+)$/, (m) => core.standings(knownLeague(m))],
   [/^\/api\/league\/(\d+)\/fixtures$/, (m) => core.leagueFixtures(knownLeague(m))],
   [/^\/api\/league\/(\d+)\/teams$/, (m) => core.teams(knownLeague(m))],
-  [/^\/api\/team\/(\d+)$/, (m) => core.team(Number(m[1]))],
-  [/^\/api\/team\/(\d+)\/squad$/, (m) => core.squad(Number(m[1]))],
+  [/^\/api\/team\/(-?\d{1,12})$/, (m, q, ctx) => core.team(Number(m[1]), ctx)],
+  [/^\/api\/team\/(-?\d{1,12})\/squad$/, (m, q, ctx) => core.squad(Number(m[1]), ctx)],
 ];
-const STATUS = { quota: 429, bad: 400, notfound: 404, config: 500, plan: 403, blocked: 503 };
+const STATUS = { quota: 429, busy: 429, bad: 400, notfound: 404, config: 500, plan: 403, blocked: 503, upstream: 502 };
+
+// IP başına istek sınırı: dakikada 120 istek, en çok 60'lık patlama (uygulamanın normal kullanımı bunun çok altında).
+const perIp = new Buckets({ rate: Number(process.env.RATE_PER_MIN || 120), burst: Number(process.env.RATE_BURST || 60) });
+setInterval(() => perIp.sweep(), 5 * 60000).unref();
+const SECURITY_HEADERS = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' };
 
 const server = http.createServer(async (req, res) => {
   const send = (code, body) => {
-    res.writeHead(code, {
-      'content-type': 'application/json; charset=utf-8',
-      'access-control-allow-origin': '*',
-      'cache-control': 'no-store',
-    });
-    res.end(JSON.stringify(body));
+    const headers = { 'content-type': 'application/json; charset=utf-8', 'access-control-allow-origin': '*', 'cache-control': 'no-store', ...SECURITY_HEADERS };
+    const json = JSON.stringify(body);
+    // Büyük yanıtlar sıkıştırılır (mobil veri ve süre).
+    if (json.length > 1024 && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
+      res.writeHead(code, { ...headers, 'content-encoding': 'gzip', vary: 'accept-encoding' });
+      return res.end(zlib.gzipSync(json));
+    }
+    res.writeHead(code, headers);
+    res.end(json);
   };
+  const ip = clientIp(req.headers, req.socket.remoteAddress);
   if (req.method === 'OPTIONS') return send(204, {});
+  if (!perIp.take(ip)) return send(429, { error: { kind: 'busy', message: 'Çok fazla istek; biraz sonra tekrar dene.' } });
   if (req.method !== 'GET') return send(405, { error: { kind: 'bad', message: 'Yalnızca GET.' } });
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/') return send(200, { name: 'Tribün API', ok: true, provider: provider.id });
   // Davet bağlantısı: /j/ABC123?n=Grup+adı  (WhatsApp'tan gelen kişi için karşılama sayfası)
   const invite = /^\/j\/([A-Za-z0-9]{6})$/.exec(url.pathname);
   if (invite && validCode(invite[1])) {
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300', 'x-content-type-options': 'nosniff' });
+    res.writeHead(200, {
+      'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300', ...SECURITY_HEADERS,
+      // Sayfa dış kaynak yüklemez; yalnızca kendi satır içi stil ve betiği çalışır, başka sitelerde çerçevelenemez.
+      'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      'x-frame-options': 'DENY',
+    });
     return res.end(invitePage({ code: invite[1], name: url.searchParams.get('n'), storeUrl: process.env.APP_STORE_URL }));
   }
   for (const [re, handler] of routes) {
     const m = re.exec(url.pathname);
     if (!m) continue;
     try {
-      return send(200, await handler(m, url.searchParams));
+      return send(200, await handler(m, url.searchParams, { ip }));
     } catch (e) {
       if (!e.kind) console.error(e);
-      return send(STATUS[e.kind] || 502, { error: { kind: e.kind || 'server', message: e.message } });
+      // Beklenmeyen hataların iç ayrıntısı istemciye gönderilmez (sunucu günlüğüne yazılır).
+      return send(STATUS[e.kind] || 500, { error: { kind: e.kind || 'server', message: e.kind ? e.message : 'Sunucu hatası.' } });
     }
   }
   send(404, { error: { kind: 'notfound', message: 'Bulunamadı.' } });
 });
+
+// Yavaş/yarım bırakılan bağlantılar kaynak tutmasın.
+server.requestTimeout = 30000;
+server.headersTimeout = 15000;
 
 server.listen(PORT, () => {
   const s = provider.state;

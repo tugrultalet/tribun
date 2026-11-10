@@ -12,12 +12,16 @@ import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { Button, Card, Crest, Empty, Icon, LiveDot, Loader, MatchList, RowNote, Seg, statusText } from '../ui';
 import { resolveTeam } from '../healTeams';
+import { useAppActive } from '../appState';
 import { Screen } from './Screen';
 
 // Bir takımın sezon boyunca tüm yarışmalardaki maçları rahatça sığar.
 const UPCOMING_LIMIT = 100;
 const RESULTS_LIMIT = 10;
 const GROUP_WINDOW_DAYS = 7;
+// Yenileme aralığı: canlı ya da 2 saat içinde başlayacak maç varken 1 dk, yoksa 5 dk.
+const FAST_MS = 60000, SLOW_MS = 5 * 60000;
+const hot = (fixtures: Fixture[] | undefined) => !!fixtures?.some((f) => f.st === 'live' || (f.st === 'ns' && f.ts * 1000 - Date.now() < 2 * 3600000 && f.ts * 1000 > Date.now() - 3 * 3600000));
 
 type Status = { group_id: string; match_id: number; entered: number; h: number | null; a: number | null };
 
@@ -30,14 +34,18 @@ export default function Home() {
   const store = useStore();
   const [scope, setScope] = useState<'mine' | 'all'>('mine');
   const secret = store.me?.secret;
+  const active = useAppActive();
   const euro = useMemo(() => euroIds(store.meta.leagues), [store.meta.leagues]);
-  const groups = useRpc<Group[]>('my_groups', secret ? { p_secret: secret } : null, 60000).data ?? [];
+  const groupsRaw = useRpc<Group[]>('my_groups', secret ? { p_secret: secret } : null, SLOW_MS).data;
+  const groups = Array.isArray(groupsRaw) ? groupsRaw : [];
 
   // Takip edilen takımlara, takip edilmeyen grup takımları da eklenir (grup maçları ana ekranda görünsün).
   const teamIds = [...new Set([...store.teams.map((x) => x.id), ...groups.map((g) => g.team.id)])];
   const query = scope === 'mine' && teamIds.length ? `/api/mine?teams=${teamIds.join(',')}` : null;
-  const state = useApi<Mine>(query, 60000, true);
-  const day = useApi<{ date: string; fixtures: Fixture[] }>(scope === 'all' ? `/api/fixtures?date=${store.meta.today}` : null, 60000);
+  const [fast, setFast] = useState(true);
+  const state = useApi<Mine>(query, fast ? FAST_MS : SLOW_MS, true);
+  useEffect(() => { if (state.data) setFast(hot(state.data.fixtures)); }, [state.data]);
+  const day = useApi<{ date: string; fixtures: Fixture[] }>(scope === 'all' ? `/api/fixtures?date=${store.meta.today}` : null, fast ? FAST_MS : SLOW_MS);
   const openMatch = (f: Fixture) => nav.navigate('Match', { id: f.id });
 
   // Hiç maçı gelmeyen takip (numarası sunucuyla eşleşmiyor) adından yeniden eşleştirilir; her takım oturumda bir kez denenir.
@@ -60,7 +68,7 @@ export default function Home() {
   // Turnuva kapsamlı gruplar ve "tüm maçlarını takip et" turnuvaları için turnuva fikstürleri (sunucu önbelleğinden).
   const full = store.full ?? [];
   const leagueIds = useMemo(() => [...new Set([...groups.flatMap((g) => scopeLeagues(g) ?? []), ...full])], [groups, full]);
-  const leagueFx = useLeagueFixtures(scope === 'mine' ? leagueIds : []);
+  const leagueFx = useLeagueFixtures(scope === 'mine' ? leagueIds : [], fast ? FAST_MS : SLOW_MS);
   const teamFx = state.data?.fixtures ?? [];
 
   // Grup maçları: grubun kapsamındaki, bugünden bir hafta içindeki başlamamış / canlı maçlar (takım ya da turnuva kapsamı).
@@ -78,11 +86,12 @@ export default function Home() {
   useEffect(() => {
     if (!secret || !candidates.length) { setStatus([]); return; }
     let alive = true;
-    const load = () => rpc<Status[]>('group_prediction_status', { p_secret: secret, p_matches: candidates.map((f) => f.id).slice(0, 200) }).then((r) => alive && setStatus(r), () => {});
+    const load = () => rpc<Status[]>('group_prediction_status', { p_secret: secret, p_matches: candidates.map((f) => f.id).slice(0, 200) }).then((r) => alive && setStatus(Array.isArray(r) ? r : []), () => {});
     load();
-    const timer = setInterval(load, 60000);
+    if (!active) return () => { alive = false; };
+    const timer = setInterval(load, fast ? FAST_MS : SLOW_MS);
     return () => { alive = false; clearInterval(timer); };
-  }, [secret, matchKey]);
+  }, [secret, matchKey, active, fast]);
 
   const notes = useMemo(() => {
     const out = new Map<number, RowNote>();
@@ -114,7 +123,9 @@ export default function Home() {
   }, [teamFx, leagueFx.data, store.teams, store.main, store.meta.today, euro, candidates, full]);
 
   // Grup etiketi olmayan maçlarda kendi tahminim gösterilir (takip edilmeyen takım olsa da, her maça tahmin girilebilir).
-  const myPicks = useMyPicks(60000).data;
+  const myPicksRaw = useMyPicks(SLOW_MS).data;
+  // Beklenmeyen bir yanıt (dizi olmayan) ana ekranı çökertmesin.
+  const myPicks = Array.isArray(myPicksRaw) ? myPicksRaw : undefined;
   const displayNotes = useMemo(() => {
     const out = new Map(notes);
     const byId = new Map((myPicks ?? []).map((p) => [p.match_id, p]));

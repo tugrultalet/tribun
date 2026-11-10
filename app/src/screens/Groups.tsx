@@ -76,6 +76,9 @@ function MyGroups({ secret }: { secret: string }) {
     setBusy(true); setError('');
     try {
       const group = await call();
+      // Kodla katılmada hata mesajı yanıt olarak gelir (deneme sınırının sayılması için; bkz. join_group).
+      const failed = (group as unknown as { error?: string }).error;
+      if (failed) throw new ApiError('social', failed);
       setForm('none'); setName(''); setCode('');
       nav.setParams({ code: undefined } as never);
       state.reload();

@@ -13,9 +13,11 @@ import { GroupDetail, Message, rpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { BackBar, Crest } from '../ui';
+import { useAppActive } from '../appState';
 import { Backdrop } from './Screen';
 
 const POLL_MS = 4000;
+const POLL_IDLE_MS = 12000;
 const MATCH_POLL_MS = 15000;
 const RECENT_MS = 12 * 3600 * 1000;
 const IOS = Platform.OS === 'ios';
@@ -27,6 +29,7 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
   const insets = useSafeAreaInsets();
   const headerHeight = useHeaderHeight();
   const focused = useIsFocused();
+  const appActive = useAppActive();
   const store = useStore();
   const secret = store.me?.secret ?? '';
   const { id, name } = route.params;
@@ -64,18 +67,27 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
   useEffect(() => {
     rpc<GroupDetail>('group_detail', { p_secret: secret, p_group: id }).then((d) => { setMyId(d.me); setTeam(d.group.team); setDetail(d); }, () => {});
   }, [secret, id]);
+  // Sohbet canlıyken (son 2 dakikada yeni mesaj) 4 sn'de bir, sessizken 12 sn'de bir sorulur; uygulama arka plandayken hiç.
+  const lastNew = useRef(Date.now());
   useEffect(() => {
-    if (!focused) return;
-    poll();
-    const timer = setInterval(poll, POLL_MS);
-    return () => clearInterval(timer);
-  }, [focused, id]);
+    if (!focused || !appActive) return;
+    let stop = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const loop = async () => {
+      const before = last.current;
+      await poll();
+      if (last.current !== before) lastNew.current = Date.now();
+      if (!stop) timer = setTimeout(loop, Date.now() - lastNew.current < 120000 ? POLL_MS : POLL_IDLE_MS);
+    };
+    loop();
+    return () => { stop = true; clearTimeout(timer); };
+  }, [focused, appActive, id]);
 
   // Grubun takımının canlı ve son 12 saatte biten maçları: olayları sohbet akışına sistem mesajı olarak girer.
   // Sunucu yanıtları önbelleğe alır; burada yalnızca birkaç hafif istek atılır, hata olursa sohbet etkilenmez.
   useEffect(() => {
     // Turnuva kapsamlı gruplarda tek bir takım yoktur (team.id 0): maç olayları sohbete girmez.
-    if (!focused || !team || team.id <= 0) return;
+    if (!focused || !appActive || !team || team.id <= 0) return;
     let alive = true;
     const load = async () => {
       try {
@@ -94,7 +106,7 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
     load();
     const timer = setInterval(load, MATCH_POLL_MS);
     return () => { alive = false; clearInterval(timer); };
-  }, [focused, team?.id]);
+  }, [focused, appActive, team?.id]);
   const items = useMemo(() => {
     const now = Date.now();
     return mergeTimeline(messages, games.flatMap((g) => systemMessages(g.f, g.events, now, detail ? finalSummary(detail, g.f, teamFx) : null)));

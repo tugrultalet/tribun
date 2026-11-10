@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIsFocused } from '@react-navigation/native';
+import { useAppActive } from './appState';
 
 // Tribün sunucusunun adresi. Geliştirmede `EXPO_PUBLIC_API_URL` ile bilgisayarın yerel ağ adresi verilir;
 // verilmezse yerel sunucuya gidilir. Yayın (TestFlight/App Store) sürümü ise varsayılan olarak Render'daki sunucuyu kullanır.
@@ -60,7 +61,9 @@ const memory = new Map<string, unknown>();
 // `keepPrevious`: adres değişince (ör. ana ekranda grup bilgisi sonradan gelince) yeni yanıt gelene kadar eski veri kalır;
 // ekran boşalıp yeniden dolmaz. Yalnızca aynı ekranı besleyen sorgularda kullanılır.
 export function useApi<T>(path: string | null, refreshMs?: number, keepPrevious = false) {
-  const focused = useIsFocused();
+  const isFocused = useIsFocused();
+  const appActive = useAppActive();
+  const focused = isFocused && appActive;
   const [data, setData] = useState<T | undefined>(() => (path ? (memory.get(path) as T | undefined) : undefined));
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
