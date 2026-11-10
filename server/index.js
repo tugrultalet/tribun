@@ -60,6 +60,7 @@ const routes = [
   }],
   [/^\/api\/mine$/, (m, q) => core.mine(teamParam(q))],
   [/^\/api\/national$/, () => core.national()],
+  [/^\/api\/results$/, (m, q) => core.results([...new Set((q.get('ids') || '').split(',').map(Number).filter((n) => Number.isInteger(n) && n !== 0))].slice(0, 40))],
   [/^\/api\/match\/(\d+)$/, (m) => core.match(Number(m[1]))],
   [/^\/api\/match\/(\d+)\/lineups$/, (m) => core.lineups(Number(m[1]))],
   [/^\/api\/standings\/(\d+)$/, (m) => core.standings(knownLeague(m))],

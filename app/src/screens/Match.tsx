@@ -7,6 +7,7 @@ import { RootParams, useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { Crest, Empty, Icon, LiveDot, Loader, Note, Section, Seg, StandingsTable, statusText, Tabs, HAIR } from '../ui';
+import { PickCard } from '../game/PickCard';
 import { Screen } from './Screen';
 
 type Tab = 'sum' | 'line' | 'stat' | 'table';
@@ -25,6 +26,7 @@ export default function Match({ route }: NativeStackScreenProps<RootParams, 'Mat
           <>
             <Head m={m} />
             {m.stale && <Note>Veri yenilenemedi; son alınan bilgiler gösteriliyor.</Note>}
+            <PickCard f={m.fixture} />
             <Tabs value={tab} onChange={setTab} options={[['sum', 'Özet'], ['line', 'Kadrolar'], ['stat', 'İstatistik'], ['table', 'Tablo']]} />
             {tab === 'sum' && <Summary m={m} />}
             {tab === 'line' && <Lineups m={m} />}

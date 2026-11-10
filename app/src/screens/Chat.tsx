@@ -87,7 +87,7 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
           return { f: m?.fixture ?? f, events: m?.events ?? [] };
         }));
         // Maç sonu özeti için güncel tahminler de yenilenir (biten maçın tahminleri açıktır).
-        const d = next.some((g) => g.f.st === 'ft') ? await rpc<GroupDetail>('group_detail', { p_secret: secret, p_group: id }).catch(() => null) : null;
+        const d = next.some((g) => g.f.st === 'ft') ? await rpc<GroupDetail>('group_detail', { p_secret: secret, p_group: id, p_matches: td.fixtures.slice(-300).map((x) => x.id) }).catch(() => null) : null;
         if (alive) { setGames(next); setTeamFx(td.fixtures); if (d) setDetail(d); }
       } catch { /* sistem mesajları isteğe bağlı */ }
     };

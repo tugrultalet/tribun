@@ -3,13 +3,15 @@ import { Alert, Platform, Pressable, Share, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ApiError, Fixture } from '../api';
 import { useGroupFixtures } from '../groups/scope';
-import { dayLabel } from '../dates';
+import { dayLabel, daysBetween } from '../dates';
 import { RootParams, useNav } from '../nav';
 import { entryCount, hasStarted, isValid, points, ranks, sameWeek, standings } from '../groups/standings';
 import { GroupDetail, Prediction, rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { shortName } from '../names';
+import { setPick } from '../game/hooks';
+import { Stepper } from '../game/Stepper';
 import { Button, Card, Crest, Empty, Icon, Loader, Panel, Seg, Tabs } from '../ui';
 import { InviteSheet } from './InviteSheet';
 import { Screen } from './Screen';
@@ -23,9 +25,14 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
   const id = route.params.id;
   const [tab, setTab] = useState<'predict' | 'table'>('predict');
   const [inviting, setInviting] = useState(false);
-  const state = useRpc<GroupDetail>('group_detail', secret ? { p_secret: secret, p_group: id } : null, 15000);
+  // Grup ayrıntısı önce maç listesi olmadan (son 60 günün tahminleri) gelir; grubun maçları bilinince yalnızca o maçların
+  // tahminleri istenir (üyelerin tüm tahminlerini taşımamak için).
+  const [matchIds, setMatchIds] = useState<number[] | null>(null);
+  const state = useRpc<GroupDetail>('group_detail', secret ? { p_secret: secret, p_group: id, ...(matchIds ? { p_matches: matchIds } : {}) } : null, 15000);
   const group = state.data?.group;
   const fixtures = useGroupFixtures(group);
+  const idsKey = (fixtures.data ?? []).filter((f) => f.st !== 'off' && daysBetween(store.meta.today, f.date) <= 8).sort((x, y) => y.ts - x.ts).slice(0, 300).map((f) => f.id).join(',');
+  useEffect(() => { if (idsKey) setMatchIds(idsKey.split(',').map(Number)); }, [idsKey]);
 
   const leave = () => {
     const go = () => rpc('leave_group', { p_secret: secret, p_group: id }).then(() => nav.goBack(), () => {});
@@ -71,23 +78,6 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
   );
 }
 
-function Stepper({ value, onChange, label, dim }: { value: number; onChange: (n: number) => void; label: string; dim?: boolean }) {
-  const t = useTheme();
-  const button = (text: string, delta: number) => (
-    <Pressable onPress={() => onChange(Math.max(0, Math.min(20, value + delta)))} hitSlop={6} accessibilityRole="button" accessibilityLabel={`${label} ${delta > 0 ? 'artır' : 'azalt'}`}
-      style={{ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surface2 }}>
-      <Text style={{ fontSize: 18, lineHeight: 20, color: t.fg }}>{text}</Text>
-    </Pressable>
-  );
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-      {button('−', -1)}
-      <Text style={{ width: 24, textAlign: 'center', fontSize: 22, fontWeight: '700', color: dim ? t.muted : t.fg, fontVariant: ['tabular-nums'] }}>{value}</Text>
-      {button('+', 1)}
-    </View>
-  );
-}
-
 // Haftanın tek maçı: başlamadıysa +/− ile tek dokunuşta girilen, otomatik kaydedilen tahmin; başladıysa herkesin tahmini ve puanlar.
 function WeekMatch({ f, detail, today, secret, onSaved }: { f: Fixture; detail: GroupDetail; today: string; secret: string; onSaved: () => void }) {
   const t = useTheme();
@@ -107,7 +97,7 @@ function WeekMatch({ f, detail, today, secret, onSaved }: { f: Fixture; detail: 
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       try {
-        await rpc('set_prediction', { p_secret: secret, p_group: detail.group.id, p_match: f.id, p_home: nh, p_away: na, p_kickoff: new Date(f.ts * 1000).toISOString() });
+        await setPick(secret, f.id, nh, na, f.ts);
         setState('saved'); onSaved();
       } catch (e) { setState('error'); setError((e as ApiError).message); }
     }, 600);

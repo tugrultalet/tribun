@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { Fixture, Mine, useApi } from '../api';
 import { dayLabel, daysBetween } from '../dates';
 import { euroIds, followedFixtures } from '../follow';
+import { useMyPicks } from '../game/hooks';
 import { inScope, scopeLeagues, useLeagueFixtures } from '../groups/scope';
 import { sameWeek } from '../groups/standings';
 import { useNav } from '../nav';
@@ -94,6 +95,18 @@ export default function Home() {
     return out.sort((x, y) => x.ts - y.ts);
   }, [teamFx, leagueFx.data, store.teams, store.main, store.meta.today, euro, candidates, full]);
 
+  // Grup etiketi olmayan maçlarda kendi tahminim gösterilir (takip edilmeyen takım olsa da, her maça tahmin girilebilir).
+  const myPicks = useMyPicks(60000).data;
+  const displayNotes = useMemo(() => {
+    const out = new Map(notes);
+    const byId = new Map((myPicks ?? []).map((p) => [p.match_id, p]));
+    for (const f of [...shown, ...(day.data?.fixtures ?? [])]) {
+      const p = byId.get(f.id);
+      if (p && !out.has(f.id) && (f.st === 'ns' || f.st === 'live')) out.set(f.id, { wait: false, text: `Tahminin ${p.h}–${p.a}` });
+    }
+    return out;
+  }, [notes, shown, myPicks, day.data]);
+
   const addButton = (
     <Pressable onPress={() => nav.navigate('Picker')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Takım ekle" style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
       <Icon.plus color={t.accent} />
@@ -122,7 +135,7 @@ export default function Home() {
       <Screen tab title="Maçlarım" right={addButton} team={store.mainTeam?.name} onRefresh={day.reload}>
         {filter}
         <Loader state={day}>
-          {(d) => d.fixtures.length ? <MatchList title="Bugünün maçları" fixtures={d.fixtures} onMatch={openMatch} showLeague /> : <Empty>Bugün katalogdaki liglerde maç yok.</Empty>}
+          {(d) => d.fixtures.length ? <MatchList title="Bugünün maçları" fixtures={d.fixtures} onMatch={openMatch} showLeague notes={displayNotes} /> : <Empty>Bugün katalogdaki liglerde maç yok.</Empty>}
         </Loader>
       </Screen>
     );
@@ -142,11 +155,11 @@ export default function Home() {
           return (
             <>
               <View style={{ gap: 12, marginTop: 4 }}>
-                {heroes.map((f) => <Hero key={f.id} f={f} today={d.today} note={notes.get(f.id)} onPress={() => openMatch(f)} />)}
+                {heroes.map((f) => <Hero key={f.id} f={f} today={d.today} note={displayNotes.get(f.id)} onPress={() => openMatch(f)} />)}
               </View>
               {!heroes.length && <Empty>Takip ettiklerinin yaklaşan maçı yok.</Empty>}
               {rest.length > 0 && (
-                <MatchList title="Fikstür" fixtures={rest} onMatch={openMatch} showLeague today={d.today} notes={notes} />
+                <MatchList title="Fikstür" fixtures={rest} onMatch={openMatch} showLeague today={d.today} notes={displayNotes} />
               )}
               {results.length > 0 && (
                 <MatchList title="Son sonuçlar" fixtures={results} onMatch={openMatch} showLeague today={d.today} />

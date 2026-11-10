@@ -286,8 +286,31 @@ export function createCore({ provider, cacheDir }) {
     };
   }
 
+  // Biten maçların sonuçları (tahmin puanları için). Önce önbellekteki fikstürlere bakılır; bulunamayan maç için maç
+  // önbelleği (biten maç 30 gün saklanır) kullanılır ve tek çağrıda en çok 8 maç kaynağa sorulur, kalanı sonraki çağrıya
+  // kalır. Böylece bir sonuç herkes için yalnızca bir kez istek tutar.
+  const slim = (f) => ({ id: f.id, st: f.st, s: f.s, ts: f.ts, date: f.date, lg: f.lg, h: { id: f.h.id, name: f.h.name }, a: { id: f.a.id, name: f.a.name } });
+  async function getResults(ids) {
+    const want = new Set(ids);
+    const found = new Map();
+    for (const k of [...keys('season:'), ...keys('teamfx:'), ...keys('day:')]) {
+      for (const f of load(k)?.data.fixtures || []) if (want.has(f.id) && f.st === 'ft' && f.s) found.set(f.id, slim(f));
+    }
+    let asked = 0;
+    for (const id of ids) {
+      if (found.has(id) || asked >= 8) continue;
+      asked++;
+      try {
+        const m = await getMatch(id);
+        if (m.fixture.st === 'ft' && m.fixture.s) found.set(id, slim(m.fixture));
+      } catch { /* sonuç şimdilik alınamadı; sonraki çağrıda yeniden denenir */ }
+    }
+    return { results: [...found.values()], pending: ids.filter((id) => !found.has(id)) };
+  }
+
   return {
     leagueIds,
+    results: getResults,
     meta: getMeta,
     day: getDay,
     mine: getMine,
