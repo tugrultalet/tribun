@@ -15,6 +15,8 @@ import { createFcm, loadServiceAccount } from './lib/fcm.js';
 import { messageFor } from './lib/notify.js';
 import { Buckets, clientIp, dateInWindow } from './lib/limits.js';
 import { createSupa, syncMatches } from './lib/supa.js';
+import { askPage, validAskToken } from './lib/ask.js';
+import { sendPushes } from './lib/push.js';
 import { createApiFootball } from './providers/apifootball.js';
 import { createHighlightly } from './providers/highlightly.js';
 
@@ -97,8 +99,21 @@ const cacheFor = (p) =>
   : /^\/api\/(standings\/\d+|league\/\d+\/teams|team\/[^/]+\/squad|national|meta)$/.test(p) ? 'public, max-age=300'
   : 'no-store';
 // Universal Links: tribunapp.io/j/KOD bağlantısı uygulama kuruluysa doğrudan uygulamada açılır.
-const AASA = JSON.stringify({ applinks: { details: [{ appIDs: [`${process.env.APPLE_TEAM_ID || 'M93BM8ZSQH'}.com.sportvisor.tribun`], components: [{ '/': '/j/*' }] }] } });
+const AASA = JSON.stringify({ applinks: { details: [{ appIDs: [`${process.env.APPLE_TEAM_ID || 'M93BM8ZSQH'}.com.sportvisor.tribun`], components: [{ '/': '/j/*' }, { '/': '/t/*' }] }] } });
 const PUBLIC_HOST = (process.env.PUBLIC_HOST || 'tribunapp.io').toLowerCase();
+// Supabase: sunucu yetkili istemci (service role, ortam değişkeninden) ve herkese açık anahtarla çağrı (web sayfaları).
+// Publishable anahtar gizli değildir; uygulamada da durur.
+const SUPABASE_URL = (process.env.SUPABASE_URL || 'https://kbekepfgbgxlyqllkkuu.supabase.co').replace(/\/$/, '');
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_k85M5vAXnmMtReECuvCEqg_smrFYQxd';
+const supa = createSupa({ url: SUPABASE_URL });
+async function publicRpc(fn, args) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: 'POST', headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'content-type': 'application/json' },
+    body: JSON.stringify(args), signal: AbortSignal.timeout(8000),
+  });
+  if (!r.ok) throw new Error(`supabase ${fn}: ${r.status}`);
+  return r.json();
+}
 const SECURITY_HEADERS = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' };
 
 const server = http.createServer(async (req, res) => {
@@ -144,6 +159,18 @@ const server = http.createServer(async (req, res) => {
     });
     return res.end(invitePage({ code: invite[1], name: url.searchParams.get('n'), storeUrl: process.env.APP_STORE_URL }));
   }
+  // "Arkadaşına sor" bağlantısı: /t/KOD8 (uygulama kuruluysa Universal Link ile uygulamada açılır).
+  const ask = /^\/t\/([A-Za-z0-9]{8})$/.exec(url.pathname);
+  if (ask && validAskToken(ask[1])) {
+    let info = null;
+    try { info = await publicRpc('ask_info', { p_token: ask[1].toUpperCase() }); } catch { /* sayfa "bulunamadı" gösterir */ }
+    res.writeHead(info ? 200 : 404, {
+      'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=60', ...SECURITY_HEADERS,
+      'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src ${SUPABASE_URL}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
+      'x-frame-options': 'DENY',
+    });
+    return res.end(askPage({ token: ask[1], info, supabaseUrl: SUPABASE_URL, supabaseKey: SUPABASE_PUBLISHABLE_KEY, storeUrl: process.env.APP_STORE_URL }));
+  }
   for (const [re, handler] of routes) {
     const m = re.exec(url.pathname);
     if (!m) continue;
@@ -166,8 +193,17 @@ server.headersTimeout = 15000;
 // canlı/başlamak üzere maç yoksa kaynağa istek gitmez.
 if (process.env.BACKGROUND_REFRESH !== '0') setInterval(() => core.tick().catch(() => {}), 15000).unref();
 
+// Kişiye özel bildirimler (tahmin istekleri): veritabanındaki kuyruktan 15 sn'de bir alınır ve FCM ile gönderilir.
+if (supa && fcm && process.env.BACKGROUND_REFRESH !== '0') {
+  let sending = false;
+  setInterval(async () => {
+    if (sending) return;
+    sending = true;
+    try { await sendPushes(supa, fcm); } catch (e) { console.warn('Kişisel bildirimler gönderilemedi:', e.message); } finally { sending = false; }
+  }, 15000).unref();
+}
+
 // Puanlama: tahmin girilen maçların saatini ve sonucunu dakikada bir Supabase'e yazar; puanlar veritabanında hesaplanır.
-const supa = createSupa();
 if (supa && process.env.BACKGROUND_REFRESH !== '0') {
   let syncing = false;
   setInterval(async () => {

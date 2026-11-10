@@ -9,6 +9,7 @@ import { useTheme } from '../theme';
 import { Button, Crest } from '../ui';
 import { NationalTeams, TeamGrid } from './Picker';
 import { Backdrop } from './Screen';
+import { WebClaim } from './WebClaim';
 
 const STEPS = 4;
 const national = (team: Team): FollowedTeam => ({ ...team, kind: 'national' });
@@ -68,6 +69,7 @@ export default function Onboarding() {
         <View style={{ flex: 1, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, gap: 16 }}>
           {step === 0 && (
             <View style={{ flex: 1, justifyContent: 'flex-end', gap: 14 }}>
+              <WebClaim />
               <Text style={{ fontWeight: '800', fontSize: 52, lineHeight: 56, letterSpacing: -1, color: t.fg }}>Sadece <Text style={{ color: t.accent }}>senin</Text> maçların.</Text>
               {lead('Takımını seç. Fikstür, canlı skor, kadro ve puan durumu tek yerde; arkadaşlarınla tahmin oyunu da cabası.')}
               <Button label="Başla" onPress={() => setStep(1)} />

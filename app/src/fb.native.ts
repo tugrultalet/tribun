@@ -96,3 +96,8 @@ export function fbOnNotificationOpen(handler: (data: Record<string, string>) => 
     return () => {};
   }
 }
+// Bu cihazın FCM anahtarı (kişiye özel bildirimler için sunucuya kaydedilir). Alınamazsa null.
+export async function fbToken(): Promise<string | null> {
+  const m = load(); if (!m) return null;
+  try { return await m.messaging.getToken(m.messaging.getMessaging()); } catch { return null; }
+}

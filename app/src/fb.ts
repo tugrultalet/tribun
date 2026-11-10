@@ -8,3 +8,4 @@ export async function fbRemoteValues(_defaults: Record<string, string>): Promise
 export async function fbPushPermission(): Promise<boolean> { return false; }
 export async function fbSubscribe(_topics: string[], _previous: string[]): Promise<boolean> { return false; }
 export function fbOnNotificationOpen(_handler: (data: Record<string, string>) => void): () => void { return () => {}; }
+export async function fbToken(): Promise<string | null> { return null; }
