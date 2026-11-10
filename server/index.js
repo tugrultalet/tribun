@@ -7,7 +7,7 @@ import http from 'node:http';
 import zlib from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fail, today } from './lib/common.js';
+import { CATALOG, fail, today } from './lib/common.js';
 import { createCore } from './core.js';
 import { invitePage, validCode } from './lib/invite.js';
 import { privacyPage } from './lib/privacy.js';
@@ -17,6 +17,7 @@ import { messageFor } from './lib/notify.js';
 import { Buckets, clientIp, dateInWindow } from './lib/limits.js';
 import { createSupa, syncMatches } from './lib/supa.js';
 import { askPage, validAskToken } from './lib/ask.js';
+import { logoUri, matchSvg, renderPng } from './lib/og.js';
 import { sendPushes } from './lib/push.js';
 import { createApns, loadApnsConfig } from './lib/apns.js';
 import { createLive } from './lib/live.js';
@@ -114,6 +115,30 @@ const cacheFor = (p) =>
   : /^\/api\/(standings\/\d+|league\/\d+\/teams|team\/[^/]+\/squad|national|meta)$/.test(p) ? 'public, max-age=300'
   : 'no-store';
 // Universal Links: tribunapp.io/j/KOD bağlantısı uygulama kuruluysa doğrudan uygulamada açılır.
+// Önizleme görseli: istek bilgisi + maç (logolar, lig, saat). Son 200 görsel bellekte tutulur.
+const ogCache = new Map();
+const DAY_FMT = new Intl.DateTimeFormat('tr-TR', { timeZone: 'Europe/Istanbul', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+async function askImage(token) {
+  const info = await publicRpc('ask_info', { p_token: token });
+  if (!info) throw new Error('yok');
+  const key = `${token}:${info.pick ? `${info.pick.h}-${info.pick.a}` : 'x'}`;
+  if (ogCache.has(key)) return ogCache.get(key);
+  let f = null;
+  try { f = (await core.match(Number(info.match_id))).fixture; } catch { /* adlar istekten gelir, logo olmaz */ }
+  const lg = f && (CATALOG.find((c) => c.id === f.lg)?.name || f.lgName);
+  const kick = f ? f.ts * 1000 : Date.parse(info.kickoff);
+  const png = renderPng(matchSvg({
+    home: f?.h.name || info.home, away: f?.a.name || info.away,
+    homeLogo: await logoUri(f?.h.logo), awayLogo: await logoUri(f?.a.logo),
+    pick: info.pick, sender: info.sender,
+    league: [lg, f?.round].filter(Boolean).join(' · '),
+    when: Number.isFinite(kick) ? DAY_FMT.format(kick).replace(/\s(\d{2}:\d{2})$/, ' · $1') : '',
+  }));
+  ogCache.set(key, png);
+  if (ogCache.size > 200) ogCache.delete(ogCache.keys().next().value);
+  return png;
+}
+
 const AASA = JSON.stringify({ applinks: { details: [{ appIDs: [`${process.env.APPLE_TEAM_ID || 'M93BM8ZSQH'}.com.sportvisor.tribun`], components: [{ '/': '/j/*' }, { '/': '/t/*' }] }] } });
 const PUBLIC_HOST = (process.env.PUBLIC_HOST || 'tribunapp.io').toLowerCase();
 // Supabase: sunucu yetkili istemci (service role, ortam değişkeninden) ve herkese açık anahtarla çağrı (web sayfaları).
@@ -188,6 +213,18 @@ const server = http.createServer(async (req, res) => {
     });
     return res.end(invitePage({ code: invite[1], name: url.searchParams.get('n'), storeUrl: process.env.APP_STORE_URL }));
   }
+  // Bağlantının önizleme görseli (WhatsApp vb.): /t/KOD8/og.png. Aynı istek için bellekte saklanır.
+  const og = /^\/t\/([A-Za-z0-9]{8})\/og\.png$/.exec(url.pathname);
+  if (og && validAskToken(og[1])) {
+    try {
+      const png = await askImage(og[1].toUpperCase());
+      res.writeHead(200, { 'content-type': 'image/png', 'content-length': png.length, 'cache-control': 'public, max-age=3600', ...SECURITY_HEADERS });
+      return res.end(png);
+    } catch (e) {
+      res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8', ...SECURITY_HEADERS });
+      return res.end('Görsel yok');
+    }
+  }
   // "Arkadaşına sor" bağlantısı: /t/KOD8 (uygulama kuruluysa Universal Link ile uygulamada açılır).
   const ask = /^\/t\/([A-Za-z0-9]{8})$/.exec(url.pathname);
   if (ask && validAskToken(ask[1])) {
@@ -198,7 +235,8 @@ const server = http.createServer(async (req, res) => {
       'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src ${SUPABASE_URL}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
       'x-frame-options': 'DENY',
     });
-    return res.end(askPage({ token: ask[1], info, supabaseUrl: SUPABASE_URL, supabaseKey: SUPABASE_PUBLISHABLE_KEY, storeUrl: process.env.APP_STORE_URL }));
+    const image = info ? `https://${PUBLIC_HOST}/t/${ask[1].toUpperCase()}/og.png` : null;
+    return res.end(askPage({ token: ask[1], info, supabaseUrl: SUPABASE_URL, supabaseKey: SUPABASE_PUBLISHABLE_KEY, storeUrl: process.env.APP_STORE_URL, image }));
   }
   for (const [re, handler] of routes) {
     const m = re.exec(url.pathname);

@@ -11,7 +11,7 @@ export function askText(info) {
   return info.pick ? `${info.sender} ${match} için ${info.pick.h}–${info.pick.a} dedi. Sen ne diyorsun?` : `${info.sender} ${match} için tahmin yaptı. Sen ne diyorsun?`;
 }
 
-export function askPage({ token, info, supabaseUrl, supabaseKey, storeUrl }) {
+export function askPage({ token, info, supabaseUrl, supabaseKey, storeUrl, image }) {
   const t = esc(String(token).toUpperCase());
   if (!info) {
     return shell('Bağlantı bulunamadı', 'Bu tahmin isteği silinmiş ya da bağlantı hatalı.', '<h1>Bağlantı bulunamadı</h1><p>Bu tahmin isteği silinmiş ya da bağlantı hatalı.</p>', '');
@@ -66,14 +66,15 @@ ${closed ? '<p class="lead">Maç başladı, tahminler kapandı.</p>' : `
     .catch(function(x){err.textContent=x.message;go.disabled=false;go.textContent='Tahminimi gönder';});};
 })();
 </script>`;
-  return shell(title, `${info.home}–${info.away} · Tribün`, body, script);
+  return shell(title, `${info.home}–${info.away} · Tribün`, body, script, image);
 }
 
-function shell(title, desc, body, script) {
+function shell(title, desc, body, script, image) {
   return `<!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title} · Tribün</title>
 <meta property="og:title" content="${title}"><meta property="og:description" content="${esc(desc)}"><meta property="og:site_name" content="Tribün">
+${image ? `<meta property="og:image" content="${esc(image)}"><meta property="og:image:type" content="image/png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">` : ''}
 <meta name="description" content="${esc(desc)}"><meta name="robots" content="noindex">
 <style>
 :root{color-scheme:dark}*{box-sizing:border-box}
