@@ -108,7 +108,7 @@ export default function Onboarding() {
           {step === 3 && (
             <>
               {progress}
-              {title('Sevdiğin başka takımlar var mı?')}
+              {title('Takip etmek istediğin başka takımlar var mı?')}
               {lead('İstersen ekle; bunlar için varsayılan olarak yalnızca Avrupa kupası maçları gösterilir (Avrupa\'da oynamıyorlarsa tüm maçları). Sonra Takımlarım\'dan değiştirebilirsin.')}
               <ScrollView style={{ flex: 1, marginHorizontal: -20 }} contentContainerStyle={{ paddingHorizontal: 20 }} keyboardShouldPersistTaps="handled">
                 <TeamGrid selected={(id) => id === main?.id || nat.some((x) => x.id === id) || others.some((x) => x.id === id)} onToggle={toggleOther} />
