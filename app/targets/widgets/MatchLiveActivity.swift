@@ -88,23 +88,32 @@ struct NoteRow: View {
   let attributes: MatchActivityAttributes
   let state: MatchActivityAttributes.ContentState
   var body: some View {
+    // Gol satırı golü atan takımın tarafında durur (deplasman golünde sağda); tahmin karşı tarafa geçer.
+    let right = state.side == "a"
     HStack {
-      if let note = state.note {
-        // Gol: satır alttan itilerek girer, top büyüyüp yerine oturur (güncelleme geldiği anda, iOS en çok 2 sn oynatır).
-        HStack(spacing: 5) {
-          if note.hasPrefix("⚽") {
-            Text("⚽").font(.system(size: 17)).transition(.scale(scale: 2.2).combined(with: .opacity))
-            Text(note.replacingOccurrences(of: "⚽ ", with: "")).font(.footnote.weight(.heavy)).lineLimit(1)
-          } else {
-            Text(note).font(.footnote.weight(.semibold)).lineLimit(1)
-          }
-        }
-        .id(note)
-        .transition(.push(from: .bottom))
-      }
-      Spacer(minLength: 8)
-      if let pick = attributes.pick { Text("Tahminin \(pick)").font(.footnote.weight(.semibold)).foregroundStyle(tribunAccent) }
+      if right { pick; Spacer(minLength: 8); note } else { note; Spacer(minLength: 8); pick }
     }
+  }
+
+  @ViewBuilder var note: some View {
+    if let note = state.note {
+      // Gol: satır alttan itilerek girer, top büyüyüp yerine oturur (güncelleme geldiği anda, iOS en çok 2 sn oynatır).
+      HStack(spacing: 5) {
+        if note.hasPrefix("⚽") {
+          Text("⚽").font(.system(size: 17)).transition(.scale(scale: 2.2).combined(with: .opacity))
+          Text(note.replacingOccurrences(of: "⚽ ", with: "")).font(.footnote.weight(.heavy)).lineLimit(1)
+        } else {
+          Text(note).font(.footnote.weight(.semibold)).lineLimit(1)
+        }
+      }
+      .environment(\.layoutDirection, state.side == "a" ? .rightToLeft : .leftToRight)
+      .id(note)
+      .transition(.push(from: .bottom))
+    }
+  }
+
+  @ViewBuilder var pick: some View {
+    if let pick = attributes.pick { Text("Tahminin \(pick)").font(.footnote.weight(.semibold)).foregroundStyle(tribunAccent) }
   }
 }
 

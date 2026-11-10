@@ -48,7 +48,16 @@ export function fx(f) {
     s: f.goals?.home == null ? null : [f.goals.home, f.goals.away],
     pen: pen && pen.home != null ? [pen.home, pen.away] : null,
     ...redCards(f),
+    ...lastGoal(f),
   };
+}
+
+// Son gol (kaçan penaltı hariç): atan oyuncu, taraf ve dakika. Live Activity'de "GOL! <oyuncu>" yazmak için.
+function lastGoal(f) {
+  const goals = (Array.isArray(f.events) ? f.events : []).filter((e) => e.type === 'Goal' && e.detail !== 'Missed Penalty');
+  const g = goals[goals.length - 1];
+  if (!g) return {};
+  return { goal: { p: g.player?.name || null, side: g.team?.id === f.teams.home.id ? 'h' : 'a', min: g.time?.elapsed ?? null, extra: g.time?.extra ?? null, n: goals.length } };
 }
 
 // Kırmızı kart sayısı (ikinci sarıdan atılma dahil). Yalnızca olayları da içeren yanıtlarda (fixtures?ids, canlı yenileme)

@@ -23,12 +23,27 @@ export function nextUpdate(prev, f, now = Date.now()) {
   return null;
 }
 
+// Gol satırı: golü atan oyuncu (olaylar skorla birlikte geldiyse) ve dakika; yoksa takım adı. `side` satırın hangi
+// tarafta duracağı (golü atan takımın tarafı).
+export function goalNote(u, f) {
+  const team = u.side === 'a' ? f.a.name : u.side === 'h' ? f.h.name : null;
+  const g = f.goal && f.goal.side === u.side && f.goal.n === u.state.home + u.state.away ? f.goal : null;
+  const min = g?.min != null ? ` ${g.min}${g.extra ? `+${g.extra}` : ''}'` : '';
+  const who = g?.p || team;
+  return { note: who ? `⚽ GOL! ${who}${min}` : '⚽ GOL!', side: u.side, team, who: g?.p ? `${g.p}${min}` : null };
+}
+
+// Gol satırı kilit ekranında bu kadar kalır, sonra satırı silen sessiz bir güncelleme gider.
+export const NOTE_MS = 8000;
+
 export function payloadFor(u, f, now = Date.now()) {
-  const aps = { timestamp: Math.floor(now / 1000), event: u.kind === 'end' ? 'end' : 'update', 'content-state': { ...u.state, note: null } };
+  const aps = { timestamp: Math.floor(now / 1000), event: u.kind === 'end' ? 'end' : 'update', 'content-state': { ...u.state, note: null, side: null } };
   if (u.kind === 'goal') {
-    const team = u.side === 'a' ? f.a.name : u.side === 'h' ? f.h.name : null;
-    aps['content-state'].note = team ? `⚽ GOL! ${team}` : '⚽ GOL!';
-    aps.alert = { title: team ? `GOL! ${team}` : 'GOL!', body: `${f.h.name} ${u.state.home}–${u.state.away} ${f.a.name}`, sound: 'default' };
+    const g = goalNote(u, f);
+    aps['content-state'].note = g.note;
+    aps['content-state'].side = g.side;
+    const score = `${f.h.name} ${u.state.home}–${u.state.away} ${f.a.name}`;
+    aps.alert = { title: g.team ? `GOL! ${g.team}` : 'GOL!', body: g.who ? `${g.who} · ${score}` : score, sound: 'default' };
   }
   // Devre arası ve maç sonu da kısa uyarı ve titreşimle bildirilir (kilit ekranı yanar, Dynamic Island genişler).
   if (u.kind === 'status' && u.state.status === 'live') {
@@ -73,6 +88,27 @@ export function createLive({ apns, supa, log = console, watch = null }) {
       if (watch) for (const id of new Set(tokens.flatMap((x) => x.matches))) Promise.resolve(watch(id)).catch(() => {});
     } catch { /* sonraki turda yeniden */ }
   }
+  // Gol satırını birkaç saniye sonra siler (skor aynı kalır). Bu arada yeni bir gol olduysa o satır silinmez.
+  const clearTimers = new Map();
+  function clearLater(f, state) {
+    clearTimeout(clearTimers.get(f.id));
+    clearTimers.set(f.id, setTimeout(async () => {
+      clearTimers.delete(f.id);
+      const cur = states.get(f.id);
+      if (!cur || cur.home !== state.home || cur.away !== state.away) return;
+      notes.delete(f.id);
+      const now = Date.now();
+      const channel = channels.get(f.id);
+      const quiet = { aps: { timestamp: Math.floor(now / 1000), event: 'update', 'content-state': { ...cur, note: null, side: null }, 'stale-date': Math.floor(now / 1000) + 900 } };
+      if (channel) await apns.broadcast(channel, quiet, 10).catch((e) => log.warn?.(`Gol satırı silinemedi (${f.id}): ${e.message}`));
+      for (const t of tokens) {
+        if (!t.matches.includes(f.id)) continue;
+        await apns.toToken(t.token, multiPayload(t.matches, states, notes, null, now), 10).catch(() => {});
+      }
+    }, NOTE_MS));
+    clearTimers.get(f.id).unref?.();
+  }
+
   let loaded = false;
   async function load() {
     if (loaded) return;
@@ -104,8 +140,8 @@ export function createLive({ apns, supa, log = console, watch = null }) {
         if (!u) continue;
         states.set(f.id, u.state);
         if (u.kind === 'goal') {
-          const team = u.side === 'a' ? f.a.name : u.side === 'h' ? f.h.name : null;
-          notes.set(f.id, team ? `⚽ GOL! ${team}` : '⚽ GOL!');
+          notes.set(f.id, goalNote(u, f).note);
+          clearLater(f, u.state);
         }
         changed.set(f.id, { u, f });
         if (!channel) { sent.set(f.id, { state: u.state, at: now }); continue; }

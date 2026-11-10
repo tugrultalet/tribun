@@ -103,3 +103,16 @@ test('maç başladı / ikinci yarı uyarısı', () => {
   const second = nextUpdate(ht, f({ min: 46 }), now + 1000);
   assert.equal(payloadFor(second, f(), 1_000_000_000).aps.alert.title, 'İkinci yarı başladı');
 });
+
+test('gol satırı golü atan oyuncuyu ve tarafını yazar', () => {
+  const st = { home: 0, away: 5, minute: "58'", status: 'live' };
+  const fx = f({ s: [0, 5], h: { name: 'Tavernes' }, a: { name: 'Valencia' }, goal: { p: 'H. Duro', side: 'a', min: 57, extra: null, n: 5 } });
+  const g = payloadFor({ kind: 'goal', side: 'a', state: st }, fx, 1_000_000_000);
+  assert.equal(g.aps['content-state'].note, "⚽ GOL! H. Duro 57'");
+  assert.equal(g.aps['content-state'].side, 'a');
+  assert.equal(g.aps.alert.title, 'GOL! Valencia');
+  assert.match(g.aps.alert.body, /^H\. Duro 57' · Tavernes 0–5 Valencia$/);
+  // Olaylar skoru henüz yakalamadıysa (eski gol) takım adı yazılır.
+  const old = payloadFor({ kind: 'goal', side: 'a', state: st }, { ...fx, goal: { ...fx.goal, n: 4 } }, 1_000_000_000);
+  assert.equal(old.aps['content-state'].note, '⚽ GOL! Valencia');
+});
