@@ -28,7 +28,7 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
   // Grup ayrıntısı önce maç listesi olmadan (son 60 günün tahminleri) gelir; grubun maçları bilinince yalnızca o maçların
   // tahminleri istenir (üyelerin tüm tahminlerini taşımamak için).
   const [matchIds, setMatchIds] = useState<number[] | null>(null);
-  const state = useRpc<GroupDetail>('group_detail', secret ? { p_secret: secret, p_group: id, ...(matchIds ? { p_matches: matchIds } : {}) } : null, 15000);
+  const state = useRpc<GroupDetail>('group_detail', secret ? { p_secret: secret, p_group: id, ...(matchIds ? { p_matches: matchIds } : {}) } : null, 30000);
   const group = state.data?.group;
   const fixtures = useGroupFixtures(group);
   const idsKey = (fixtures.data ?? []).filter((f) => f.st !== 'off' && daysBetween(store.meta.today, f.date) <= 8).sort((x, y) => y.ts - x.ts).slice(0, 300).map((f) => f.id).join(',');

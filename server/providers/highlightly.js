@@ -101,14 +101,15 @@ export function createHighlightly({ key, baseUrl, fetchImpl = fetch } = {}) {
   const base = baseUrl || 'https://soccer.highlightly.net/';
   const state = { plan: null, limitDay: null, remaining: null };
   const throttle = new Throttle(60);
-  let chain = Promise.resolve();
+  // Aynı anda en çok 3 istek (hız sınırı ayrıca throttle'da): yavaş bir istek herkesi bekletmesin.
+  let active = 0;
+  const waiting = [];
   const provider = { id: 'highlightly', name: 'Highlightly', state, onState: null };
 
-  function api(pathAndQuery) {
-    const run = () => apiNow(pathAndQuery);
-    const p = chain.then(run, run); // istekler tek tek ve sıraya girerek gider
-    chain = p.catch(() => {});
-    return p;
+  async function api(pathAndQuery) {
+    if (active >= 3) await new Promise((resolve) => waiting.push(resolve));
+    active++;
+    try { return await apiNow(pathAndQuery); } finally { active--; waiting.shift()?.(); }
   }
   async function apiNow(pathAndQuery) {
     if (!key) throw fail('config', 'Sunucuda HIGHLIGHTLY_KEY tanımlı değil.');

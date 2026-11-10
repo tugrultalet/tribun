@@ -27,7 +27,9 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [],
+    "plugins": [
+      "expo-secure-store"
+    ],
     "scheme": "tribun",
     "backgroundColor": "#0B1030"
   }

@@ -151,3 +151,47 @@ test('sonuçlar: önbellekteki biten maç kaynağa sorulmaz; bilinmeyen maç tek
   const r3 = await core.results([notDone.id]);
   assert.deepEqual(r3.results, [], 'bitmemiş maç sonuç sayılmaz');
 });
+
+test('koruma: bilinmeyen takım numarası soğuk bütçeye bağlı; bilinen ve önbellekteki numara serbest', async () => {
+  process.env.COLD_PER_IP = '2';
+  let calls = 0;
+  const { core } = makeCore({ teamSeason: async () => { calls++; return []; } });
+  const ctx = { ip: '1.2.3.4' };
+  await core.team(900001, ctx); await core.team(900002, ctx);
+  await assert.rejects(core.team(900003, ctx), (e) => e.kind === 'busy');
+  assert.equal(calls, 2, 'bütçe dolunca kaynağa gidilmez');
+  await core.team(900001, ctx); // önbellekte (boş liste) → bilinen sayılır
+  assert.equal(calls, 2);
+  await core.team(900004, { ip: '5.6.7.8' }); // başka IP'nin bütçesi ayrı
+  assert.equal(calls, 3);
+  delete process.env.COLD_PER_IP;
+});
+
+test('koruma: kaynakta olmayan maç 6 saat tekrar sorulmaz', async () => {
+  let calls = 0;
+  const { core } = makeCore({ match: async () => { calls++; throw Object.assign(new Error('yok'), { kind: 'notfound' }); } });
+  await assert.rejects(core.match(424242), (e) => e.kind === 'notfound');
+  await assert.rejects(core.match(424242), (e) => e.kind === 'notfound');
+  assert.equal(calls, 1);
+});
+
+test('koruma: kota azaldıysa kaynağa gidilmez, eski veri gösterilir', async () => {
+  let calls = 0;
+  const m = fx({ h: FB, a: GS });
+  const { core, provider } = makeCore({ teamSeason: async () => { calls++; return [m]; } });
+  await core.mine([611]);
+  provider.state.remaining = 3; // QUOTA_RESERVE varsayılanı 10
+  const fresh = await core.team(645).catch((e) => e);
+  assert.equal(fresh.kind, 'quota', 'önbellekte olmayan takım için kaynağa gidilmez');
+  assert.equal(calls, 1);
+});
+
+test('önbellek: bellek sınırı aşılınca en eski kayıt çıkar, diskten geri okunur', async () => {
+  const { createCache } = await import('../lib/cache.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tribun-cache-'));
+  const c = createCache(dir, { maxEntries: 2 });
+  c.save('a', 1, 60000); c.save('b', 2, 60000); c.save('c', 3, 60000);
+  assert.deepEqual(c.keys(''), ['b', 'c']);
+  await new Promise((r) => setTimeout(r, 50)); // disk yazımı
+  assert.equal(c.load('a').data, 1, 'diskten geri gelir');
+});

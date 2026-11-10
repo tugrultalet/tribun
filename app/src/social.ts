@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIsFocused } from '@react-navigation/native';
+import { useAppActive } from './appState';
 import { ApiError, Fixture, Team } from './api';
 import { SUPABASE_KEY, SUPABASE_URL } from './config';
 
@@ -33,7 +34,9 @@ export async function rpc<T>(fn: string, args: Record<string, unknown>): Promise
 
 // useApi'nin veritabanı fonksiyonları için karşılığı. `args` null ise beklemede kalır.
 export function useRpc<T>(fn: string, args: Record<string, unknown> | null, refreshMs?: number) {
-  const focused = useIsFocused();
+  const isFocused = useIsFocused();
+  const appActive = useAppActive();
+  const focused = isFocused && appActive;
   const key = args ? JSON.stringify(args) : null;
   const [data, setData] = useState<T | undefined>(undefined);
   const [error, setError] = useState<ApiError | null>(null);

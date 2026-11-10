@@ -72,6 +72,12 @@ Uygulamanın ilk sürümleri Highlightly numaralarını kaydetmişti; uygulama a
 - **Grup kapsamı** kişisel takipten bağımsızdır: grup kurarken "Bu grupta hangi maçları tahmin edeceksiniz?" sorulur. Bir takımın maçları (kapsamsız mevcut gruplar böyledir) ya da en çok 5 turnuva (`groups.scope = {"type":"leagues","ids":[..]}`). Kapsam mantığı `app/src/groups/scopeRules.ts` (testli).
 - Ana ekran sunucuda `/api/mine?teams=..` (en çok 30 takım). Katalogdaki turnuvalar (`server/lib/common.js`) Turnuvalar sekmesinde puan durumu ve fikstürle görülebilir.
 
+### Güvenlik ve kota koruması
+
+- **Sunucu:** IP başına istek sınırı (dakikada 120). Uygulamaya numaralar yalnızca sunucunun kendi yanıtlarından ulaştığı için bilinmeyen takım/maç numarası için kaynağa gitmek bütçeye bağlıdır (IP başına saatte 20, genel 60); kaynakta olmayan maç 6 saat tekrar sorulmaz; tarih bugünden en çok ±30 gün; günlük kotanın son 10 isteği canlı skor yenilemesine ayrılır (diğer durumlarda kayıtlı veri gösterilir). Bellek önbelleği sınırlı, diskte 45 günden eski dosyalar silinir. Yanıtlar gzip'lenir; beklenmeyen hataların ayrıntısı istemciye gönderilmez; davet sayfası CSP ve çerçeveleme engeliyle sunulur. Ayarlar: `server/.env.example`.
+- **Veritabanı:** tablolara doğrudan erişim kapalı, her işlem cihaz sırrını doğrulayan fonksiyonlardan geçer. Hız sınırları: takma ad (IP başına saatte 10), grup kurma (IP başına saatte 10), kodla katılma (profil başına 10 dakikada 10, IP başına 30; yanlış kodlar da sayılır), mesaj (dakikada 20), tahmin (dakikada 120).
+- **Uygulama:** cihaz sırrı iOS Keychain'de (`expo-secure-store`), AsyncStorage'da değil. Yenilemeler uygulama arka plandayken durur; ana ekran canlı ya da yakın maç yoksa 5 dakikada bir yenilenir; sohbet sessizken 12 sn'de bir sorulur.
+
 ### Highlightly ile istek tasarrufu
 
 Ücretsiz plan günde 100 istek verir; sunucu bunu korumak için her ligin sezon fikstürünü bir kez çekip (lig başına 2–4 istek) günde bir yeniler, günlük maç listelerini buradan süzer ve yalnızca başlamış ama sonuçlanmamış maçı olan ligleri tazeler (ücretsiz planda 3 dakikada bir, ücretli planda dakikada bir). `LIVE_TTL` (saniye) ile aralık elle değiştirilebilir.

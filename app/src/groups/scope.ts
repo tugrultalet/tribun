@@ -3,6 +3,7 @@
 //  - {type:'leagues', ids}: seçilen turnuvaların maçları
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIsFocused } from '@react-navigation/native';
+import { useAppActive } from '../appState';
 import { ApiError, Fixture, LeagueFixtures, TeamData, get } from '../api';
 import type { Group } from '../social';
 
@@ -13,7 +14,9 @@ const byTime = (a: Fixture, b: Fixture) => a.ts - b.ts || a.id - b.id;
 
 // Turnuva numaralarına göre fikstürler (sunucu önbelleğinden); hatada eldeki veri kalır.
 export function useLeagueFixtures(ids: number[], refreshMs = 60000) {
-  const focused = useIsFocused();
+  const isFocused = useIsFocused();
+  const appActive = useAppActive();
+  const focused = isFocused && appActive;
   const key = [...ids].sort((a, b) => a - b).join(',');
   const [data, setData] = useState<Fixture[] | undefined>(undefined);
   const [error, setError] = useState<ApiError | null>(null);
@@ -44,7 +47,9 @@ export function useGroupFixtures(group: Group | undefined) {
   const [team, setTeam] = useState<Fixture[] | undefined>(undefined);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
-  const focused = useIsFocused();
+  const isFocused = useIsFocused();
+  const appActive = useAppActive();
+  const focused = isFocused && appActive;
   const teamId = group && !leagues ? group.team.id : 0;
   const load = useCallback(async () => {
     if (!teamId) return;

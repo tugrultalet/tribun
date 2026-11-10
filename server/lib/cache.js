@@ -3,24 +3,46 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 // Bellek + disk önbelleği. Kayıtlar { exp, data } biçimindedir.
-export function createCache(dir) {
+// Bellek en çok `maxEntries` kayıt tutar (en uzun süredir kullanılmayan çıkarılır; disk kopyası kalır). Diskte 45 günden
+// eski dosyalar açılışta ve 12 saatte bir silinir; böylece önbellek sınırsız büyümez.
+const PINNED = new Set(['state', 'teams', 'known', 'national']);
+const DISK_MAX_AGE = 45 * 24 * 3600 * 1000;
+export function createCache(dir, { maxEntries = Number(process.env.CACHE_MAX_ENTRIES || 4000) } = {}) {
   fs.mkdirSync(dir, { recursive: true });
   const mem = new Map();
+  function remember(key, entry) {
+    mem.delete(key);
+    mem.set(key, entry);
+    if (mem.size <= maxEntries) return;
+    for (const k of mem.keys()) {
+      if (mem.size <= maxEntries) break;
+      if (!PINNED.has(k)) mem.delete(k);
+    }
+  }
+  function sweepDisk() {
+    fs.promises.readdir(dir).then((files) => Promise.all(files.map(async (f) => {
+      const p = path.join(dir, f);
+      const st = await fs.promises.stat(p).catch(() => null);
+      if (st && Date.now() - st.mtimeMs > DISK_MAX_AGE) await fs.promises.unlink(p).catch(() => {});
+    }))).catch(() => {});
+  }
+  sweepDisk();
+  setInterval(sweepDisk, 12 * 3600 * 1000).unref();
   const inflight = new Map();
   const fileOf = (key) => path.join(dir, crypto.createHash('sha1').update(key).digest('hex') + '.json');
 
   function load(key) {
-    if (mem.has(key)) return mem.get(key);
+    if (mem.has(key)) { const hit = mem.get(key); remember(key, hit); return hit; }
     try {
       const entry = JSON.parse(fs.readFileSync(fileOf(key), 'utf8'));
-      mem.set(key, entry);
+      remember(key, entry);
       return entry;
     } catch {
       return null;
     }
   }
   function persist(key, entry) {
-    mem.set(key, entry);
+    remember(key, entry);
     fs.promises.writeFile(fileOf(key), JSON.stringify(entry)).catch(() => {});
   }
   const save = (key, data, ttl) => persist(key, { exp: Date.now() + ttl, data });
