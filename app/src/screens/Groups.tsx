@@ -145,7 +145,7 @@ function MyGroups({ secret }: { secret: string }) {
             </>
           ) : store.teams.length ? (
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {store.teams.map((x) => {
+              {store.teams.filter((x, i, all) => all.findIndex((y) => y.name === x.name) === i).map((x) => {
                 const on = x.id === team?.id;
                 return (
                   <Pressable key={x.id} onPress={() => setTeam(x)} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={x.name}
