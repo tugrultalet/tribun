@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ApiError, get, League, Meta, Team } from './api';
-import type { FollowedTeam } from './follow';
+import { dedupeTeams, teamKey, type FollowedTeam } from './follow';
 import { toCommon } from './ids';
 import { rpc } from './social';
 
@@ -34,7 +34,9 @@ function migrate(raw: Saved): Saved {
     const dropped = (s.leagues ?? []).filter((id) => id > 0);
     s = { ...s, v: 3, main: s.main ?? s.teams[0]?.id, leagues: undefined, droppedLeagues: dropped.length ? dropped : undefined, onboarded: s.teams.length ? s.onboarded : false };
   }
-  return s;
+  // Aynı takımın kopyaları (farklı kaynaklardan ya da tekrarlı kayıtlardan) tek takıma indirilir.
+  const d = dedupeTeams(s.teams, s.main);
+  return { ...s, teams: d.teams, main: d.main };
 }
 
 type Store = Saved & {
@@ -70,7 +72,7 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
         if (!raw) return setSaved({ ...EMPTY, ids: 2 });
         const stored: Saved = JSON.parse(raw);
         const migrated = migrate(stored);
-        if (stored.ids !== 2) AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated)).catch(() => {});
+        if (JSON.stringify(migrated) !== raw) AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(migrated)).catch(() => {});
         setSaved(migrated);
       })
       .catch(() => setSaved({ ...EMPTY, ids: 2 }));
@@ -99,10 +101,12 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
       mainTeam: saved.teams.find((t) => t.id === saved.main),
       followsTeam: (id) => teamIds.has(id),
       toggleTeam: (team, kind) => update((s) => {
-        if (s.teams.some((t) => t.id === team.id)) {
-          const teams = s.teams.filter((t) => t.id !== team.id);
+        // Aynı takım başka bir numarayla zaten takipteyse yeni kopya eklenmez; dokunmak onu çıkarır.
+        const same = s.teams.find((t) => t.id === team.id || teamKey(t) === teamKey({ name: team.name, kind: kind === 'national' ? 'national' : undefined }));
+        if (same) {
+          const teams = s.teams.filter((t) => t.id !== same.id);
           // Ana takım takipten çıkarsa sıradaki takım ana takım olur.
-          return { ...s, teams, main: s.main === team.id ? teams[0]?.id : s.main };
+          return { ...s, teams, main: s.main === same.id ? teams[0]?.id : s.main };
         }
         const added: FollowedTeam = kind === 'national' ? { ...team, kind: 'national' } : team;
         return { ...s, teams: [...s.teams, added], main: s.main ?? team.id };
@@ -112,7 +116,11 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
       toggleFull: (id) => update((s) => ({ ...s, full: (s.full ?? []).includes(id) ? (s.full ?? []).filter((x) => x !== id) : [...(s.full ?? []), id] })),
       setTeamSel: (id, sel) => update((s) => ({ ...s, teams: s.teams.map((t) => (t.id === id ? { ...t, sel } : t)) })),
       startTab,
-      finishOnboarding: (teams, main, tab) => { setStartTab(tab); update((s) => ({ ...s, teams, main: main ?? teams[0]?.id, onboarded: true })); },
+      finishOnboarding: (teams, main, tab) => {
+        setStartTab(tab);
+        const d = dedupeTeams(teams, main ?? teams[0]?.id);
+        update((s) => ({ ...s, teams: d.teams, main: d.main, onboarded: true }));
+      },
       dismissNotice: () => update((s) => ({ ...s, droppedLeagues: undefined })),
       restartOnboarding: () => update((s) => ({ ...s, onboarded: false })),
       setName: async (name) => {

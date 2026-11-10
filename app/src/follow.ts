@@ -10,6 +10,25 @@ export type FollowedTeam = Team & {
 };
 export type Competition = { id: number; name: string; logo: string | null };
 
+// Aynı takımın kopyalarını tanımak için anahtar: tür + ad (numaralar farklı kaynaklardan gelmiş olsa da aynı takım tek sayılır).
+export const teamKey = (t: Pick<FollowedTeam, 'name' | 'kind'>) => `${t.kind ?? 'club'}:${t.name.trim().toLocaleLowerCase('tr')}`;
+
+// Takip listesindeki kopyaları temizler: aynı takımın ilk kaydı kalır (ana takım başta olduğu için onun kaydı korunur),
+// ana takım silinen bir kopyaya işaret ediyorsa kalan kayda yönlendirilir. Sıra korunur.
+export function dedupeTeams(teams: FollowedTeam[], main: number | undefined): { teams: FollowedTeam[]; main: number | undefined } {
+  const ordered = main === undefined ? teams : [...teams.filter((t) => t.id === main), ...teams.filter((t) => t.id !== main)];
+  const keep = new Map<string, FollowedTeam>();
+  const alias = new Map<number, number>();
+  for (const t of ordered) {
+    const k = teamKey(t);
+    const first = keep.get(k);
+    if (!first) keep.set(k, t); else alias.set(t.id, first.id);
+  }
+  const kept = new Set([...keep.values()].map((t) => t.id));
+  const out = teams.filter((t) => kept.has(t.id) && keep.get(teamKey(t))?.id === t.id);
+  return { teams: out, main: main === undefined ? undefined : (alias.get(main) ?? main) };
+}
+
 // Avrupa kupaları: katalogdaki UEFA turnuvaları (type 'cup').
 export const euroIds = (leagues: League[]): Set<number> => new Set(leagues.filter((l) => l.type === 'cup').map((l) => l.id));
 
