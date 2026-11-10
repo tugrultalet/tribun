@@ -29,7 +29,7 @@ const clock = (e: Pick<MatchEvent, 'min' | 'extra'>) => `${e.min}'${e.extra ? `+
 const board = (f: Fixture, h: number, a: number) => `${abbr(f.h.name)} ${h}–${a} ${abbr(f.a.name)}`;
 
 // Bir maçın olaylarından sistem mesajları üretir. `now` gelecekteki zamanları keser (tahmini saat ileri taşmasın).
-export function systemMessages(f: Fixture, events: MatchEvent[], now: number): SystemMsg[] {
+export function systemMessages(f: Fixture, events: MatchEvent[], now: number, summary?: string | null): SystemMsg[] {
   const out: SystemMsg[] = [];
   const sorted = [...events].sort((x, y) => x.min - y.min || (x.extra ?? 0) - (y.extra ?? 0));
   let h = 0, a = 0, htH = 0, htA = 0;
@@ -54,6 +54,8 @@ export function systemMessages(f: Fixture, events: MatchEvent[], now: number): S
     const last = sorted.length ? eventTime(f, sorted[sorted.length - 1]) : f.ts * 1000;
     const at = Math.min(Math.max(f.ts * 1000 + 110 * MIN, last + MIN), now);
     out.push({ kind: 'system', id: `${f.id}:ft`, at, side: null, tone: 'info', text: `🏁 Maç sonu · ${board(f, f.s[0], f.s[1])}` });
+    // Grubun tahmin özeti ("Tam skoru bilen: …") maç sonu mesajının hemen ardından gelir.
+    if (summary) out.push({ kind: 'system', id: `${f.id}:sum`, at: at + 1000, side: null, tone: 'info', text: `🎯 ${summary}` });
   }
   return out;
 }
