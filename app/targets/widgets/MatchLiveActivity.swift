@@ -36,11 +36,15 @@ struct MatchLiveActivity: Widget {
           }
         }
         DynamicIslandExpandedRegion(.bottom) {
+          // Köşeler yuvarlak olduğu için içerik kenardan içeride; lig adı ortada.
           VStack(spacing: 8) {
+            Text(a.league).font(.caption2.weight(.semibold)).foregroundStyle(.secondary).lineLimit(1)
+              .frame(maxWidth: .infinity, alignment: .center)
             if s.status != "ns" { MatchProgress(state: s) }
             NoteRow(attributes: a, state: s)
           }
-          .padding(.horizontal, 6)
+          .padding(.horizontal, 14)
+          .padding(.bottom, 4)
         }
       } compactLeading: {
         // Sıkı tutulur: Dynamic Island kameraya yakın, dar kalır.
