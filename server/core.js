@@ -11,7 +11,8 @@ const byTime = (a, b) => a.ts - b.ts;
 const unsettled = (f) => (f.st === 'live' || f.st === 'ns') && f.ts * 1000 <= Date.now() + 5 * MIN && f.ts * 1000 > Date.now() - 2 * DAY;
 
 // `notify(kind, fixture)`: canlı yenilemede yakalanan maç olayları (başladı, gol, bitti) için çağrılır (bildirim gönderimi).
-export function createCore({ provider, cacheDir, notify = null }) {
+// `onRefresh(fixtures)`: canlı yenilemeden sonra tazelenen maçlarla çağrılır (Live Activity güncellemesi).
+export function createCore({ provider, cacheDir, notify = null, onRefresh = null }) {
   const { load, persist, save, cached, keys } = createCache(cacheDir);
 
   const leagues = CATALOG.map((c) => ({ id: c.id, key: c.key, name: c.name, country: c.country, type: c.type, tv: c.tv, logo: provider.leagueLogo(c.id) }));
@@ -134,9 +135,17 @@ export function createCore({ provider, cacheDir, notify = null }) {
   function touch(key) { seenAt.set(key, Date.now()); }
   const recent = (k) => Date.now() - (seenAt.get(k) || 0) < DAY;
   const fixtureCaches = () => [...keys('season:'), ...keys('teamfx:'), ...keys('day:')].filter(recent);
+  // Live Activity'si açık maçlar: hiçbir liste önbelleğinde olmasa da canlı yenilemeye girer (en çok 6 saat).
+  const watched = new Map();
+  function watch(id) { watched.set(id, Date.now() + 6 * HOUR); }
   function pendingFixtures() {
     const byId = new Map();
     for (const k of fixtureCaches()) for (const f of load(k)?.data.fixtures || []) if (unsettled(f)) byId.set(f.id, f);
+    for (const [id, until] of watched) {
+      if (until < Date.now()) { watched.delete(id); continue; }
+      const f = load(`match:${id}`)?.data.fixture;
+      if (f && unsettled(f) && !byId.has(id)) byId.set(id, f);
+    }
     return [...byId.values()];
   }
   // Aynı olay iki kez bildirilmesin: gönderilen olay anahtarları (son 3000) diskte de tutulur.
@@ -178,6 +187,12 @@ export function createCore({ provider, cacheDir, notify = null }) {
           });
           if (changed) persist(k, { exp: entry.exp, data: { ...entry.data, fixtures } });
         }
+        // İzlenen maçların ayrıntı önbelleği de güncel durumu taşısın.
+        for (const id of watched.keys()) {
+          const n = fresh.get(id), entry = n && load(`match:${id}`);
+          if (entry) persist(`match:${id}`, { exp: entry.exp, data: { ...entry.data, fixture: n } });
+        }
+        if (onRefresh) Promise.resolve().then(() => onRefresh([...fresh.values()])).catch(() => {});
         refreshError = null;
       } catch (e) {
         refreshError = e.message; // eldeki veri gösterilmeye devam eder
@@ -392,6 +407,8 @@ export function createCore({ provider, cacheDir, notify = null }) {
     results: getResults,
     // Arka plan zamanlayıcısı için: uygulamalar kapalıyken de canlı maçlar tazelenir ve gol bildirimi gider.
     tick: () => refreshUnsettled(),
+    // Live Activity: maçı izlemeye al ve güncel maç bilgisini döndür (bilinmeyen maç için kota kuralları geçerli).
+    watchMatch: async (id, ctx) => { gateMatch(id, ctx); const m = await getMatch(id); watch(id); return m.fixture; },
     meta: getMeta,
     day: getDay,
     mine: getMine,

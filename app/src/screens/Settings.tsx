@@ -11,6 +11,7 @@ import { useTheme } from '../theme';
 import { Card, Icon, Section, HAIR } from '../ui';
 import { Screen } from './Screen';
 import { SignInButtons } from './SignIn';
+import { liveSupported } from '../live';
 import { providerName } from '../auth';
 import { rpc, useRpc } from '../social';
 
@@ -101,7 +102,17 @@ export default function Settings() {
               onValueChange={(on) => store.setNotify(on).then((ok) => { if (on && !ok) Alert.alert('Bildirim izni yok', 'iPhone Ayarlar → Tribün → Bildirimler bölümünden izin verebilirsin.'); })}
               accessibilityLabel="Ana takım bildirimleri" />
           </View>
-          {row('Kilit ekranında canlı skor', 'Sonraki sürümde (iOS Live Activity).')}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: HAIR, borderColor: t.line }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, color: t.fg }}>Kilit ekranında canlı skor</Text>
+              <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 18 }}>
+                {liveSupported()
+                  ? `${store.mainTeam?.name ?? 'Ana takımın'} maçı başlarken kilit ekranında ve Dynamic Island'da otomatik açılır. Diğer maçlar için maç ekranındaki düğmeyi kullan.`
+                  : 'iOS 18 ve üzeri gerekir (Ayarlar → Tribün → Canlı Etkinlikler açık olmalı).'}
+              </Text>
+            </View>
+            <Switch value={!!store.liveAuto && liveSupported()} disabled={!liveSupported() || !store.mainTeam} onValueChange={store.setLiveAuto} accessibilityLabel="Kilit ekranında canlı skor" />
+          </View>
         </Card>
       </Section>
       <Section eyebrow="Uygulama">

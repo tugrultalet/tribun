@@ -145,6 +145,30 @@ Sunucu dakikada bir, tahmin girilmiş ve henüz puanlanmamış maçların saatin
 
 Render'da `SUPABASE_SERVICE_ROLE_KEY` tanımlı olmalı (açılışta "Puanlama: açık" yazar). Anahtar repoya girmez.
 
+### Kilit ekranı canlı skor (Live Activity) ve widget
+
+- **Widget hedefi** `app/targets/widgets` (`com.sportvisor.tribun.widgets`, `@bacons/apple-targets`):
+  - Ana ekran widget'ı: ana takımın sıradaki/canlı maçı ve "Kanka grubunda 2." bilgisi.
+  - Maç Live Activity'si: kilit ekranı ve Dynamic Island.
+  - Uygulama widget verisini App Group'a (`group.com.sportvisor.tribun`) yazıyor.
+- **Uygulama:**
+  - Live Activity'yi yerel modül `app/modules/tribun-live` başlatıyor (iOS 18+).
+  - Maç ekranında "Kilit ekranında takip et" düğmesi var.
+  - Ayarlar'daki anahtar açıksa ana takımın maçı başlarken Live Activity kendiliğinden açılıyor.
+- **Sunucu:**
+  - Maç başına bir APNs **yayın kanalı** açıyor (`/api/live/:id/channel`); skor ya da durum değişince kanala güncelleme gidiyor (gol: hemen, dakika: en çok dakikada bir).
+  - Maç bitince aktivite 1 saat sonra kapanıyor, kanal 2 saat sonra siliniyor.
+  - Kanal numaraları Supabase'de (`live_channels`).
+
+Render ortam değişkenleri (anahtar repoya girmez):
+
+| Değişken | Değer |
+|---|---|
+| `APNS_KEY` | `.p8` dosyasının base64 hali (ya da yerelde `APNS_KEY_FILE=~/.tribun/AuthKey_LRY59WK5A8.p8`) |
+| `APNS_KEY_ID` | `LRY59WK5A8` |
+| `APNS_TEAM_ID` | `M93BM8ZSQH` |
+| `APNS_ENV` | `development` (geliştirme derlemesi) · `production` (TestFlight / App Store) |
+
 ## Yayıncı bilgisi
 
 Maç kartında ve maç sayfasında görünen "Yayın: …" bilgisi `server/index.js` içindeki lig tablosundaki `tv` alanından gelir. Türkiye'de yayın hakları lig bazında satıldığı için elle tutulur ve her sezon başında güncellenmelidir. Maç bazında tam kanal bilgisi yoktur.

@@ -18,13 +18,19 @@
         "UIBackgroundModes": [
           "remote-notification"
         ],
-        "CFBundleDisplayName": "Tribün"
+        "CFBundleDisplayName": "Tribün",
+        "NSSupportsLiveActivities": true,
+        "NSSupportsLiveActivitiesFrequentUpdates": true
       },
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
-        "aps-environment": "production"
+        "aps-environment": "production",
+        "com.apple.security.application-groups": [
+          "group.com.sportvisor.tribun"
+        ]
       },
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "appleTeamId": "M93BM8ZSQH"
     },
     "android": {
       "adaptiveIcon": {
@@ -54,7 +60,8 @@
           }
         }
       ],
-      "expo-dev-client"
+      "expo-dev-client",
+      "@bacons/apple-targets"
     ],
     "scheme": "tribun",
     "backgroundColor": "#0B1030",

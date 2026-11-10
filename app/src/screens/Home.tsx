@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Fixture, Mine, useApi } from '../api';
+import { followOnLockScreen, liveMatches, liveSupported, saveWidget, widgetSnapshot, type WidgetRank } from '../live';
 import { dayLabel, daysBetween } from '../dates';
 import { euroIds, followedFixtures } from '../follow';
 import { useMyPicks } from '../game/hooks';
@@ -66,6 +67,23 @@ export default function Home() {
       }
     })();
   }, [state.data, state.loading]);
+
+  // Ana takımın canlı / sıradaki maçı: ana ekran widget'ının verisi ve (Ayarlar'da açıksa) kilit ekranında otomatik canlı skor.
+  const ranks = useRpc<WidgetRank[]>('my_group_ranks', secret ? { p_secret: secret } : null, SLOW_MS).data;
+  const autoStarted = React.useRef(new Set<number>());
+  useEffect(() => {
+    const main = store.main;
+    if (!main || !state.data) return;
+    const own = state.data.fixtures.filter((f) => f.h.id === main || f.a.id === main).sort((a, b) => a.ts - b.ts);
+    const next = own.find((f) => f.st === 'live') ?? own.find((f) => f.st === 'ns');
+    const leagueName = next ? store.league(next.lg)?.name ?? '' : '';
+    saveWidget(widgetSnapshot(next, leagueName, Array.isArray(ranks) ? ranks[0] : undefined));
+    const soon = next && (next.st === 'live' || next.ts * 1000 - Date.now() < 30 * 60000);
+    if (store.liveAuto && next && soon && liveSupported() && !liveMatches().includes(next.id) && !autoStarted.current.has(next.id)) {
+      autoStarted.current.add(next.id);
+      followOnLockScreen(next, leagueName, null).catch(() => {});
+    }
+  }, [state.data, ranks, store.main, store.liveAuto]);
 
   // Turnuva kapsamlı gruplar ve "tüm maçlarını takip et" turnuvaları için turnuva fikstürleri (sunucu önbelleğinden).
   const full = store.full ?? [];
