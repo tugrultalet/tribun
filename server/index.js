@@ -11,6 +11,7 @@ import { fail, today } from './lib/common.js';
 import { createCore } from './core.js';
 import { invitePage, validCode } from './lib/invite.js';
 import { privacyPage } from './lib/privacy.js';
+import { landingPage, LANDING_CSP } from './lib/landing.js';
 import { createFcm, loadServiceAccount } from './lib/fcm.js';
 import { messageFor } from './lib/notify.js';
 import { Buckets, clientIp, dateInWindow } from './lib/limits.js';
@@ -115,6 +116,7 @@ async function publicRpc(fn, args) {
   return r.json();
 }
 const SECURITY_HEADERS = { 'x-content-type-options': 'nosniff', 'referrer-policy': 'no-referrer' };
+const LANDING = landingPage({ storeUrl: process.env.APP_STORE_URL });
 
 const server = http.createServer(async (req, res) => {
   const send = (code, body, cache = 'no-store') => {
@@ -142,7 +144,17 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'public, max-age=3600', ...SECURITY_HEADERS });
     return res.end(AASA);
   }
-  if (url.pathname === '/') return send(200, { name: 'Tribün API', ok: true, provider: provider.id });
+  // Ana sayfa (tanıtım sayfası). Sunucu durumu /api/health adresinde.
+  if (url.pathname === '/' || url.pathname === '/index.html') {
+    const headers = { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300', vary: 'accept-encoding', ...SECURITY_HEADERS, 'content-security-policy': LANDING_CSP, 'x-frame-options': 'DENY' };
+    if (/\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
+      res.writeHead(200, { ...headers, 'content-encoding': 'gzip' });
+      return res.end(LANDING.gzip);
+    }
+    res.writeHead(200, headers);
+    return res.end(LANDING.html);
+  }
+  if (url.pathname === '/api/health') return send(200, { name: 'Tribün API', ok: true, provider: provider.id });
   // Gizlilik politikası ve KVKK aydınlatma metni (App Store'a verilecek adres).
   if (url.pathname === '/gizlilik') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=3600', ...SECURITY_HEADERS, 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'" });

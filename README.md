@@ -151,6 +151,8 @@ Maç kartında ve maç sayfasında görünen "Yayın: …" bilgisi `server/index
 
 ## Sunucu uçları
 
+Ana sayfa (`/`) tanıtım sayfasıdır: `server/public/index.html`. `APP_STORE_URL` tanımlıysa indirme düğmeleri o adrese gider. Sunucu durumu: `/api/health`.
+
 `/api/meta`, `/api/mine?teams=..` (ana ekran: takımların tüm maçları; turnuva süzmesi istemcide), `/api/national` (milli takımlar), `/api/fixtures?date=YYYY-AA-GG[&leagues=..&teams=..]`, `/api/match/:id`, `/api/match/:id/lineups`, `/api/standings/:lig`, `/api/league/:lig/fixtures`, `/api/league/:lig/teams`, `/api/team/:id`, `/api/team/:id/squad`
 
 ## Henüz yok
