@@ -5,13 +5,13 @@ import { pushMessage, sendPushes } from '../lib/push.js';
 
 const info = { match_id: 1, sender: 'Tuğrul', home: 'GS', away: 'FB', kickoff: new Date(Date.now() + 86400000).toISOString(), pick: { h: 2, a: 1 }, group: 'Kanka' };
 
-test('askText: kısa kart başlığı', () => {
-  assert.equal(askText(info), 'GS - FB · Skor tahmini');
+test('askText: kart başlığı gönderenin ağzından', () => {
+  assert.equal(askText(info), 'GS - FB maçı 2-1 biter dedim. Senin skor tahminin ne?');
 });
 
 test('askPage: önizleme, form ve kaçış', () => {
   const html = askPage({ token: 'abcdefgh', info: { ...info, sender: '<b>x</b>' }, supabaseUrl: 'https://s', supabaseKey: 'k' });
-  assert.match(html, /og:title" content="GS - FB · Skor tahmini"/);
+  assert.match(html, /og:title" content="GS - FB maçı 2-1 biter dedim\. Senin skor tahminin ne\?"/);
   assert.match(html, /&lt;b&gt;x&lt;\/b&gt;, GS - FB maçı 2-1 biter dedi\. Senin skor tahminin ne\?/);
   assert.match(html, /id="f"/);
   assert.doesNotMatch(html, /<b>x<\/b>/);
