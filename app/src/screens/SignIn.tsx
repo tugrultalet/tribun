@@ -81,7 +81,7 @@ export function SignInButtons({ onDone }: { onDone?: () => void }) {
             {Platform.OS === 'ios' && <Button label="Mail uygulamasını aç" onPress={() => { Linking.openURL('message://').catch(() => {}); }} />}
             {manual ? (
               <>
-                <Field value={code} onChange={(v) => setCode(v.replace(/\D/g, ''))} placeholder="E-postadaki kod" maxLength={10} autoCapitalize="none" keyboardType="number-pad" textContentType="oneTimeCode" onSubmit={verify} />
+                <Field value={code.length > 3 && code.length <= 6 ? `${code.slice(0, 3)}-${code.slice(3)}` : code} onChange={(v) => setCode(v.replace(/\D/g, '').slice(0, 10))} placeholder="123-456" maxLength={11} autoCapitalize="none" keyboardType="number-pad" textContentType="oneTimeCode" onSubmit={verify} />
                 <Button kind="sec" label={busy ? 'Kontrol ediliyor…' : 'Kodla giriş yap'} disabled={busy || code.length < 6} onPress={verify} />
               </>
             ) : null}

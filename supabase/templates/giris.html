@@ -1,5 +1,6 @@
 <!-- Supabase → Authentication → Emails → Templates: "Magic link or OTP" ve "Confirm sign up" şablonlarının ikisine de.
      Konu: Tribün'e giriş yap
+     Kod 6 haneli olmalı (Authentication → Sign In / Providers → Email → Email OTP Length = 6); "123-456" diye gösterilir.
      E-posta istemcileri (Gmail, Outlook, Spark…) div arka planlarını çoğu zaman siler; bu yüzden tablo düzeni, hücre
      renkleri (bgcolor) ve açık zemin üzerinde koyu yazı kullanılır: renkler silinse de her şey okunur kalır. -->
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F1F0FA" style="background:#F1F0FA;">
@@ -19,7 +20,7 @@
               </tr>
             </table>
             <p style="margin:28px 0 6px;font-size:12px;line-height:1.5;color:#6B7090;">Bilgisayardan mı açtın? Uygulamada "Kodla giriş yap"a dokunup bu kodu yaz:</p>
-            <div style="font-size:20px;font-weight:700;letter-spacing:4px;color:#0B1030;">{{ .Token }}</div>
+            <div style="font-size:22px;font-weight:700;letter-spacing:3px;color:#0B1030;">{{ slice .Token 0 3 }}-{{ slice .Token 3 }}</div>
             <p style="margin:22px 0 0;font-size:12px;line-height:1.5;color:#6B7090;">Bağlantı 1 saat geçerli. Bu e-postayı sen istemediysen görmezden gelebilirsin.</p>
           </td>
         </tr>
