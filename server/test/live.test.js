@@ -84,3 +84,22 @@ test('multiPayload: tüm maçlar bitince kart kapanır', () => {
   const p = multiPayload([1, 2], states, new Map(), null, 1_000_000_000);
   assert.equal(p.aps.event, 'end');
 });
+
+test('devre arası ve maç sonu uyarısı (sesli)', () => {
+  const ht = payloadFor({ kind: 'status', state: { home: 1, away: 0, minute: 'Devre arası', status: 'ht', clock: null } }, f(), 1_000_000_000);
+  assert.equal(ht.aps.alert.title, 'Devre arası'); assert.equal(ht.aps.alert.sound, 'default');
+  const end = payloadFor({ kind: 'end', state: { home: 2, away: 1, minute: 'Maç sonu', status: 'ft', clock: null } }, f(), 1_000_000_000);
+  assert.equal(end.aps.alert.title, 'Maç bitti'); assert.equal(end.aps.alert.body, 'GS 2–1 FB');
+  const live = payloadFor({ kind: 'tick', state: { home: 1, away: 0, minute: "70'", status: 'live', clock: 1 } }, f(), 1_000_000_000);
+  assert.equal(live.aps.alert, undefined, 'dakika güncellemesinde uyarı yok');
+});
+
+test('maç başladı / ikinci yarı uyarısı', () => {
+  const now = 1_000_000;
+  const ns = { state: liveState(f({ st: 'ns', s: null, min: null })), at: now };
+  const k = nextUpdate(ns, f({ min: 1, s: [0, 0] }), now + 1000);
+  assert.equal(payloadFor(k, f(), 1_000_000_000).aps.alert.title, 'Maç başladı');
+  const ht = { state: liveState(f({ short: 'HT' })), at: now };
+  const second = nextUpdate(ht, f({ min: 46 }), now + 1000);
+  assert.equal(payloadFor(second, f(), 1_000_000_000).aps.alert.title, 'İkinci yarı başladı');
+});
