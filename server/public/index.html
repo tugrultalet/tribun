@@ -46,9 +46,8 @@ a{color:inherit}
 header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(9,13,40,.72);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:21;background:rgba(9,13,40,.95)}
 .nav{display:flex;align-items:center;gap:24px;min-height:64px}
-.logo{font-family:var(--font-display);font-weight:800;font-size:28px;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;display:flex;align-items:center}
-.logo span{font-weight:600;color:var(--muted)}
-.logo i{margin-right:10px;width:28px;height:28px;border-radius:8px;background:linear-gradient(140deg,var(--accent),#5E74E8);display:grid;place-items:center;font-style:normal;color:var(--accent-ink);font-size:17px}
+.logo{font-family:var(--font-display);font-weight:800;font-size:28px;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;display:flex;align-items:center;gap:10px}
+.logo i{width:28px;height:28px;border-radius:8px;background:linear-gradient(140deg,var(--accent),#5E74E8);display:grid;place-items:center;font-style:normal;color:var(--accent-ink);font-size:17px}
 .nav ul{display:flex;gap:22px;list-style:none;margin:0 0 0 auto;padding:0;font-size:15px;color:var(--muted)}
 .nav ul a{text-decoration:none}
 .nav ul a:hover{color:var(--fg)}
@@ -304,7 +303,7 @@ footer .sp{margin-left:auto}
 
 <header>
   <div class="wrap nav">
-    <a class="logo" href="#top" aria-label="Tribün ana sayfa"><i aria-hidden="true">T</i>Tribün<span>App</span></a>
+    <a class="logo" href="#top" aria-label="Tribün ana sayfa"><i aria-hidden="true">T</i>Tribün</a>
     <ul>
       <li><a href="#ozellikler">Özellikler</a></li>
       <li><a href="#nasil">Nasıl çalışır</a></li>
