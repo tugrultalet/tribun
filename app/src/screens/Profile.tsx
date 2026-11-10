@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { providerName } from '../auth';
 import { useMyPicks, useOpenMatches, usePoints, useResults } from '../game/hooks';
 import { ActivePicks, SummaryCard, splitPicks } from '../game/PicksView';
+import { FriendsSection } from '../game/Friends';
 import { summary } from '../game/profile';
 import { useNav } from '../nav';
 import { useStore } from '../store';
@@ -68,6 +69,8 @@ export default function Profile() {
           )}
         </Section>
       )}
+
+      {store.me && <FriendsSection />}
 
       <Section eyebrow="Takımlarım" right={
         <Pressable onPress={() => nav.navigate('MyTeams')} accessibilityRole="button" hitSlop={8}><Text style={{ color: t.accent, fontWeight: '600', fontSize: 14 }}>Düzenle</Text></Pressable>

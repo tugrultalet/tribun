@@ -71,9 +71,19 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
     touched.current = true; setH(nh); setA(na); setError('');
     if (state !== 'saving') setState('idle');
   };
+  // "Arkadaşlarına sor" bağlantısıyla gelindiyse ve bu maça tahmin kaydedildiyse: gönderenle arkadaş olunur.
+  const store = useStore();
+  const [friendMsg, setFriendMsg] = useState('');
+  const connectAsk = () => {
+    const ask = store.ask;
+    if (!ask || ask.match !== f.id) return;
+    rpc<{ connected?: boolean; new?: boolean; name?: string }>('ask_connect', { p_secret: secret, p_token: ask.token })
+      .then((r) => { if (r?.connected) { store.setAsk(undefined); if (r.new && r.name) { setFriendMsg(`${r.name} ile artık arkadaşsınız; birbirinizin tahminlerini göreceksiniz.`); track('friend_connected'); } } })
+      .catch(() => {});
+  };
   const confirm = async () => {
     setState('saving'); setError('');
-    try { await setPick(secret, f.id, h, a, f.ts); setState('saved'); setEditing(false); picks.reload(); friends.reload(); community.reload(); track('pick_saved', { source: 'match' }); notePickSaved(); }
+    try { await setPick(secret, f.id, h, a, f.ts); setState('saved'); setEditing(false); connectAsk(); picks.reload(); friends.reload(); community.reload(); track('pick_saved', { source: 'match' }); notePickSaved(); }
     catch (e) { setState('error'); setError((e as { message?: string }).message ?? 'Kaydedilemedi.'); }
   };
   const pred = saved ? { profile_id: '', match_id: f.id, h: saved.h, a: saved.a, updated_at: saved.updated_at } : null;
@@ -100,6 +110,7 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
                 <Text style={{ fontSize: 14, fontWeight: '700', color: t.fg }}>Düzenle</Text>
               </Pressable>
             </View>
+            {!!friendMsg && <Text style={{ fontSize: 13, color: t.win, fontWeight: '600', textAlign: 'center' }}>🤝 {friendMsg}</Text>}
             {saved && <AskFriends f={f} secret={secret} pick={{ h: saved.h, a: saved.a }} />}
             {saved && <LinkHint />}
             <CommunityLine f={f} data={community.data} />
