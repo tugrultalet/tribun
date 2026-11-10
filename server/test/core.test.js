@@ -130,3 +130,24 @@ test('önbellek boşken milli takım maçları da Türkçe adlarla gelir (takım
   const team = await core.team(777); // /api/national hiç çağrılmadı
   assert.deepEqual([team.fixtures[0].h.name, team.fixtures[0].a.name], ['Türkiye', 'Belçika']);
 });
+
+test('sonuçlar: önbellekteki biten maç kaynağa sorulmaz; bilinmeyen maç tek çağrıda en çok 8 kez sorulur', async () => {
+  const done = fx({ h: FB, a: GS, offsetDays: -3, st: 'ft', s: [2, 1] });
+  const notDone = fx({ h: FB, a: GS, offsetDays: 3 });
+  let asked = 0;
+  const { core } = makeCore({
+    teamSeason: async () => [done, notDone],
+    match: async (id) => { asked++; return { fixture: id === notDone.id ? notDone : fx({ h: FB, a: GS, offsetDays: -2, st: 'ft', s: [1, 0] }), events: [], stats: [] }; },
+  });
+  await core.mine([611]); // fikstürler önbelleğe girer
+  const r = await core.results([done.id]);
+  assert.equal(asked, 0);
+  assert.deepEqual(r.results.map((x) => [x.id, x.s]), [[done.id, [2, 1]]]);
+  assert.deepEqual(r.pending, []);
+  const many = Array.from({ length: 12 }, (_, i) => 9000 + i);
+  const r2 = await core.results(many);
+  assert.equal(asked, 8, 'tek çağrıda en çok 8 maç sorulur');
+  assert.equal(r2.pending.length >= 4, true);
+  const r3 = await core.results([notDone.id]);
+  assert.deepEqual(r3.results, [], 'bitmemiş maç sonuç sayılmaz');
+});

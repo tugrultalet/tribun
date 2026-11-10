@@ -7,6 +7,7 @@ import { TabParams, useNav } from '../nav';
 import { Group, rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
+import { ScoreCard } from '../game/ScoreCard';
 import { MAX_SCOPE_LEAGUES } from '../groups/scope';
 import { Button, Card, Crest, Empty, Icon, Loader, Panel, Seg } from '../ui';
 import { Screen } from './Screen';
@@ -25,7 +26,7 @@ export default function Groups() {
   const store = useStore();
   return (
     <Screen tab title="Gruplar">
-      {store.me ? <MyGroups secret={store.me.secret} /> : <NameForm />}
+      {store.me ? <><ScoreCard /><MyGroups secret={store.me.secret} /></> : <NameForm />}
     </Screen>
   );
 }
