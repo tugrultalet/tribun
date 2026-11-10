@@ -35,6 +35,7 @@ import Settings from './src/screens/Settings';
 import Profile from './src/screens/Profile';
 import Member from './src/screens/Member';
 import AskLink from './src/screens/AskLink';
+import AccountScreen from './src/screens/Account';
 import Team from './src/screens/Team';
 
 // Davet bağlantısı: tribun://join/ABC234 → Gruplar sekmesi, katılma formu kodla dolu.
@@ -126,6 +127,7 @@ function Root() {
           <Stack.Screen name="Settings" component={Settings} options={{ title: 'Ayarlar' }} />
           <Stack.Screen name="Member" component={Member} />
           <Stack.Screen name="Ask" component={AskLink} />
+          <Stack.Screen name="Account" component={AccountScreen} options={{ title: 'Hesap' }} />
           <Stack.Screen name="Feedback" component={Feedback} options={{ title: 'Geri bildirim' }} />
         </>
       ) : (
