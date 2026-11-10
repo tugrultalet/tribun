@@ -128,7 +128,7 @@ function Lineups({ m }: { m: MatchData }) {
   const state = useApi<LineupData>(`/api/match/${f.id}/lineups`, f.st === 'ft' ? undefined : 120000);
   if (!state.data) return <Loader state={state}>{() => null}</Loader>;
   const lineups = state.data.lineups;
-  if (!lineups.length) return <Empty>İlk 11'ler genellikle maçtan yaklaşık bir saat önce açıklanır.</Empty>;
+  if (!lineups.length) return <Empty>{f.st === 'ns' ? "İlk 11'ler genellikle maçtan yaklaşık bir saat önce açıklanır." : 'Bu maç için kadro bilgisi yok. Veri sağlayıcımız alt lig ve bazı kupa maçlarında kadro vermiyor.'}</Empty>;
   const lu: Lineup | undefined = lineups.find((l) => l.teamId === f[side].id);
   if (!lu) return <Empty>Bu takımın kadrosu henüz açıklanmadı.</Empty>;
   const color = lu.color || t.accent;
@@ -176,7 +176,7 @@ const POS: Record<string, string> = { G: 'Kaleci', D: 'Defans', M: 'Orta saha', 
 
 function Stats({ m }: { m: MatchData }) {
   const t = useTheme();
-  if (!m.stats.length) return <Empty>İstatistikler maç başladıktan sonra dolar.</Empty>;
+  if (!m.stats.length) return <Empty>{m.fixture.st === 'ns' ? 'İstatistikler maç başladıktan sonra dolar.' : 'Bu maç için istatistik yok. Veri sağlayıcımız alt lig ve bazı kupa maçlarında istatistik vermiyor.'}</Empty>;
   const bar = (value: number, total: number, alignEnd: boolean, color: string) => (
     <View style={{ flex: 1, height: 6, borderRadius: 4, backgroundColor: t.surface2, flexDirection: 'row', justifyContent: alignEnd ? 'flex-end' : 'flex-start' }}>
       <View style={{ width: `${(value / total) * 100}%`, borderRadius: 4, backgroundColor: color }} />
@@ -204,5 +204,7 @@ function Stats({ m }: { m: MatchData }) {
 function Table({ f }: { f: Fixture }) {
   const nav = useNav();
   const state = useApi<Standings>(`/api/standings/${f.lg}`);
-  return <Loader state={state}>{(d) => <StandingsTable data={d} highlight={[f.h.id, f.a.id]} onTeam={(r) => nav.navigate('Team', { team: r.team })} />}</Loader>;
+  return <Loader state={state}>{(d) => d.groups.length
+    ? <StandingsTable data={d} highlight={[f.h.id, f.a.id]} onTeam={(r) => nav.navigate('Team', { team: r.team })} />
+    : <Empty>Bu turnuvanın puan tablosu yok (eleme usulü oynanıyor).</Empty>}</Loader>;
 }
