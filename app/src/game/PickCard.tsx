@@ -60,18 +60,20 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [error, setError] = useState('');
   const touched = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => { if (!touched.current && saved) { setH(saved.h); setA(saved.a); } }, [saved?.h, saved?.a]);
-  useEffect(() => () => clearTimeout(timer.current), []);
 
   const started = hasStarted(f);
+  // Skor değişince yalnızca ekranda değişir; "Tahmini kaydet" ile onaylanınca kaydedilir.
   const change = (nh: number, na: number) => {
-    touched.current = true; setH(nh); setA(na); setState('saving'); setError('');
-    clearTimeout(timer.current);
-    timer.current = setTimeout(async () => {
-      try { await setPick(secret, f.id, nh, na, f.ts); setState('saved'); picks.reload(); friends.reload(); community.reload(); track('pick_saved', { source: 'match' }); notePickSaved(); }
-      catch (e) { setState('error'); setError((e as { message?: string }).message ?? 'Kaydedilemedi.'); }
-    }, 600);
+    touched.current = true; setH(nh); setA(na); setError('');
+    if (state !== 'saving') setState('idle');
+  };
+  // Kaydedildikten sonra liste yenilenene kadar da kaydedilmiş sayılır.
+  const dirty = state !== 'saved' && (!saved || saved.h !== h || saved.a !== a);
+  const confirm = async () => {
+    setState('saving'); setError('');
+    try { await setPick(secret, f.id, h, a, f.ts); setState('saved'); picks.reload(); friends.reload(); community.reload(); track('pick_saved', { source: 'match' }); notePickSaved(); }
+    catch (e) { setState('error'); setError((e as { message?: string }).message ?? 'Kaydedilemedi.'); }
   };
   const pred = saved ? { profile_id: '', match_id: f.id, h: saved.h, a: saved.a, updated_at: saved.updated_at } : null;
   const pts = pred ? points(pred, f, true) : null;
@@ -87,8 +89,13 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
             <Text style={{ fontSize: 22, color: t.muted }}>–</Text>
             <Stepper value={a} onChange={(n) => change(h, n)} label={f.a.name} dim={!saved && !touched.current} />
           </View>
+          {(dirty || state === 'saving') && (
+            <View style={{ alignSelf: 'stretch' }}>
+              <Button label={state === 'saving' ? 'Kaydediliyor…' : saved ? `Tahmini güncelle · ${h}–${a}` : `Tahmini kaydet · ${h}–${a}`} onPress={confirm} disabled={state === 'saving'} />
+            </View>
+          )}
           <Text style={{ fontSize: 12.5, color: state === 'error' ? t.live : t.muted, textAlign: 'center' }}>
-            {state === 'saving' ? 'Kaydediliyor…' : state === 'error' ? error : saved || state === 'saved' ? 'Kaydedildi · başlama düdüğüne kadar değiştirebilirsin' : 'Tam skor 3 puan, doğru sonuç 1 puan'}
+            {state === 'error' ? error : !dirty ? `✓ ${h}–${a} kaydedildi · başlama düdüğüne kadar değiştirebilirsin` : saved ? `Kayıtlı tahminin ${saved.h}–${saved.a}; değiştirmek için onayla` : 'Tam skor 3 puan, doğru sonuç 1 puan'}
           </Text>
           <FavoriteHint f={f} h={h} a={a} picked={!!saved || touched.current} crowd={community.data} />
           {pending > 0 && <Text style={{ fontSize: 12.5, color: t.muted }}>{pending} arkadaşın tahmin girdi; maç başlayınca görürsün.</Text>}
