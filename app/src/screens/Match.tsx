@@ -8,6 +8,7 @@ import { dayLabel } from '../dates';
 import { RootParams, useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
+import { FormCard, OddsCard } from '../game/Preview';
 import { Crest, Empty, Icon, LiveDot, Loader, RedCard, Note, Section, Seg, StandingsTable, statusText, Tabs, HAIR } from '../ui';
 import { PickCard } from '../game/PickCard';
 import { Screen } from './Screen';
@@ -94,7 +95,13 @@ function Summary({ m }: { m: MatchData }) {
   const { meta } = useStore();
   const f = m.fixture;
   if (!m.events.length) {
-    return <Empty>{f.st === 'ns' ? `Maç ${dayLabel(f.date, meta.today).toLocaleLowerCase('tr')} ${f.time}'de başlıyor.` : f.st === 'off' ? 'Bu maç oynanmadı.' : 'Henüz gol, kart ya da oyuncu değişikliği yok.'}</Empty>;
+    return (
+      <View>
+        {f.st === 'ns' && <OddsCard f={f} />}
+        <FormCard f={f} />
+        <Empty>{f.st === 'ns' ? `Maç ${dayLabel(f.date, meta.today).toLocaleLowerCase('tr')} ${f.time}'de başlıyor.` : f.st === 'off' ? 'Bu maç oynanmadı.' : 'Henüz gol, kart ya da oyuncu değişikliği yok.'}</Empty>
+      </View>
+    );
   }
   const icon = (e: MatchEvent) => e.k === 'goal' ? <Icon.ball color={t.fg} /> : e.k === 'y' ? <Icon.card color="#F5C518" /> : e.k === 'r' ? <Icon.card color="#E0262B" /> : e.k === 'sub' ? <Icon.sub /> : <Icon.ball color={t.muted} />;
   const body = (e: MatchEvent, align: 'left' | 'right') => (

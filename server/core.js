@@ -315,6 +315,14 @@ export function createCore({ provider, cacheDir, notify = null, onRefresh = null
     }));
   }
 
+  // Maç öncesi oranlar: yalnızca başlamamış maçlarda ve maça 14 günden az kala sorulur; 3 saat saklanır.
+  async function getOdds(id) {
+    if (!provider.odds) return { odds: null };
+    const f = (await getMatch(id)).fixture;
+    if (f.st !== 'ns' || f.ts * 1000 - Date.now() > 14 * DAY) return { odds: null };
+    return cached(`odds:${id}`, (d) => (d.odds ? 3 * HOUR : HOUR), async () => (spendGuard(), { updated: Date.now(), odds: await provider.odds(id) }));
+  }
+
   function getStandings(lg) {
     return cached(`std:${lg}`, tableTtl, async () => {
       spendGuard();
@@ -417,6 +425,7 @@ export function createCore({ provider, cacheDir, notify = null, onRefresh = null
     national: getNational,
     match: async (id, ctx) => { gateMatch(id, ctx); const { lineups, ...rest } = await getMatch(id); return rest; }, // ilk 11'ler ayrı uçtan gelir
     lineups: (id, ctx) => { gateMatch(id, ctx); return getLineups(id); },
+    odds: (id, ctx) => { gateMatch(id, ctx); return getOdds(id); },
     standings: getStandings,
     leagueFixtures: getLeagueFixtures,
     teams: getTeams,

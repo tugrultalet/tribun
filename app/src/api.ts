@@ -36,6 +36,8 @@ export type Match = { fixture: Fixture; venue: string | null; referee: string | 
 export type Lineups = { lineups: Lineup[] };
 export type Zone = 'cl' | 'el' | 'ecl' | 'rel';
 export type StandingRow = { rank: number; team: Team; pts: number; gd: number; p: number; w: number; d: number; l: number; gf: number; ga: number; form: string; zone: Zone | null };
+// Maç öncesi 1X2: ortalama oranlar ve ihtimaller (ev, beraberlik, deplasman).
+export type Odds = { odds: { odds: [number, number, number]; pct: [number, number, number]; books: number } | null };
 export type Standings = { league: number; season: number; current: boolean; groups: { name: string; rows: StandingRow[] }[] };
 export type LeagueFixtures = { league: number; limited: boolean; fixtures: Fixture[] };
 export type TeamData = { team: Team; league: number | null; limited: boolean; fixtures: Fixture[] };
