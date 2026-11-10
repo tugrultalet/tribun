@@ -23,7 +23,8 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
         "aps-environment": "production"
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -40,6 +41,7 @@
     },
     "plugins": [
       "expo-secure-store",
+      "expo-apple-authentication",
       "@react-native-firebase/app",
       "@react-native-firebase/analytics",
       "@react-native-firebase/crashlytics",

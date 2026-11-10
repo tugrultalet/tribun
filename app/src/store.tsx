@@ -9,9 +9,11 @@ import { legacyToCommon } from './ids';
 import { fbPushPermission, fbSubscribe } from './fb';
 import { pushTopics } from './version';
 import { rpc } from './social';
+import { signIn, type Provider } from './auth';
 
 // `me`: gruplar için kimlik. `secret` yalnızca bu cihazda durur; veritabanında özeti tutulur.
-type Me = { secret: string; name: string };
+// provider: profil Apple/Google hesabına bağlıysa (telefon değişince geri yüklenebilir).
+type Me = { secret: string; name: string; provider?: Provider };
 // `ids: 2`: numaralar API-Football'un ortak numaralarıdır (1. sürüm kayıtlarında Highlightly numaraları vardı ve
 // `provider` alanı tutuluyordu).
 // `v: 3`: takip modeli takım üzerinden kurulur (ana takım + her takım için turnuva seçimi); lig takibi yoktur.
@@ -83,10 +85,16 @@ type Store = Saved & {
   dismissNotice: () => void;
   restartOnboarding: () => void;
   setName: (name: string) => Promise<void>;
+  // Apple/Google ile giriş: profili hesaba bağlar ya da başka telefondaki profili geri yükler.
+  // 'new': bu hesapla hiç profil yok; takma ad sorulup `setName` çağrılınca hesaba bağlanır.
+  linkAccount: (provider: Provider) => Promise<'linked' | 'restored' | 'new'>;
+  setProvider: (provider: Provider | undefined) => void;
   // Hesabı ve sunucudaki tüm verileri siler (geri alınamaz); takip tercihleri telefonda kalır.
   deleteAccount: () => Promise<void>;
   reloadMeta: () => void;
 };
+// Girişten sonra takma ad beklenirken: aynı cihaz sırrı ve oturum anahtarı (yalnızca bellekte).
+let pending: { secret: string; provider: Provider; token: string } | null = null;
 const Ctx = createContext<Store | null>(null);
 export const useStore = () => useContext(Ctx)!;
 
@@ -173,8 +181,24 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
         const secret = saved.me?.secret ?? Crypto.randomUUID() + Crypto.randomUUID();
         const profile = await rpc<{ name: string }>('register', { p_secret: secret, p_name: name });
         await writeSecret(secret);
-        update((s) => ({ ...s, me: { secret, name: profile.name } }));
+        let provider = saved.me?.provider;
+        // Girişten sonra takma ad soruldaysa: yeni profil şimdi hesaba bağlanır.
+        if (pending && pending.secret === secret) {
+          await rpc('link_account', { p_secret: secret, p_provider: pending.provider }, pending.token).then(() => { provider = pending!.provider; }, () => {});
+          pending = null;
+        }
+        update((s) => ({ ...s, me: { secret, name: profile.name, provider } }));
       },
+      linkAccount: async (provider) => {
+        const token = await signIn(provider);
+        const secret = saved.me?.secret ?? Crypto.randomUUID() + Crypto.randomUUID();
+        const r = await rpc<{ status: 'linked' | 'restored' | 'new'; name?: string }>('link_account', { p_secret: secret, p_provider: provider }, token);
+        if (r.status === 'new') { pending = { secret, provider, token }; return 'new'; }
+        await writeSecret(secret);
+        update((s) => ({ ...s, me: { secret, name: r.name ?? s.me?.name ?? '', provider } }));
+        return r.status;
+      },
+      setProvider: (provider) => update((s) => (s.me ? { ...s, me: { ...s.me, provider } } : s)),
       deleteAccount: async () => {
         if (!saved.me) return;
         await rpc('delete_account', { p_secret: saved.me.secret });

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Image, PanResponder, Platform, Pressable, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, Animated, Image, PanResponder, Platform, Pressable, ScrollView, StyleProp, TextInput, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { ApiError, Fixture, Standings, Zone } from './api';
@@ -333,5 +333,15 @@ export function BackBar({ title, onBack, color, background }: { title?: string; 
       </Pressable>
       <Text numberOfLines={1} style={{ flex: 1, textAlign: 'center', marginRight: 36, fontWeight: '700', fontSize: 15, color: color || t.fg }}>{title}</Text>
     </View>
+  );
+}
+
+// Tek satırlık metin alanı (takma ad, grup adı, davet kodu).
+export function Field({ value, onChange, placeholder, maxLength, autoCapitalize }: { value: string; onChange: (v: string) => void; placeholder: string; maxLength: number; autoCapitalize?: 'characters' | 'sentences' }) {
+  const t = useTheme();
+  return (
+    <TextInput value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={t.muted} maxLength={maxLength} autoCorrect={false}
+      autoCapitalize={autoCapitalize ?? 'sentences'} accessibilityLabel={placeholder}
+      style={{ height: 46, borderRadius: 14, paddingHorizontal: 14, fontSize: 16, color: t.fg, backgroundColor: t.surface2 }} />
   );
 }

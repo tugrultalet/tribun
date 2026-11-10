@@ -11,15 +11,9 @@ import { track } from '../telemetry';
 import { MAX_SCOPE_LEAGUES } from '../groups/scope';
 import { Button, Card, Crest, Empty, GAP, Icon, Loader, Panel, Seg } from '../ui';
 import { Screen } from './Screen';
+import { RestoreBlock, SignInButtons, useCanSignIn } from './SignIn';
 
-export function Field({ value, onChange, placeholder, maxLength, autoCapitalize }: { value: string; onChange: (v: string) => void; placeholder: string; maxLength: number; autoCapitalize?: 'characters' | 'sentences' }) {
-  const t = useTheme();
-  return (
-    <TextInput value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={t.muted} maxLength={maxLength} autoCorrect={false}
-      autoCapitalize={autoCapitalize ?? 'sentences'} accessibilityLabel={placeholder}
-      style={{ height: 46, borderRadius: 14, paddingHorizontal: 14, fontSize: 16, color: t.fg, backgroundColor: t.surface2 }} />
-  );
-}
+import { Field } from '../ui';
 
 // Gruplar sekmesi: takma ad (ilk kez), gruplarım, grup kurma ve koda katılma.
 export default function Groups() {
@@ -48,6 +42,7 @@ function NameForm() {
         <Field value={name} onChange={setValue} placeholder="Takma adın" maxLength={30} />
         {error ? <Text style={{ color: t.live, fontSize: 13 }}>{error}</Text> : null}
         <Button label={busy ? 'Kaydediliyor…' : 'Devam'} disabled={busy || !name.trim()} onPress={submit} />
+        <RestoreBlock />
       </View>
     </Panel>
   );
@@ -58,6 +53,9 @@ function MyGroups({ secret }: { secret: string }) {
   const nav = useNav();
   const store = useStore();
   const state = useRpc<Group[]>('my_groups', { p_secret: secret }, 20000);
+  // Grup kurmak hesap ister (giriş bu cihazda kullanılabiliyorsa; web ve Expo Go'da istenmez).
+  const canSignIn = useCanSignIn();
+  const needsAccount = canSignIn && !store.me?.provider;
   const unreadRaw = useRpc<Record<string, number>>('unread_counts', { p_secret: secret }, 20000).data;
   const unread = unreadRaw && typeof unreadRaw === 'object' && !Array.isArray(unreadRaw) ? unreadRaw : {};
   // Davet bağlantısından gelen kod varsa katılma formu onunla açılır.
@@ -134,7 +132,14 @@ function MyGroups({ secret }: { secret: string }) {
         <View style={{ flex: 1 }}><Button kind={form === 'join' ? 'pri' : 'sec'} label="Kodla katıl" onPress={() => open('join')} /></View>
       </View>
 
-      {form === 'create' && (
+      {form === 'create' && needsAccount && (
+        <Card style={{ marginTop: GAP, padding: 16, gap: 12 }}>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: t.fg }}>Grup kurmak için hesabını bağla</Text>
+          <Text style={{ fontSize: 13, color: t.muted, lineHeight: 18 }}>Grubun ve üyelerin telefon değişse de kaybolmaz. Takma adın aynı kalır; e-posta ya da telefon numarası paylaşılmaz.</Text>
+          <SignInButtons />
+        </Card>
+      )}
+      {form === 'create' && !needsAccount && (
         <Card style={{ marginTop: GAP, padding: 16, gap: 12 }}>
           <Field value={name} onChange={setName} placeholder="Grup adı" maxLength={40} />
           <Text style={{ fontSize: 14, fontWeight: '600', color: t.fg }}>Bu grupta hangi maçları tahmin edeceksiniz?</Text>

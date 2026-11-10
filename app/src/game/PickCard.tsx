@@ -6,7 +6,7 @@ import { rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { Button, Panel } from '../ui';
-import { Field } from '../screens/Groups';
+import { Field } from '../ui';
 import { MatchPicks, setPick, useMyPicks } from './hooks';
 import { Stepper } from './Stepper';
 import { notePickSaved } from '../review';

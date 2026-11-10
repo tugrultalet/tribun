@@ -136,5 +136,6 @@ end $$;
 
 revoke all on function public._hash(text), public._profile_or_null(text), public._merge_profile(uuid, uuid) from public, anon, authenticated;
 revoke all on function public.link_account(text, text), public.account_info(text), public.set_hide_global(text, boolean) from public;
+revoke execute on function public.link_account(text, text) from anon;
 grant execute on function public.link_account(text, text) to authenticated;
 grant execute on function public.account_info(text), public.set_hide_global(text, boolean) to anon, authenticated;
