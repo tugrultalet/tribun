@@ -44,11 +44,12 @@ const TABS = [
 
 function TabsScreen() {
   const t = useTheme();
+  const startTab = useStore().startTab;
   const insets = useSafeAreaInsets();
   if (NativeTab) {
     // Yerel iOS sekme çubuğu. Başlığı ekranın kendisi çizer ki en üste otursun.
     return (
-      <NativeTab.Navigator screenOptions={{
+      <NativeTab.Navigator initialRouteName={startTab} screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: t.accent,
         tabBarMinimizeBehavior: 'onScrollDown',
@@ -62,7 +63,7 @@ function TabsScreen() {
   }
   // Web ve Android: yüzen, yarı saydam sekme çubuğu.
   return (
-    <Tab.Navigator screenOptions={{
+    <Tab.Navigator initialRouteName={startTab} screenOptions={{
       headerShown: false,
       tabBarActiveTintColor: t.accent,
       tabBarInactiveTintColor: t.muted,

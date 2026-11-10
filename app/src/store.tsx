@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { ApiError, Fixture, get, League, Meta, Team } from './api';
+import { ApiError, get, League, Meta, Team } from './api';
+import type { FollowedTeam } from './follow';
 import { toCommon } from './ids';
 import { rpc } from './social';
 
@@ -9,29 +10,43 @@ import { rpc } from './social';
 type Me = { secret: string; name: string };
 // `ids: 2`: numaralar API-Football'un ortak numaralarıdır (1. sürüm kayıtlarında Highlightly numaraları vardı ve
 // `provider` alanı tutuluyordu).
-type Saved = { teams: Team[]; leagues: number[]; onboarded: boolean; me?: Me; ids?: number; provider?: string };
-const EMPTY: Saved = { teams: [], leagues: [], onboarded: false };
+// `v: 3`: takip modeli takım üzerinden kurulur (ana takım + her takım için turnuva seçimi); lig takibi yoktur.
+// `leagues` yalnızca eski kayıtları okumak içindir. `droppedLeagues`: taşınan kullanıcıya bir kez gösterilen bilgi notu için
+// kaldırılan liglerin numaraları.
+type Saved = { teams: FollowedTeam[]; main?: number; onboarded: boolean; me?: Me; ids?: number; provider?: string; v?: number; leagues?: number[]; droppedLeagues?: number[] };
+const EMPTY: Saved = { teams: [], onboarded: false, v: 3 };
 const STORAGE_KEY = 'tribun:v1';
 
 // Eski kayıtları bir kereliğine ortak numaralara çevirir. Takip edilen ligler de temizlenir: eski sürümde ilk açılışta
 // takımların ligleri kendiliğinden eklenirdi ve ana ekran onları kullanmazdı; artık takip edilen lig tüm maçlarıyla
 // görünür, bu yüzden eski kayıtlar ana ekranı doldurmasın.
 function migrate(raw: Saved): Saved {
-  const s: Saved = { ...EMPTY, ...raw };
-  if (s.ids === 2) return s;
-  const convert = s.provider === 'apifootball' ? (id: number) => id : toCommon;
-  return { ...s, teams: s.teams.map((t) => ({ ...t, id: convert(t.id) })), leagues: [], ids: 2, provider: undefined };
+  let s: Saved = { ...EMPTY, ...raw };
+  if (s.ids !== 2) {
+    const convert = s.provider === 'apifootball' ? (id: number) => id : toCommon;
+    s = { ...s, teams: s.teams.map((t) => ({ ...t, id: convert(t.id) })), leagues: [], ids: 2, provider: undefined };
+  }
+  if (s.v !== 3) {
+    // Takip modeli sadeleşti: ilk takip edilen takım ana takım olur; takip edilen ligler kaybolur (çipe dönüşmez).
+    // Hiç takımı olmayan kullanıcı ilk açılışa döner, yoksa ana ekranı boş kalırdı.
+    const dropped = (s.leagues ?? []).filter((id) => id > 0);
+    s = { ...s, v: 3, main: s.main ?? s.teams[0]?.id, leagues: undefined, droppedLeagues: dropped.length ? dropped : undefined, onboarded: s.teams.length ? s.onboarded : false };
+  }
+  return s;
 }
 
 type Store = Saved & {
   meta: Meta;
   league: (id: number) => League | undefined;
+  mainTeam: FollowedTeam | undefined;
   followsTeam: (id: number) => boolean;
-  followsLeague: (id: number) => boolean;
-  followsMatch: (f: Fixture) => boolean;
-  toggleTeam: (team: Team) => void;
-  toggleLeague: (id: number) => void;
-  finishOnboarding: (teams: Team[], leagues: number[]) => void;
+  toggleTeam: (team: Team, kind?: 'club' | 'national') => void;
+  setMain: (id: number) => void;
+  setTeamSel: (id: number, sel: number[] | undefined) => void;
+  // Ana ekranın ilk açılacağı sekme (kalıcı değil): ilk açılışta "grup kur" seçilirse Gruplar.
+  startTab: 'Groups' | undefined;
+  finishOnboarding: (teams: FollowedTeam[], main: number | undefined, startTab?: 'Groups') => void;
+  dismissNotice: () => void;
   restartOnboarding: () => void;
   setName: (name: string) => Promise<void>;
   reloadMeta: () => void;
@@ -43,6 +58,7 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
   const [saved, setSaved] = useState<Saved | null>(null);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
+  const [startTab, setStartTab] = useState<'Groups' | undefined>(undefined);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
@@ -72,17 +88,26 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
   const store = useMemo<Store | null>(() => {
     if (!saved || !meta) return null;
     const teamIds = new Set(saved.teams.map((t) => t.id));
-    const leagueIds = new Set(saved.leagues);
     return {
       ...saved,
       meta,
       league: (id) => meta.leagues.find((l) => l.id === id),
+      mainTeam: saved.teams.find((t) => t.id === saved.main),
       followsTeam: (id) => teamIds.has(id),
-      followsLeague: (id) => leagueIds.has(id),
-      followsMatch: (f) => teamIds.has(f.h.id) || teamIds.has(f.a.id) || leagueIds.has(f.lg),
-      toggleTeam: (team) => update((s) => ({ ...s, teams: s.teams.some((t) => t.id === team.id) ? s.teams.filter((t) => t.id !== team.id) : [...s.teams, team] })),
-      toggleLeague: (id) => update((s) => ({ ...s, leagues: s.leagues.includes(id) ? s.leagues.filter((l) => l !== id) : [...s.leagues, id] })),
-      finishOnboarding: (teams, leagues) => update(() => ({ teams, leagues, onboarded: true })),
+      toggleTeam: (team, kind) => update((s) => {
+        if (s.teams.some((t) => t.id === team.id)) {
+          const teams = s.teams.filter((t) => t.id !== team.id);
+          // Ana takım takipten çıkarsa sıradaki takım ana takım olur.
+          return { ...s, teams, main: s.main === team.id ? teams[0]?.id : s.main };
+        }
+        const added: FollowedTeam = kind === 'national' ? { ...team, kind: 'national' } : team;
+        return { ...s, teams: [...s.teams, added], main: s.main ?? team.id };
+      }),
+      setMain: (id) => update((s) => ({ ...s, main: id })),
+      setTeamSel: (id, sel) => update((s) => ({ ...s, teams: s.teams.map((t) => (t.id === id ? { ...t, sel } : t)) })),
+      startTab,
+      finishOnboarding: (teams, main, tab) => { setStartTab(tab); update((s) => ({ ...s, teams, main: main ?? teams[0]?.id, onboarded: true })); },
+      dismissNotice: () => update((s) => ({ ...s, droppedLeagues: undefined })),
       restartOnboarding: () => update((s) => ({ ...s, onboarded: false })),
       setName: async (name) => {
         const secret = saved.me?.secret ?? Crypto.randomUUID() + Crypto.randomUUID();
@@ -91,7 +116,7 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
       },
       reloadMeta,
     };
-  }, [saved, meta, update, reloadMeta]);
+  }, [saved, meta, startTab, update, reloadMeta]);
 
   if (!store) return <>{fallback(error, reloadMeta)}</>;
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;

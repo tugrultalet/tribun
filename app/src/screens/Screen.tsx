@@ -12,7 +12,7 @@ const IOS = Platform.OS === 'ios';
 
 function useBackdropColors(team?: string, league?: number) {
   const store = useStore();
-  return gradientFor(team ?? store.teams[0]?.name, league ? store.league(league)?.key : undefined);
+  return gradientFor(team ?? store.mainTeam?.name, league ? store.league(league)?.key : undefined);
 }
 
 const TITLE_HEIGHT = 46;

@@ -38,25 +38,53 @@ test('takım ekranı takımın katıldığı tüm yarışmaları gösterir, kul�
   assert.deepEqual(team.fixtures.map((f) => f.lgName), ['Süper Lig', 'Turkey Cup']);
 });
 
-test('ana ekran takipteki takımların maçlarını ve takipteki turnuvaların yakın maçlarını birleştirir', async () => {
-  const teamMatch = fx({ h: FB, a: GS, offsetDays: 30 });
-  const cupSoon = fx({ lg: 2, lgName: 'Champions League', h: side(1, 'A'), a: side(2, 'B'), offsetDays: 4 });
-  const cupLater = fx({ lg: 2, lgName: 'Champions League', h: side(3, 'C'), a: side(4, 'D'), offsetDays: 40 });
-  const dup = { ...teamMatch };
-  const { core } = makeCore({ teamSeason: async () => [teamMatch], seasonFixtures: async (lg) => (lg === 2 ? [cupSoon, cupLater] : [dup]) });
-  const mine = await core.mine([611], [2, 203]);
+test('ana ekran takımların tüm maçlarını (tüm yarışmalarda) tek listede, tekrarsız verir; lig takibi yoktur', async () => {
+  const league = fx({ h: FB, a: GS, offsetDays: 30 });
+  const cup = fx({ lg: 2, lgName: 'Champions League', h: FB, a: side(2, 'B'), offsetDays: 4 });
+  const dupOfLeague = { ...league };
+  const { core, calls } = makeCore({ teamSeason: async (id) => (id === 611 ? [league, cup] : [dupOfLeague]) });
+  const mine = await core.mine([611, 645]);
   const ids = mine.fixtures.map((f) => f.id);
-  assert.ok(ids.includes(teamMatch.id), 'takım maçı (30 gün sonra bile) gelmeli');
-  assert.ok(ids.includes(cupSoon.id), 'takipteki turnuvanın yakın maçı gelmeli');
-  assert.ok(!ids.includes(cupLater.id), 'takipteki turnuvanın uzak maçı gelmemeli');
-  assert.equal(ids.filter((i) => i === teamMatch.id).length, 1, 'aynı maç bir kez görünmeli');
+  assert.ok(ids.includes(league.id) && ids.includes(cup.id), 'iki yarışmanın maçı da gelmeli');
+  assert.equal(ids.filter((i) => i === league.id).length, 1, 'aynı maç bir kez görünmeli');
+  assert.ok(!calls.some((c) => c[0] === 'season'), 'lig sezonu hiç sorulmamalı');
+  assert.deepEqual((await core.mine([])).fixtures, []);
 });
 
-test('yalnızca turnuva takip edilirken de çalışır', async () => {
-  const m = fx({ lg: 1, lgName: 'World Cup', h: TR, a: DE, offsetDays: 3 });
-  const { core } = makeCore({ seasonFixtures: async () => [m] });
-  assert.equal((await core.mine([], [1])).fixtures.length, 1);
-  assert.deepEqual((await core.mine([], [])).fixtures, []);
+test('takım fikstürü günde bir kez, ortak önbellekten gelir (ikinci istek kaynağa gitmez)', async () => {
+  let n = 0;
+  const { core } = makeCore({ teamSeason: async () => { n++; return [fx({ h: FB, a: GS })]; } });
+  await core.mine([611]); await core.mine([611]); await core.team(611);
+  assert.equal(n, 1);
+});
+
+test('tüm ligler günü: gün listesi tek çağrıyla gelir, katalog dışı ligler ve kulüp hazırlıkları elenir', async () => {
+  const today = dayFmt.format(Date.now());
+  const inCatalog = fx({ lg: 203, h: FB, a: GS, offsetDays: 0 });
+  const outside = fx({ lg: -5, lgName: 'Bilinmeyen Lig', h: side(8, 'X'), a: side(9, 'Y'), offsetDays: 0 });
+  const club = fx({ lg: 203, lgName: 'Friendlies Clubs', h: side(6, 'P'), a: side(7, 'Q'), offsetDays: 0 });
+  let dayCalls = 0;
+  const { core, calls } = makeCore({ day: async () => { dayCalls++; return [inCatalog, outside, club]; } });
+  const r = await core.day(today, [...core.leagueIds], []);
+  assert.deepEqual(r.fixtures.map((f) => f.id), [inCatalog.id]);
+  await core.day(today, [...core.leagueIds], []);
+  assert.equal(dayCalls, 1, 'ikinci istek önbellekten');
+  assert.equal(calls.length, 0, 'lig sezonları sorulmamalı');
+});
+
+test('gün listesi alınamazsa lig lig yola düşülür', async () => {
+  const today = dayFmt.format(Date.now());
+  const m = fx({ lg: 203, h: FB, a: GS, offsetDays: 0 });
+  const { core } = makeCore({ day: async () => { throw new Error('desteklenmiyor'); }, seasonFixtures: async (lg) => (lg === 203 ? [m] : []) });
+  assert.deepEqual((await core.day(today, [...core.leagueIds], [])).fixtures.map((f) => f.id), [m.id]);
+});
+
+test('canlı yenileme yalnızca son 24 saatte istenen takımlar için yapılır', async () => {
+  const live = fx({ h: FB, a: GS, st: 'live', ts: Math.floor(Date.now() / 1000) - 600 });
+  let refreshed = 0;
+  const { core } = makeCore({ teamSeason: async () => [live], refresh: async (list) => { refreshed++; return list.map((f) => ({ ...f, st: 'ft' })); } });
+  await core.mine([611]);
+  assert.equal(refreshed, 1, 'istenen takım için yenilenir');
 });
 
 test('milli takım turnuvasının sezonu kaynağa sorulur, lig sezonu takvimden bulunur', async () => {

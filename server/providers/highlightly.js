@@ -152,6 +152,10 @@ export function createHighlightly({ key, baseUrl, fetchImpl = fetch } = {}) {
     async seasonFixtures(lg, season) {
       return (await apiAll(`matches?leagueId=${fromCommon(lg)}&season=${season}`)).map(fx);
     },
+    // Bir günün tüm maçları (sayfa sayfa; katalogdaki liglere çekirdek süzer). Lig başına sezon çekmekten çok daha ucuzdur.
+    async day(date) {
+      return (await apiAll(`matches?date=${date}&timezone=${TZ}`)).map(fx);
+    },
     // Başlamış ya da başlamak üzere olan maçların güncel hali. Lig ve güne göre gruplanır.
     async refresh(fixtures) {
       const groups = [...new Set(fixtures.map((f) => `${fromCommon(f.lg)}|${f.date}`))];

@@ -9,6 +9,9 @@ import { Crest, Empty, Icon, Loader, Note, Seg } from '../ui';
 import { SearchBox } from './Leagues';
 import { Screen } from './Screen';
 
+// `kind`: kulüp ya da milli takım; `country`: kulüp seçilirken içinde bulunulan ligin ülkesi (milli takım önerisi için).
+export type Toggle = (team: Team, kind: 'club' | 'national', country?: string) => void;
+
 // Takım kutuları ızgarası.
 function Cells({ teams, selected, onToggle }: { teams: Team[]; selected: (id: number) => boolean; onToggle: (team: Team) => void }) {
   const t = useTheme();
@@ -32,7 +35,7 @@ function Cells({ teams, selected, onToggle }: { teams: Team[]; selected: (id: nu
 }
 
 // Kulüpler: lig seçip o ligin takımlarını gösterir.
-function Clubs({ selected, onToggle }: { selected: (id: number) => boolean; onToggle: (team: Team) => void }) {
+function Clubs({ selected, onToggle }: { selected: (id: number) => boolean; onToggle: Toggle }) {
   const t = useTheme();
   const { meta } = useStore();
   const leagues = meta.leagues.filter((l) => l.type === 'main');
@@ -60,7 +63,7 @@ function Clubs({ selected, onToggle }: { selected: (id: number) => boolean; onTo
           return (
             <>
               {!d.current && <Note>Ücretsiz API planı güncel sezonun takım listesini vermiyor; {seasonLabel(d.season)} listesi gösteriliyor. Listede olmayan bir takımı maç sayfasından takip edebilirsin.</Note>}
-              <Cells teams={teams} selected={selected} onToggle={onToggle} />
+              <Cells teams={teams} selected={selected} onToggle={(tm) => onToggle(tm, 'club', leagues.find((l) => l.id === leagueId)?.country)} />
               {!teams.length && <Empty>Eşleşen takım yok.</Empty>}
             </>
           );
@@ -73,7 +76,7 @@ function Clubs({ selected, onToggle }: { selected: (id: number) => boolean; onTo
 const NATIONAL_PREVIEW = 60;
 
 // Milli takımlar: tek liste, arama kutusuyla. Aramadan önce ilk takımlar (Türkiye başta) gösterilir.
-function NationalTeams({ selected, onToggle }: { selected: (id: number) => boolean; onToggle: (team: Team) => void }) {
+export function NationalTeams({ selected, onToggle }: { selected: (id: number) => boolean; onToggle: Toggle }) {
   const [q, setQ] = useState('');
   const state = useApi<National>('/api/national');
   const needle = q.trim().toLocaleLowerCase('tr');
@@ -86,7 +89,7 @@ function NationalTeams({ selected, onToggle }: { selected: (id: number) => boole
           const teams = needle ? all : all.slice(0, NATIONAL_PREVIEW);
           return (
             <>
-              <Cells teams={teams} selected={selected} onToggle={onToggle} />
+              <Cells teams={teams} selected={selected} onToggle={(tm) => onToggle(tm, 'national')} />
               {!needle && all.length > NATIONAL_PREVIEW && <Note>Listede {all.length} milli takım var. Diğerlerini bulmak için yukarıya adını yaz.</Note>}
               {!teams.length && <Empty>Eşleşen milli takım yok.</Empty>}
             </>
@@ -98,7 +101,7 @@ function NationalTeams({ selected, onToggle }: { selected: (id: number) => boole
 }
 
 // Kulüp ya da milli takım seçimi. İlk açılışta ve "Takım ekle"de kullanılır.
-export function TeamGrid({ selected, onToggle }: { selected: (id: number) => boolean; onToggle: (team: Team) => void }) {
+export function TeamGrid({ selected, onToggle }: { selected: (id: number) => boolean; onToggle: Toggle }) {
   const [kind, setKind] = useState<'club' | 'national'>('club');
   return (
     <View>
@@ -114,7 +117,7 @@ export default function Picker() {
   const store = useStore();
   return (
     <Screen bottomInset title="Takım ekle" right={Platform.OS === 'ios' ? <Pressable onPress={nav.goBack} hitSlop={8} accessibilityRole="button"><Text style={{ fontSize: 17, fontWeight: '600', color: t.accent }}>Bitti</Text></Pressable> : undefined}>
-      <TeamGrid selected={store.followsTeam} onToggle={(team) => store.toggleTeam(team)} />
+      <TeamGrid selected={store.followsTeam} onToggle={(team, kind) => store.toggleTeam(team, kind)} />
     </Screen>
   );
 }
