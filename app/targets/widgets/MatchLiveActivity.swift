@@ -61,12 +61,20 @@ struct MatchLiveActivity: Widget {
   }
 }
 
+// Dakika: canlıyken iOS'un kendi sayacıyla (uygulama kapalıyken ve sunucu güncellemesi gelmeden de akar), "67:12" biçiminde.
+// Sayaç maçın 0. dakikası sayılan andan (clock) başlar. Saat bilgisi yoksa sunucunun yazısı ("67'") gösterilir.
 struct StatusLabel: View {
   let state: MatchActivityAttributes.ContentState
   var body: some View {
     HStack(spacing: 5) {
       if state.status == "live" { Circle().fill(tribunLive).frame(width: 7, height: 7) }
-      Text(state.minute).font(.subheadline.weight(.bold)).foregroundStyle(state.status == "live" ? tribunLive : Color.white.opacity(0.85)).monospacedDigit()
+      if state.status == "live", let clock = state.clock {
+        Text(timerInterval: Date(timeIntervalSince1970: clock)...Date(timeIntervalSince1970: clock + 3 * 3600), countsDown: false, showsHours: false)
+          .font(.subheadline.weight(.bold)).foregroundStyle(tribunLive).monospacedDigit()
+          .multilineTextAlignment(.trailing).frame(maxWidth: 64, alignment: .trailing)
+      } else {
+        Text(state.minute).font(.subheadline.weight(.bold)).foregroundStyle(state.status == "live" ? tribunLive : Color.white.opacity(0.85)).monospacedDigit()
+      }
     }
   }
 }
