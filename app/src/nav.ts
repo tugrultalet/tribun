@@ -13,5 +13,6 @@ export type RootParams = {
   Group: { id: string };
   Chat: { id: string; name: string };
 };
-export type TabParams = { Home: undefined; Groups: undefined; Leagues: undefined; Settings: undefined };
+// Groups.code: davet bağlantısından (tribun://join/KOD) gelen kod; katılma formu bununla açılır.
+export type TabParams = { Home: undefined; Groups: { code?: string } | undefined; Leagues: undefined; Settings: undefined };
 export const useNav = () => useNavigation<NativeStackNavigationProp<RootParams>>();

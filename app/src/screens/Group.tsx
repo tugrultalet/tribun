@@ -10,6 +10,7 @@ import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { shortName } from '../names';
 import { Button, Card, Crest, Empty, Icon, Loader, Panel, Seg, Tabs } from '../ui';
+import { InviteSheet } from './InviteSheet';
 import { Screen } from './Screen';
 
 // Grup sayfası: davet, sohbete giriş, haftanın maçlarına tahmin ve grup puan tablosu (hafta / sezon).
@@ -20,11 +21,11 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
   const secret = store.me?.secret ?? '';
   const id = route.params.id;
   const [tab, setTab] = useState<'predict' | 'table'>('predict');
+  const [inviting, setInviting] = useState(false);
   const state = useRpc<GroupDetail>('group_detail', secret ? { p_secret: secret, p_group: id } : null, 15000);
   const group = state.data?.group;
   const fixtures = useApi<TeamData>(group ? `/api/team/${group.team.id}` : null, 60000);
 
-  const invite = () => group && Share.share({ message: `Tribün'de "${group.name}" grubuna katıl. Davet kodu: ${group.code}` }).catch(() => {});
   const leave = () => {
     const go = () => rpc('leave_group', { p_secret: secret, p_group: id }).then(() => nav.goBack(), () => {});
     if (Platform.OS === 'web') return void go();
@@ -43,7 +44,7 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <View style={{ flex: 1 }}><Button label="Sohbet" onPress={() => nav.navigate('Chat', { id, name: d.group.name })} /></View>
-              <View style={{ flex: 1 }}><Button kind="sec" label="Davet et" onPress={invite} /></View>
+              <View style={{ flex: 1 }}><Button kind="sec" label="Davet et" onPress={() => setInviting(true)} /></View>
             </View>
             {d.group.last_message && (
               <Pressable onPress={() => nav.navigate('Chat', { id, name: d.group.name })} accessibilityRole="button">
@@ -58,6 +59,7 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
                 ? <Predict detail={d} fixtures={team.fixtures} today={store.meta.today} secret={secret} onSaved={state.reload} />
                 : <Table detail={d} fixtures={team.fixtures} today={store.meta.today} />}
             </Loader>
+            {inviting && <InviteSheet group={d.group} onClose={() => setInviting(false)} />}
             <Pressable onPress={leave} accessibilityRole="button" style={{ alignSelf: 'center', padding: 14, marginTop: 10 }}>
               <Text style={{ color: t.live, fontSize: 14, fontWeight: '600' }}>Gruptan çık</Text>
             </Pressable>

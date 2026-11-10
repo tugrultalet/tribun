@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { RouteProp, useRoute } from '@react-navigation/native';
 import { ApiError, Team } from '../api';
-import { useNav } from '../nav';
+import { cleanCode } from '../invite';
+import { TabParams, useNav } from '../nav';
 import { Group, rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
@@ -54,9 +56,13 @@ function MyGroups({ secret }: { secret: string }) {
   const nav = useNav();
   const store = useStore();
   const state = useRpc<Group[]>('my_groups', { p_secret: secret }, 20000);
-  const [form, setForm] = useState<'none' | 'create' | 'join'>('none');
+  // Davet bağlantısından gelen kod varsa katılma formu onunla açılır.
+  const linked = cleanCode(useRoute<RouteProp<TabParams, 'Groups'>>().params?.code);
+  const [form, setForm] = useState<'none' | 'create' | 'join'>(linked ? 'join' : 'none');
   const [name, setName] = useState('');
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(linked);
+  // Uygulama açıkken bağlantıya dokunulursa (sıcak açılış) form yine kodla açılır.
+  useEffect(() => { if (linked) { setForm('join'); setCode(linked); } }, [linked]);
   const [team, setTeam] = useState<Team | undefined>(store.teams[0]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -66,6 +72,7 @@ function MyGroups({ secret }: { secret: string }) {
     try {
       const group = await call();
       setForm('none'); setName(''); setCode('');
+      nav.setParams({ code: undefined } as never);
       state.reload();
       nav.navigate('Group', { id: group.id });
     } catch (e) { setError((e as ApiError).message); } finally { setBusy(false); }
