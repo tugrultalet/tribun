@@ -16,12 +16,13 @@ export type GroupDetail = Detail & { group: Group };
 export type Message = { id: number; profile_id: string; name: string; body: string; created_at: string };
 
 // Veritabanındaki izinli fonksiyonlardan birini çağırır (bkz. supabase/migrations).
-export async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T> {
+// `token`: giriş yapılmış kullanıcının oturum anahtarı (yalnızca hesap bağlama için).
+export async function rpc<T>(fn: string, args: Record<string, unknown>, token?: string): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
       method: 'POST',
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token ?? SUPABASE_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(args),
     });
   } catch {

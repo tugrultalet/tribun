@@ -7,6 +7,7 @@ import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { Card, Crest, Empty, HAIR, Icon, Section } from '../ui';
 import { Screen } from './Screen';
+import { KeepAccountCard, RestoreBlock } from './SignIn';
 
 // Profil: özet (sezon puanı, isabet, seri, rozetler), Tahminlerim ve Takımlarım. Ayarlar sağ üstteki dişliden açılır.
 export default function Profile() {
@@ -22,6 +23,8 @@ export default function Profile() {
   return (
     <Screen tab title={store.me?.name ?? 'Profil'} right={gear} onRefresh={picks.reload}>
       {store.me ? <SummaryCard picks={picks.data ?? []} /> : <Empty>Tahmin yapmak ve puan toplamak için Gruplar sekmesinden bir takma ad seç.</Empty>}
+      {store.me && !store.me.provider && <KeepAccountCard />}
+      {!store.me && <RestoreBlock />}
       {store.me && <PicksList picks={picks.data ?? []} />}
       <Section eyebrow="Takımlarım" right={
         <Pressable onPress={() => nav.navigate('MyTeams')} accessibilityRole="button" hitSlop={8}><Text style={{ color: t.accent, fontWeight: '600', fontSize: 14 }}>Düzenle</Text></Pressable>
