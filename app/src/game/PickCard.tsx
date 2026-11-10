@@ -14,6 +14,7 @@ import { possessive } from './turkish';
 import { AskFriends } from './AskFriends';
 import { notePickSaved } from '../review';
 import { track } from '../telemetry';
+import { useNav } from '../nav';
 
 // Maç sayfasındaki tahmin kartı: her maça tahmin girilebilir (takip edilen takım şartı yok). Başlamadan önce +/− ile girilir ve
 // otomatik kaydedilir; maç başlayınca kilitlenir, arkadaşların tahminleri açılır ve puan gösterilir.
@@ -100,6 +101,7 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
               </Pressable>
             </View>
             {saved && <AskFriends f={f} secret={secret} pick={{ h: saved.h, a: saved.a }} />}
+            {saved && <LinkHint />}
             <CommunityLine f={f} data={community.data} />
           </View>
         </Panel>
@@ -233,6 +235,36 @@ function FavoriteHint({ f, h, a, picked, crowd }: { f: Fixture; h: number; a: nu
         {surprise ? ' Tutarsa sürpriz bonusu ' : ''}
       </Text>
       {surprise && <View style={{ backgroundColor: '#FFA53D', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}><Text style={{ fontSize: 11.5, fontWeight: '800', color: '#0B1030' }}>+2</Text></View>}
+    </View>
+  );
+}
+
+// İlk tahminden sonra, hesabı bağlı değilse: "Puanların kaybolmasın" önerisi. Hesap ekranına götürür; "Şimdi değil" ile
+// kalıcı olarak kapanır (Profil'deki hesap kartı yine durur).
+function LinkHint() {
+  const t = useTheme();
+  const store = useStore();
+  const nav = useNav();
+  if (!store.me || store.me.provider || store.linkHintOff) return null;
+  return (
+    <View style={{ borderRadius: 14, padding: 12, gap: 10, backgroundColor: t.accentSoft, borderWidth: 1, borderColor: t.line }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <Text style={{ fontSize: 22 }}>🔒</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 14.5, fontWeight: '700', color: t.fg }}>Puanların kaybolmasın</Text>
+          <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 17 }}>Hesabını bağla; telefon değişse de tahminlerin ve grupların seninle gelsin.</Text>
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Pressable onPress={() => { track('link_hint', { action: 'open' }); nav.navigate('Account'); }} accessibilityRole="button"
+          style={({ pressed }) => ({ flex: 2, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: t.accent, opacity: pressed ? 0.8 : 1 })}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: t.accentInk }}>Hesabını bağla</Text>
+        </Pressable>
+        <Pressable onPress={() => { track('link_hint', { action: 'dismiss' }); store.dismissLinkHint(); }} accessibilityRole="button"
+          style={({ pressed }) => ({ flex: 1, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: pressed ? t.line : t.surface2 })}>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: t.fg }}>Şimdi değil</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
