@@ -1,14 +1,29 @@
 <!-- Supabase → Authentication → Emails → Templates: "Magic link or OTP" ve "Confirm sign up" şablonlarının ikisine de.
-     Konu: Tribün'e giriş bağlantın
-     Asıl yol düğme: telefonda uygulamayı açar, giriş kendiliğinden tamamlanır. Kod yalnızca bilgisayarda açanlar için. -->
-<div style="margin:0;padding:32px 16px;background:#E9E7F7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
-  <div style="max-width:440px;margin:0 auto;background:#121A44;border-radius:24px;padding:34px 28px;color:#ffffff;text-align:center">
-    <div style="font-size:15px;font-weight:700;letter-spacing:.5px;color:#9DB1FF">TRİBÜN</div>
-    <h1 style="margin:14px 0 8px;font-size:23px;line-height:1.3;color:#ffffff">Girişe bir dokunuş kaldı</h1>
-    <p style="margin:0 0 24px;font-size:14px;line-height:1.5;color:#A7ABC8">Bu e-postayı telefonunda aç ve düğmeye dokun.</p>
-    <a href="https://tribunapp.io/giris?h={{ .TokenHash }}" style="display:inline-block;padding:16px 30px;border-radius:14px;background:#9DB1FF;color:#0B1030;font-size:17px;font-weight:700;text-decoration:none">Tribün'e giriş yap</a>
-    <p style="margin:28px 0 6px;font-size:12px;line-height:1.5;color:#7F84A8">Bilgisayardan mı açtın? Uygulamada "Kodla giriş yap"a dokunup bu kodu yaz:</p>
-    <div style="font-size:20px;font-weight:700;letter-spacing:5px;color:#C9CDEB">{{ .Token }}</div>
-    <p style="margin:22px 0 0;font-size:12px;line-height:1.5;color:#7F84A8">Bağlantı 1 saat geçerli. Bu e-postayı sen istemediysen görmezden gelebilirsin.</p>
-  </div>
-</div>
+     Konu: Tribün'e giriş yap
+     E-posta istemcileri (Gmail, Outlook, Spark…) div arka planlarını çoğu zaman siler; bu yüzden tablo düzeni, hücre
+     renkleri (bgcolor) ve açık zemin üzerinde koyu yazı kullanılır: renkler silinse de her şey okunur kalır. -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F1F0FA" style="background:#F1F0FA;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFFFFF" style="max-width:440px;background:#FFFFFF;border-radius:20px;">
+        <tr>
+          <td align="center" style="padding:34px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <div style="font-size:14px;font-weight:700;letter-spacing:1px;color:#18237A;">TRİBÜN</div>
+            <h1 style="margin:14px 0 8px;font-size:23px;line-height:1.3;color:#0B1030;">Girişe bir dokunuş kaldı</h1>
+            <p style="margin:0 0 24px;font-size:15px;line-height:1.5;color:#4A4F70;">Bu e-postayı telefonunda aç ve düğmeye dokun.</p>
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+              <tr>
+                <td align="center" bgcolor="#9DB1FF" style="border-radius:14px;background:#9DB1FF;">
+                  <a href="https://tribunapp.io/giris?h={{ .TokenHash }}" style="display:inline-block;padding:15px 30px;font-size:17px;font-weight:700;color:#0B1030;text-decoration:none;border-radius:14px;border:2px solid #18237A;">Tribün'e giriş yap</a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:28px 0 6px;font-size:12px;line-height:1.5;color:#6B7090;">Bilgisayardan mı açtın? Uygulamada "Kodla giriş yap"a dokunup bu kodu yaz:</p>
+            <div style="font-size:20px;font-weight:700;letter-spacing:4px;color:#0B1030;">{{ .Token }}</div>
+            <p style="margin:22px 0 0;font-size:12px;line-height:1.5;color:#6B7090;">Bağlantı 1 saat geçerli. Bu e-postayı sen istemediysen görmezden gelebilirsin.</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
