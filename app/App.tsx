@@ -2,7 +2,7 @@ import React from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { StatusBar } from 'expo-status-bar';
-import { DarkTheme, NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, LinkingOptions, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/unstable';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -25,6 +25,8 @@ import Picker from './src/screens/Picker';
 import Settings from './src/screens/Settings';
 import Team from './src/screens/Team';
 
+// Davet bağlantısı: tribun://join/ABC234 → Gruplar sekmesi, katılma formu kodla dolu.
+const LINKING: LinkingOptions<RootParams> = { prefixes: ['tribun://'], config: { screens: { Tabs: { screens: { Groups: 'join/:code' } } } } };
 const Stack = createNativeStackNavigator<RootParams>();
 const Tab = createBottomTabNavigator<TabParams>();
 const IOS = Platform.OS === 'ios';
@@ -139,7 +141,7 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       <StoreProvider fallback={(error, retry) => <Splash error={error} retry={retry} />}>
-        <NavigationContainer theme={navTheme}><Root /></NavigationContainer>
+        <NavigationContainer theme={navTheme} linking={Platform.OS === 'web' ? undefined : LINKING}><Root /></NavigationContainer>
       </StoreProvider>
     </SafeAreaProvider>
   );

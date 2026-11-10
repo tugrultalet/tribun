@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fail, today } from './lib/common.js';
 import { createCore } from './core.js';
+import { invitePage, validCode } from './lib/invite.js';
 import { createApiFootball } from './providers/apifootball.js';
 import { createHighlightly } from './providers/highlightly.js';
 
@@ -84,6 +85,12 @@ const server = http.createServer(async (req, res) => {
   if (req.method !== 'GET') return send(405, { error: { kind: 'bad', message: 'Yalnızca GET.' } });
   const url = new URL(req.url, 'http://x');
   if (url.pathname === '/') return send(200, { name: 'Tribün API', ok: true, provider: provider.id });
+  // Davet bağlantısı: /j/ABC123?n=Grup+adı  (WhatsApp'tan gelen kişi için karşılama sayfası)
+  const invite = /^\/j\/([A-Za-z0-9]{6})$/.exec(url.pathname);
+  if (invite && validCode(invite[1])) {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300', 'x-content-type-options': 'nosniff' });
+    return res.end(invitePage({ code: invite[1], name: url.searchParams.get('n'), storeUrl: process.env.APP_STORE_URL }));
+  }
   for (const [re, handler] of routes) {
     const m = re.exec(url.pathname);
     if (!m) continue;
