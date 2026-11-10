@@ -8,54 +8,10 @@ import { track } from '../telemetry';
 import { useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { Card, Crest, Icon, Section, HAIR } from '../ui';
+import { Card, Crest, Icon, Section, SwipeRow, HAIR } from '../ui';
 import { Screen } from './Screen';
-import { SignInButtons } from './SignIn';
 import { liveSupported } from '../live';
 import { providerName } from '../auth';
-import { rpc, useRpc } from '../social';
-
-type Account = { name: string; provider: 'apple' | 'google' | null; hide_global: boolean };
-
-// Hesap: takma ad, bağlı giriş yöntemi ve tek gizlilik ayarı ("Genel sıralamada görünme").
-function AccountSection({ secret }: { secret: string }) {
-  const t = useTheme();
-  const store = useStore();
-  const info = useRpc<Account>('account_info', { p_secret: secret });
-  const [hide, setHide] = React.useState<boolean | undefined>(undefined);
-  const provider = info.data?.provider ?? undefined;
-  React.useEffect(() => {
-    if (info.data && provider !== store.me?.provider) store.setProvider(provider);
-  }, [info.data]);
-  const hidden = hide ?? info.data?.hide_global ?? false;
-  const toggle = (v: boolean) => {
-    setHide(v);
-    rpc('set_hide_global', { p_secret: secret, p_hide: v }).catch(() => setHide(!v));
-  };
-  const line = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, paddingVertical: 12, paddingHorizontal: 14 };
-  return (
-    <Section eyebrow="Hesap">
-      <Card>
-        <View style={line}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, color: t.fg }}>{store.me?.name}</Text>
-            <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2 }}>
-              {provider ? `${providerName(provider)} hesabına bağlı · telefon değişince geri yüklenir` : 'Hesap bağlı değil · veriler yalnızca bu telefonda'}
-            </Text>
-          </View>
-        </View>
-        {!provider && <View style={{ paddingHorizontal: 14, paddingBottom: 14 }}><SignInButtons onDone={info.reload} /></View>}
-        <View style={[line, { borderTopWidth: HAIR, borderColor: t.line }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, color: t.fg }}>Genel sıralamada görünme</Text>
-            <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 18 }}>Türkiye sıralamasında adın yer almaz; grupların seni görmeye devam eder.</Text>
-          </View>
-          <Switch value={hidden} disabled={!info.data} onValueChange={toggle} accessibilityLabel="Genel sıralamada görünme" />
-        </View>
-      </Card>
-    </Section>
-  );
-}
 
 export default function Settings() {
   const t = useTheme();
@@ -73,20 +29,27 @@ export default function Settings() {
       {onPress && <Icon.chevron color={t.fg} />}
     </Pressable>
   );
-  // Hesap silme: geri alınamaz olduğu için onay istenir.
-  const confirmDelete = () => {
-    const go = () => store.deleteAccount().then(() => track('account_deleted'), (e) => Alert.alert('Silinemedi', (e as Error).message));
-    if (Platform.OS === 'web') { if (globalThis.confirm?.('Hesabın ve tüm verilerin kalıcı olarak silinsin mi?')) go(); return; }
-    Alert.alert('Hesabımı sil', 'Takma adın, grup üyeliklerin, mesajların ve tahminlerin kalıcı olarak silinir. Kurduğun gruplar başka üye varsa ona devredilir. Bu işlem geri alınamaz.', [
-      { text: 'Vazgeç', style: 'cancel' },
-      { text: 'Sil', style: 'destructive', onPress: go },
-    ]);
-  };
   const refresh = meta.liveTtl >= 60 ? `${Math.round(meta.liveTtl / 60)} dakikada bir` : `${meta.liveTtl} saniyede bir`;
   const quota = meta.error ? meta.error : `${meta.plan ?? '–'} plan · bugün ${meta.used ?? '–'} / ${meta.limitDay ?? '–'} istek kullanıldı`;
   return (
     <Screen title="Ayarlar">
-      {store.me && <AccountSection secret={store.me.secret} />}
+      <Section eyebrow="Hesap">
+        <Card>
+          <Pressable onPress={() => nav.navigate('Account')} accessibilityRole="button"
+            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+            <View style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: t.accentSoft }}>
+              <Text style={{ fontSize: 17, fontWeight: '800', color: t.fg }}>{(store.me?.name ?? '?').slice(0, 1).toLocaleUpperCase('tr')}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: t.fg }}>{store.me?.name ?? 'Hesap oluştur'}</Text>
+              <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2 }}>
+                {!store.me ? 'Takma ad seç ya da önceki hesabınla gir' : store.me.provider ? `${providerName(store.me.provider)} hesabına bağlı` : 'Hesap bağlı değil · veriler yalnızca bu telefonda'}
+              </Text>
+            </View>
+            <Icon.chevron color={t.fg} />
+          </Pressable>
+        </Card>
+      </Section>
       <Section eyebrow="Bildirimler">
         <Card>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14 }}>
@@ -115,7 +78,6 @@ export default function Settings() {
         <Card>
           {row('Geri bildirim gönder', 'Hata ya da öneri; e-posta gerekmez', true, () => nav.navigate('Feedback'))}
           {row('Gizlilik ve KVKK', 'Hangi verileri neden işlediğimiz', false, () => Linking.openURL(`${PUBLIC_URL}/gizlilik`).catch(() => {}))}
-          {store.me ? row('Hesabımı sil', `Takma ad (${store.me.name}), gruplar, mesajlar ve tahminler kalıcı olarak silinir`, false, confirmDelete) : null}
           {row('Sürüm', APP_VERSION)}
         </Card>
       </Section>
@@ -130,32 +92,53 @@ export default function Settings() {
   );
 }
 
-// Kilit ekranında canlı skor: takip edilen her takım için ayrı anahtar (varsayılan açık). Açık takımların maçı başlarken
-// (ya da 30 dk kala) uygulama açıldığında kilit ekranı ve Dynamic Island kartı kendiliğinden açılır.
+// Kilit ekranında canlı skor: listedeki takımların maçı başlarken (ya da 30 dk kala) uygulama açıldığında kilit ekranı ve
+// Dynamic Island kartı kendiliğinden açılır. Takip edilen her takım listede başlar; sola kaydırınca listeden çıkar.
+// Çıkarılanlar "+ Takım ekle" ile geri eklenir.
 function LockScreenTeams() {
   const t = useTheme();
   const nav = useNav();
   const store = useStore();
+  const [adding, setAdding] = React.useState(false);
   const supported = liveSupported();
   const ordered = [...store.teams].sort((a, b) => Number(b.id === store.main) - Number(a.id === store.main));
+  const on = ordered.filter((x) => store.liveFor(x.id));
+  const off = ordered.filter((x) => !store.liveFor(x.id));
   return (
     <Section eyebrow="Kilit ekranında canlı skor">
       <Card>
         <Text style={{ fontSize: 12.5, color: t.muted, lineHeight: 18, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6 }}>
           {supported
-            ? "Açık olan takımların maçı başlarken kilit ekranında ve Dynamic Island'da canlı skor kendiliğinden açılır. Başka maçlar için maç ekranındaki \u201cKilit ekranında takip et\u201d düğmesini kullan."
+            ? "Bu takımların maçı başlarken kilit ekranında ve Dynamic Island'da canlı skor kendiliğinden açılır. Çıkarmak için sola kaydır."
             : 'iOS 18 ve üzeri gerekir (iPhone Ayarlar → Tribün → Canlı Etkinlikler açık olmalı).'}
         </Text>
-        {ordered.length ? ordered.map((team) => (
-          <View key={team.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9, paddingHorizontal: 14, borderTopWidth: HAIR, borderColor: t.line }}>
-            <Crest uri={team.logo} size={26} />
-            <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, color: t.fg }}>{team.name}{team.id === store.main ? ' ★' : ''}</Text>
-            <Switch value={supported && store.liveFor(team.id)} disabled={!supported} onValueChange={(on) => store.setLiveFor(team.id, on)}
-              accessibilityLabel={`${team.name} kilit ekranında canlı skor`} />
+        {on.map((team) => (
+          <View key={team.id} style={{ borderTopWidth: HAIR, borderColor: t.line }}>
+            <SwipeRow label="Kaldır" onAction={() => store.setLiveFor(team.id, false)}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 14 }}>
+                <Crest uri={team.logo} size={26} />
+                <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, color: t.fg }}>{team.name}{team.id === store.main ? ' ★' : ''}</Text>
+              </View>
+            </SwipeRow>
           </View>
-        )) : (
+        ))}
+        {!on.length && <Text style={{ fontSize: 13.5, color: t.muted, paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: HAIR, borderColor: t.line }}>Listede takım yok.</Text>}
+        {off.length > 0 && !adding && (
+          <Pressable onPress={() => setAdding(true)} accessibilityRole="button" style={{ paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: HAIR, borderColor: t.line }}>
+            <Text style={{ color: t.accent, fontWeight: '600', fontSize: 15 }}>+ Takım ekle</Text>
+          </Pressable>
+        )}
+        {adding && off.map((team) => (
+          <Pressable key={team.id} onPress={() => { store.setLiveFor(team.id, true); if (off.length === 1) setAdding(false); }} accessibilityRole="button"
+            style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, paddingHorizontal: 14, borderTopWidth: HAIR, borderColor: t.line, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+            <Crest uri={team.logo} size={26} />
+            <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, color: t.muted }}>{team.name}</Text>
+            <Text style={{ color: t.accent, fontWeight: '700', fontSize: 15 }}>Ekle</Text>
+          </Pressable>
+        ))}
+        {!ordered.length && (
           <Pressable onPress={() => nav.navigate('Picker')} accessibilityRole="button" style={{ paddingVertical: 12, paddingHorizontal: 14, borderTopWidth: HAIR, borderColor: t.line }}>
-            <Text style={{ color: t.accent, fontWeight: '600' }}>+ Takım ekle</Text>
+            <Text style={{ color: t.accent, fontWeight: '600' }}>+ Takım takip et</Text>
           </Pressable>
         )}
       </Card>

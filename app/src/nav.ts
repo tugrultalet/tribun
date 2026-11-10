@@ -17,6 +17,7 @@ export type RootParams = {
   Settings: undefined;
   Member: { id: string; name: string };
   Ask: { token: string };
+  Account: undefined;
 };
 // Groups.code: davet bağlantısından (tribun://join/KOD) gelen kod; katılma formu bununla açılır.
 export type TabParams = { Home: undefined; Groups: { code?: string } | undefined; Leagues: undefined; Profile: undefined };
