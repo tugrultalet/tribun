@@ -7,9 +7,9 @@ export type Group = {
   id: string; name: string; code: string; team: Team; members: number;
   last_message: { body: string; name: string; created_at: string } | null;
 };
-export type Member = { id: string; name: string };
-export type Prediction = { profile_id: string; match_id: number; h: number; a: number; updated_at: string };
-export type GroupDetail = { group: Group; me: string; members: Member[]; predictions: Prediction[] };
+import type { Detail, Member, Prediction } from './groups/standings';
+export type { Member, Prediction };
+export type GroupDetail = Detail & { group: Group };
 export type Message = { id: number; profile_id: string; name: string; body: string; created_at: string };
 
 // Veritabanındaki izinli fonksiyonlardan birini çağırır (bkz. supabase/migrations).
@@ -61,28 +61,4 @@ export function useRpc<T>(fn: string, args: Record<string, unknown> | null, refr
   }, [key, focused, refreshMs, load]);
 
   return { data, error, loading, reload: load };
-}
-
-/* ---------- Tahmin kuralları ---------- */
-// Tahmin, maç başlamadan önce (veritabanı saatine göre) girildiyse geçerlidir.
-export const isValid = (p: Prediction, f: Fixture) => new Date(p.updated_at).getTime() < f.ts * 1000;
-export const hasStarted = (f: Fixture) => f.st !== 'ns' || Date.now() >= f.ts * 1000;
-// Tam skor 3 puan, doğru sonuç 1 puan. Maç bitmediyse ya da tahmin geç girildiyse null.
-export function points(p: Prediction, f: Fixture): number | null {
-  if (f.st !== 'ft' || !f.s || !isValid(p, f)) return null;
-  if (p.h === f.s[0] && p.a === f.s[1]) return 3;
-  return Math.sign(p.h - p.a) === Math.sign(f.s[0] - f.s[1]) ? 1 : 0;
-}
-export type Standing = { member: Member; total: number; exact: number; played: number };
-export function leaderboard(detail: GroupDetail, fixtures: Fixture[]): Standing[] {
-  const byId = new Map(fixtures.map((f) => [f.id, f]));
-  return detail.members
-    .map((member) => {
-      const scored = detail.predictions
-        .filter((p) => p.profile_id === member.id)
-        .map((p) => { const f = byId.get(p.match_id); return f ? points(p, f) : null; })
-        .filter((n): n is number => n !== null);
-      return { member, total: scored.reduce((a, b) => a + b, 0), exact: scored.filter((n) => n === 3).length, played: scored.length };
-    })
-    .sort((a, b) => b.total - a.total || b.exact - a.exact || a.member.name.localeCompare(b.member.name, 'tr'));
 }

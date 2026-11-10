@@ -5,10 +5,11 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ApiError, Fixture, Match, MatchEvent, Team, TeamData, get } from '../api';
+import { finalSummary } from '../groups/standings';
 import { ChatItem, SystemMsg, abbr, mergeTimeline, systemMessages } from '../chat/timeline';
 import { gradientFor } from '../teamColors';
 import { RootParams, useNav } from '../nav';
-import { Message, rpc } from '../social';
+import { GroupDetail, Message, rpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { BackBar, Crest } from '../ui';
@@ -35,6 +36,8 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
   const [team, setTeam] = useState<Team | null>(null);
+  const [detail, setDetail] = useState<GroupDetail | null>(null);
+  const [teamFx, setTeamFx] = useState<Fixture[]>([]);
   const [games, setGames] = useState<{ f: Fixture; events: MatchEvent[] }[]>([]);
   const last = useRef(0);
   const list = useRef<FlatList<ChatItem<Message>>>(null);
@@ -52,7 +55,7 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
     } catch (e) { setError((e as ApiError).message); }
   };
   useEffect(() => {
-    rpc<{ me: string; group: { team: Team } }>('group_detail', { p_secret: secret, p_group: id }).then((d) => { setMyId(d.me); setTeam(d.group.team); }, () => {});
+    rpc<GroupDetail>('group_detail', { p_secret: secret, p_group: id }).then((d) => { setMyId(d.me); setTeam(d.group.team); setDetail(d); }, () => {});
   }, [secret, id]);
   useEffect(() => {
     if (!focused) return;
@@ -75,7 +78,9 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
           const m = await get<Match>(`/api/match/${f.id}`).catch(() => null);
           return { f: m?.fixture ?? f, events: m?.events ?? [] };
         }));
-        if (alive) setGames(next);
+        // Maç sonu özeti için güncel tahminler de yenilenir (biten maçın tahminleri açıktır).
+        const d = next.some((g) => g.f.st === 'ft') ? await rpc<GroupDetail>('group_detail', { p_secret: secret, p_group: id }).catch(() => null) : null;
+        if (alive) { setGames(next); setTeamFx(td.fixtures); if (d) setDetail(d); }
       } catch { /* sistem mesajları isteğe bağlı */ }
     };
     load();
@@ -84,8 +89,8 @@ export default function Chat({ route, navigation }: NativeStackScreenProps<RootP
   }, [focused, team?.id]);
   const items = useMemo(() => {
     const now = Date.now();
-    return mergeTimeline(messages, games.flatMap((g) => systemMessages(g.f, g.events, now)));
-  }, [messages, games]);
+    return mergeTimeline(messages, games.flatMap((g) => systemMessages(g.f, g.events, now, detail ? finalSummary(detail, g.f, teamFx) : null)));
+  }, [messages, games, detail, teamFx]);
   const liveGame = games.find((g) => g.f.st === 'live')?.f;
 
   const send = async () => {
