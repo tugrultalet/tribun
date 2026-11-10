@@ -235,6 +235,13 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
     fbToken().then((token) => { if (token) rpc('register_push', { p_secret: mySecret, p_token: token }).catch(() => {}); });
   }, [mySecret]);
 
+  // Taraftar sıralaması için ana takım veritabanına bildirilir (değiştikçe).
+  const myMain = saved?.main;
+  useEffect(() => {
+    if (!mySecret || !myMain) return;
+    rpc('set_main_team', { p_secret: mySecret, p_team: myMain }).catch(() => {});
+  }, [mySecret, myMain]);
+
   if (!store) return <>{fallback(error, reloadMeta)}</>;
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }

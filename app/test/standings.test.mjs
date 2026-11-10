@@ -17,3 +17,11 @@ assert.equal(entryCount(detail, 9), 1);
 assert.equal(finalSummary(detail, fx[0], fx), 'Tam skoru bilen: Ahmet (+3). Haftanın lideri: Ahmet.');
 assert.deepEqual(ranks([{ total: 3, exact: 1 }, { total: 3, exact: 1 }, { total: 1, exact: 0 }]), [1, 1, 3]);
 console.log('ok', JSON.stringify(season.map((r) => [r.member.name, r.total])));
+
+// Defter puanı (sürpriz bonusu + joker) biten maçta istemci hesabının yerine geçer; canlı maçta geçmez.
+{
+  const withLedger = { ...detail, points: [{ profile_id: 'm', match_id: 1, total: 6, outcome: 'correct' }, { profile_id: 'm', match_id: 2, total: 99, outcome: 'exact' }] };
+  const w = standings(withLedger, fx, (f) => f.date >= '2026-11-09' && f.date <= '2026-11-15');
+  assert.deepEqual(w.map((r) => [r.member.name, r.total, r.exact]), [['Mehmet', 7, 0], ['Ahmet', 3, 1], ['Zeki', 0, 0]]);
+  console.log('ok ledger');
+}
