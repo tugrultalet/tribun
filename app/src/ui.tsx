@@ -176,7 +176,8 @@ export function statusText(f: Fixture): string {
 // Maç satırı (Apple Sports'a yakın, kompakt): `showLeague` ise üstte küçük, ortalı lig adı; altında tek satır:
 // [arma] Ev sahibi ........ saat / skor ........ Deplasman [arma]. Armalar kenarlara dayalı, adlar armayla aynı hizada.
 // Ev sahibi hep solda olduğundan iç saha / deplasman satırın düzeninden okunur; takip edilen takım kalın yazılır.
-export function MatchRow({ f, onPress, showLeague }: { f: Fixture; onPress: () => void; showLeague?: boolean }) {
+export type RowNote = { text: string; wait: boolean };
+export function MatchRow({ f, onPress, showLeague, note }: { f: Fixture; onPress: () => void; showLeague?: boolean; note?: RowNote }) {
   const t = useTheme();
   const { followsTeam, league } = useStore();
   const done = f.st === 'ft';
@@ -209,11 +210,12 @@ export function MatchRow({ f, onPress, showLeague }: { f: Fixture; onPress: () =
           <Crest uri={f.a.logo} size={26} />
         </View>
       </View>
+      {note ? <Text numberOfLines={1} style={{ fontSize: 11, marginTop: 3, textAlign: 'center', fontWeight: note.wait ? '700' : '500', color: note.wait ? t.accent : t.muted }}>{note.text}</Text> : null}
     </Pressable>
   );
 }
 // `today` verilirse maçlar günlere ayrılır ve her günün başlığı bir kez yazılır (satırlarda tarih tekrarlanmaz).
-export function MatchList({ fixtures, onMatch, showLeague, today, title }: { fixtures: Fixture[]; onMatch: (f: Fixture) => void; showLeague?: boolean; today?: string; title?: string }) {
+export function MatchList({ fixtures, onMatch, showLeague, today, title, notes }: { fixtures: Fixture[]; onMatch: (f: Fixture) => void; showLeague?: boolean; today?: string; title?: string; notes?: Map<number, RowNote> }) {
   const t = useTheme();
   return (
     <Panel title={title} style={title ? undefined : { marginTop: 0, paddingVertical: 6 }}>
@@ -222,7 +224,7 @@ export function MatchList({ fixtures, onMatch, showLeague, today, title }: { fix
           {today && (i === 0 || fixtures[i - 1].date !== f.date) ? (
             <Text style={{ fontSize: 11.5, fontWeight: '700', letterSpacing: 0.4, color: t.muted, paddingHorizontal: 16, paddingTop: i === 0 ? 4 : 12, paddingBottom: 2 }}>{dayLabel(f.date, today).toLocaleUpperCase('tr')}</Text>
           ) : null}
-          <MatchRow f={f} showLeague={showLeague} onPress={() => onMatch(f)} />
+          <MatchRow f={f} showLeague={showLeague} note={notes?.get(f.id)} onPress={() => onMatch(f)} />
         </React.Fragment>
       ))}
     </Panel>

@@ -28,7 +28,6 @@ export default function League({ route }: NativeStackScreenProps<RootParams, 'Le
           <Text style={{ fontWeight: '700', fontSize: 24, lineHeight: 28, letterSpacing: -0.3, color: t.fg }}>{league?.name ?? ''}</Text>
           <Text style={{ color: t.muted, fontSize: 13, marginTop: 4 }}>{league?.country} · {seasonLabel(store.meta.season)}</Text>
         </View>
-        <StarButton on={store.followsLeague(id)} onPress={() => store.toggleLeague(id)} label={`${league?.name} takip et`} />
       </View>
       <Tabs value={tab} onChange={setTab} options={[['table', 'Tablo'], ['fix', 'Fikstür']]} />
       {tab === 'table' ? (

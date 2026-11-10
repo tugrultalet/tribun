@@ -22,7 +22,11 @@ export function createCore({ provider, cacheDir }) {
   const isFree = () => (provider.state.limitDay ?? 100) <= 100;
   // Canlı veri yenileme aralığı. Ücretsiz planda günlük 100 isteği korumak için seyrek.
   const liveTtl = () => (process.env.LIVE_TTL ? Number(process.env.LIVE_TTL) * 1000 : provider.liveTtl(isFree()));
-  const slowTtl = () => (isFree() ? 24 * HOUR : 6 * HOUR); // sezon fikstürü
+  const slowTtl = () => (isFree() ? 24 * HOUR : 6 * HOUR); // lig sezon fikstürü
+  // Takım fikstürü her planda günde bir kez yenilenir: maç saati değişirse canlı yenileme zaten düzeltir. Takım başına 2 istek/gün.
+  const teamTtl = () => 24 * HOUR;
+  // Bir günün tüm maçları: geçmiş gün değişmez, bugün için sık yenilemeye gerek yok (canlı olanlar ayrıca tazelenir).
+  const dayTtl = (date) => (date < today() ? 30 * DAY : date === today() ? 30 * MIN : 6 * HOUR);
   const tableTtl = () => (isFree() ? 3 * HOUR : 15 * MIN);
 
   // Takım → ana lig eşlemesi; gördükçe öğrenilir, takım sayfasında puan durumunu bulmak için kullanılır.
@@ -74,13 +78,15 @@ export function createCore({ provider, cacheDir }) {
   /* ---------- Fikstür önbellekleri ---------- */
   // Bir ligin tüm sezon fikstürü. Günlük maç listeleri buradan süzülür; böylece tarih başına istek harcanmaz.
   function getSeason(lg) {
+    touch(`season:${lg}`);
     return cached(`season:${lg}`, slowTtl, async () => ({
       league: lg, updated: Date.now(), fixtures: (await withNationalNames(await provider.seasonFixtures(lg, await seasonFor(lg)))).sort(byTime),
     }));
   }
   // Takımın katıldığı tüm yarışmalardaki sezon maçları (lig, kupalar, milli takımlarda turnuvalar ve hazırlıklar).
   function teamSeason(id) {
-    return cached(`teamfx:${id}`, slowTtl, async () => ({
+    touch(`teamfx:${id}`);
+    return cached(`teamfx:${id}`, teamTtl, async () => ({
       updated: Date.now(),
       fixtures: (await withNationalNames((await provider.teamSeason(id, currentSeason())).filter(keepFixture))).sort(byTime),
     }));
@@ -89,7 +95,11 @@ export function createCore({ provider, cacheDir }) {
   // Başlamış ya da başlamak üzere olan, henüz sonuçlanmamış tüm maçları tek seferde tazeler ve
   // yüklü bütün fikstür önbelleklerine (lig ve takım) işler. `liveTtl`den sık istek göndermez.
   let lastRefresh = 0, refreshing = null, refreshError = null;
-  const fixtureCaches = () => [...keys('season:'), ...keys('teamfx:')];
+  // Canlı yenileme yalnızca son 24 saatte istenen önbellekler için yapılır; kimsenin bakmadığı takım ve ligler kota harcamaz.
+  const seenAt = new Map();
+  function touch(key) { seenAt.set(key, Date.now()); }
+  const recent = (k) => Date.now() - (seenAt.get(k) || 0) < DAY;
+  const fixtureCaches = () => [...keys('season:'), ...keys('teamfx:'), ...keys('day:')].filter(recent);
   function pendingFixtures() {
     const byId = new Map();
     for (const k of fixtureCaches()) for (const f of load(k)?.data.fixtures || []) if (unsettled(f)) byId.set(f.id, f);
@@ -132,8 +142,25 @@ export function createCore({ provider, cacheDir }) {
     return (load(`season:${lg}`)?.data.fixtures || []).filter((f) => (!from || f.date >= from) && (!to || f.date <= to));
   }
 
+  // Bir günün tüm maçları (katalogdaki ligler): kaynağın günlük listesiyle tek önbellekte tutulur.
+  function dayAll(date) {
+    touch(`day:${date}`);
+    return cached(`day:${date}`, () => dayTtl(date), async () => {
+      const list = (await provider.day(date)).filter((f) => leagueIds.has(f.lg) && keepFixture(f));
+      return { date, updated: Date.now(), fixtures: (await withNationalNames(list)).sort(byTime) };
+    });
+  }
+
   // `teamIds`: takip edilen takımların, istenen liglerin dışında kalan maçlarını da ekler (ör. Avrupa kupaları).
   async function getDay(date, leagueList, teamIds = []) {
+    // Tüm ligler istendiyse gün listesi tek seferde çekilir; lig başına sezon çekmek yüzlerce istek tutardı.
+    if (provider.day && !teamIds.length && leagueList.length === leagues.length) {
+      try {
+        const base = await dayAll(date);
+        await refreshUnsettled();
+        return { date, fixtures: (load(`day:${date}`)?.data || base).fixtures };
+      } catch { /* gün listesi alınamazsa lig lig yola düşülür */ }
+    }
     const seasons = await Promise.all(leagueList.map((lg) => getSeason(lg).catch((error) => ({ error }))));
     const failed = seasons.find((s) => s.error);
     if (failed && seasons.length && seasons.every((s) => s.error)) throw failed.error;
@@ -154,23 +181,18 @@ export function createCore({ provider, cacheDir }) {
     return { team: info, league: teamIndex[id]?.lg ?? null, limited: false, stale: base.stale, fixtures };
   }
 
-  // Ana ekran: takip edilen takımların tüm maçları (katıldıkları bütün yarışmalarda) ve takip edilen turnuvaların
-  // yakın tarihli maçları, tek listede.
-  async function getMine(teamIds, leagueList = []) {
+  // Ana ekran: takip edilen takımların tüm maçları (katıldıkları bütün yarışmalarda). Hangi turnuvaların gösterileceği
+  // istemcide süzülür; böylece takım fikstürü herkes için tek ortak önbellekten gelir. Lig takibi yoktur.
+  async function getMine(teamIds) {
     let failures = 0, lastError = null;
     for (const id of teamIds) {
       try { await teamSeason(id); } catch (e) { failures++; lastError = e; }
     }
-    for (const lg of leagueList) {
-      try { await getSeason(lg); } catch (e) { failures++; lastError = e; }
-    }
-    const sources = teamIds.length + leagueList.length;
+    const sources = teamIds.length;
     if (sources && failures === sources) throw lastError;
     await refreshUnsettled();
     const byId = new Map();
     for (const id of teamIds) for (const f of load(`teamfx:${id}`)?.data.fixtures || []) byId.set(f.id, f);
-    const from = today(-3), to = today(14);
-    for (const lg of leagueList) for (const f of load(`season:${lg}`)?.data.fixtures || []) if (f.date >= from && f.date <= to) byId.set(f.id, f);
     return { today: today(), fixtures: [...byId.values()].sort(byTime) };
   }
 

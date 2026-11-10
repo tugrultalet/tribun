@@ -65,8 +65,9 @@ Uygulamanın ilk sürümleri Highlightly numaralarını kaydetmişti; uygulama a
 
 - **Kulüpler** liglerine göre listelenir. **Milli takımlar** ayrı sekmededir; adları Türkçeleştirilir (Türkiye başta), kadın ve gençlik takımları listelenmez.
 - Bir takımın maçları, **katıldığı bütün yarışmalardan** gelir: lig, UEFA kupaları, ülke kupaları, milli takımlarda turnuvalar, elemeler ve hazırlıklar. Yarışma kataloğunda olmasa da maçın kendi yarışma adı ve logosu gösterilir. Kulüp hazırlık maçları gösterilmez.
-- **Turnuvalar** (`server/lib/common.js` içindeki katalog) takım seçmeden de takip edilebilir; takip edilen turnuvanın yakın tarihli (3 gün önce – 14 gün sonra) tüm maçları ana ekrana gelir. Milli takım turnuvalarının sezon yılı değişken olduğundan sunucu bunu kaynağa sorar.
-- Ana ekran (`/api/mine?teams=..&leagues=..`) ikisini birleştirir.
+- **Takip modeli (her şey takım üzerinden):** Kullanıcı bir **ana takım** (★) seçer; ayrıca milli takım ve sevdiği diğer takımları ekler. Her takım için hangi turnuvaların gösterileceği seçilir (`app/src/follow.ts`, testli): ana takım ve milli takımda hepsi açık; diğer takımlarda yalnızca Avrupa kupaları (Avrupa'da oynamayan takımın tüm maçları). Lig takibi yoktur. Turnuva süzmesi istemcide yapılır; sunucu takımın tüm maçlarını verir, böylece takım fikstürü herkes için tek ortak önbellekten gelir.
+- **Ana ekranın tek kuralı:** "takımlarımın seçili turnuvalardaki maçları + gruplarımın tahmin maçları". Grup maçlarının üstünde etiket durur (`Hoppa · 3/5 girdi · tahminin 2–1`, `Hoppa · tahmin bekliyor`). **Tüm ligler** filtresi o günün bütün maçlarını gösterir.
+- Ana ekran sunucuda `/api/mine?teams=..` (en çok 30 takım). Katalogdaki turnuvalar (`server/lib/common.js`) Turnuvalar sekmesinde puan durumu ve fikstürle görülebilir.
 
 ### Highlightly ile istek tasarrufu
 
@@ -97,7 +98,7 @@ Maç kartında ve maç sayfasında görünen "Yayın: …" bilgisi `server/index
 
 ## Sunucu uçları
 
-`/api/meta`, `/api/mine?teams=..&leagues=..` (ana ekran: takip edilen takımların ve turnuvaların maçları), `/api/national` (milli takımlar), `/api/fixtures?date=YYYY-AA-GG[&leagues=..&teams=..]`, `/api/match/:id`, `/api/match/:id/lineups`, `/api/standings/:lig`, `/api/league/:lig/fixtures`, `/api/league/:lig/teams`, `/api/team/:id`, `/api/team/:id/squad`
+`/api/meta`, `/api/mine?teams=..` (ana ekran: takımların tüm maçları; turnuva süzmesi istemcide), `/api/national` (milli takımlar), `/api/fixtures?date=YYYY-AA-GG[&leagues=..&teams=..]`, `/api/match/:id`, `/api/match/:id/lineups`, `/api/standings/:lig`, `/api/league/:lig/fixtures`, `/api/league/:lig/teams`, `/api/team/:id`, `/api/team/:id/squad`
 
 ## Henüz yok
 

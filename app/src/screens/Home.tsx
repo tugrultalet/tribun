@@ -1,61 +1,137 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Fixture, Mine, useApi } from '../api';
 import { dayLabel, daysBetween } from '../dates';
+import { euroIds, followedFixtures } from '../follow';
+import { sameWeek } from '../groups/standings';
 import { useNav } from '../nav';
+import { Group, rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { Button, Card, Crest, Empty, Icon, LiveDot, Loader, MatchList, statusText } from '../ui';
+import { Button, Card, Crest, Empty, Icon, LiveDot, Loader, MatchList, RowNote, Seg, statusText } from '../ui';
 import { Screen } from './Screen';
 
 // Bir takımın sezon boyunca tüm yarışmalardaki maçları rahatça sığar.
 const UPCOMING_LIMIT = 100;
 const RESULTS_LIMIT = 10;
+const GROUP_WINDOW_DAYS = 7;
 
-// Ana ekran. Takım seçiliyse yalnızca takımların maçları (katıldıkları tüm yarışmalarda); takip edilen turnuvalar ana ekranı
-// etkilemez. Takım seçilmediyse takip edilen turnuvaların yakın tarihli maçları.
-// En üstte canlı maç (yoksa sıradaki maç) büyük kartta; altında fikstür, en altta son sonuçlar.
+type Status = { group_id: string; match_id: number; entered: number; h: number | null; a: number | null };
+
+// Ana ekranın tek kuralı: "takımlarımın seçili turnuvalardaki maçları + gruplarımın tahmin maçları".
+// Grup maçlarının üstünde küçük bir etiket durur ("Hoppa · 3/5 girdi · tahminin 2–1" ya da "Hoppa · tahmin bekliyor").
+// "Tüm ligler" filtresi o günün bütün maçlarını gösterir.
 export default function Home() {
   const t = useTheme();
   const nav = useNav();
   const store = useStore();
-  const ids = store.teams.map((x) => x.id).join(',');
-  const leagueIds = store.leagues.join(',');
-  const query = ids ? `/api/mine?teams=${ids}` : leagueIds ? `/api/mine?leagues=${leagueIds}` : null;
+  const [scope, setScope] = useState<'mine' | 'all'>('mine');
+  const secret = store.me?.secret;
+  const euro = useMemo(() => euroIds(store.meta.leagues), [store.meta.leagues]);
+  const groups = useRpc<Group[]>('my_groups', secret ? { p_secret: secret } : null, 60000).data ?? [];
+
+  // Takip edilen takımlara, takip edilmeyen grup takımları da eklenir (grup maçları ana ekranda görünsün).
+  const teamIds = [...new Set([...store.teams.map((x) => x.id), ...groups.map((g) => g.team.id)])];
+  const query = scope === 'mine' && teamIds.length ? `/api/mine?teams=${teamIds.join(',')}` : null;
   const state = useApi<Mine>(query, 60000);
+  const day = useApi<{ date: string; fixtures: Fixture[] }>(scope === 'all' ? `/api/fixtures?date=${store.meta.today}` : null, 60000);
   const openMatch = (f: Fixture) => nav.navigate('Match', { id: f.id });
+
+  // Grup maçları: grup takımının, bugünden bir hafta içindeki başlamamış / canlı maçları.
+  const candidates = useMemo(() => {
+    const byTeam = new Set(groups.map((g) => g.team.id));
+    return (state.data?.fixtures ?? []).filter((f) => (f.st === 'ns' || f.st === 'live') && (byTeam.has(f.h.id) || byTeam.has(f.a.id))
+      && daysBetween(store.meta.today, f.date) <= GROUP_WINDOW_DAYS && (daysBetween(store.meta.today, f.date) >= 0 || sameWeek(f.date, store.meta.today)));
+  }, [groups, state.data, store.meta.today]);
+  const matchKey = candidates.map((f) => f.id).join(',');
+  const [status, setStatus] = useState<Status[]>([]);
+  useEffect(() => {
+    if (!secret || !candidates.length) { setStatus([]); return; }
+    let alive = true;
+    const load = () => rpc<Status[]>('group_prediction_status', { p_secret: secret, p_matches: candidates.map((f) => f.id).slice(0, 200) }).then((r) => alive && setStatus(r), () => {});
+    load();
+    const timer = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [secret, matchKey]);
+
+  const notes = useMemo(() => {
+    const out = new Map<number, RowNote>();
+    for (const f of candidates) {
+      const items = groups.filter((g) => g.team.id === f.h.id || g.team.id === f.a.id).map((g) => {
+        const row = status.find((x) => x.group_id === g.id && x.match_id === f.id);
+        const mine = row && row.h != null && row.a != null ? `${row.h}–${row.a}` : null;
+        const wait = !mine && f.st === 'ns';
+        const text = mine ? `${g.name} · ${row!.entered}/${g.members} girdi · tahminin ${mine}` : wait ? `${g.name} · tahmin bekliyor` : `${g.name} · ${row?.entered ?? 0}/${g.members} girdi`;
+        return { text, wait };
+      });
+      if (!items.length) continue;
+      const first = items.find((i) => i.wait) ?? items[0];
+      out.set(f.id, { wait: first.wait, text: items.length > 1 ? `${first.text} · +${items.length - 1} grup` : first.text });
+    }
+    return out;
+  }, [candidates, groups, status]);
+
+  // Gösterilecekler: takip edilen takımların seçili turnuva maçları + takip edilmeyen ama grubun tahmin edeceği maçlar.
+  const shown = useMemo(() => {
+    const all = state.data?.fixtures ?? [];
+    const mine = followedFixtures(all, store.teams, store.main, euro);
+    const ids = new Set(mine.map((f) => f.id));
+    return [...mine, ...candidates.filter((f) => !ids.has(f.id))].sort((x, y) => x.ts - y.ts);
+  }, [state.data, store.teams, store.main, euro, candidates]);
+
   const addButton = (
     <Pressable onPress={() => nav.navigate('Picker')} hitSlop={8} accessibilityRole="button" accessibilityLabel="Takım ekle" style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
       <Icon.plus color={t.accent} />
     </Pressable>
   );
+  const filter = <View style={{ marginTop: 4 }}><Seg value={scope} onChange={setScope} options={[['mine', 'Takiplerim'], ['all', 'Tüm ligler']]} /></View>;
+  const dropped = (store.droppedLeagues ?? []).map((id) => store.league(id)?.name).filter(Boolean) as string[];
+  const notice = dropped.length ? (
+    <Card style={{ marginTop: 12, padding: 14, gap: 10 }}>
+      <Text style={{ fontSize: 14, lineHeight: 20, color: t.fg }}>Lig takibi kalktı ({dropped.join(', ')}). Artık takımlarının maçları gösteriliyor; ligleri Turnuvalar sekmesinde yine bulabilirsin.</Text>
+      <Button kind="sec" label="Tamam" onPress={store.dismissNotice} />
+    </Card>
+  ) : null;
 
-  if (!ids && !leagueIds) {
+  if (!store.teams.length) {
     return (
       <Screen tab title="Maçlarım" right={addButton}>
-        <Empty>Henüz takım ya da turnuva seçmedin. Takımını (kulüp ya da milli takım) ekle, burada yalnızca onun maçlarını gör.</Empty>
+        {notice}
+        <Empty>Henüz takım seçmedin. Takımını (kulüp ya da milli takım) ekle, burada onun maçlarını gör.</Empty>
         <Button label="+ Takım ekle" onPress={() => nav.navigate('Picker')} />
       </Screen>
     );
   }
+  if (scope === 'all') {
+    return (
+      <Screen tab title="Maçlarım" right={addButton} team={store.mainTeam?.name} onRefresh={day.reload} refreshing={day.loading && day.data !== undefined}>
+        {filter}
+        <Loader state={day}>
+          {(d) => d.fixtures.length ? <MatchList title="Bugünün maçları" fixtures={d.fixtures} onMatch={openMatch} showLeague /> : <Empty>Bugün katalogdaki liglerde maç yok.</Empty>}
+        </Loader>
+      </Screen>
+    );
+  }
   return (
-    <Screen tab title="Maçlarım" right={addButton} onRefresh={state.reload} refreshing={state.loading && state.data !== undefined}>
+    <Screen tab title="Maçlarım" right={addButton} team={store.mainTeam?.name} onRefresh={state.reload} refreshing={state.loading && state.data !== undefined}>
+      {filter}
+      {notice}
       <Loader state={state}>
         {(d) => {
-          const live = d.fixtures.filter((f) => f.st === 'live');
-          const upcoming = d.fixtures.filter((f) => f.st === 'ns').slice(0, UPCOMING_LIMIT);
-          const results = d.fixtures.filter((f) => f.st === 'ft').slice(-RESULTS_LIMIT).reverse();
+          const live = shown.filter((f) => f.st === 'live');
+          const upcoming = shown.filter((f) => f.st === 'ns').slice(0, UPCOMING_LIMIT);
+          const results = shown.filter((f) => f.st === 'ft').slice(-RESULTS_LIMIT).reverse();
           // Canlı maç varsa hepsi büyük kartta; yoksa sıradaki ilk maç.
           const heroes = live.length ? live : upcoming.slice(0, 1);
           const rest = live.length ? upcoming : upcoming.slice(1);
           return (
             <>
               <View style={{ gap: 12, marginTop: 4 }}>
-                {heroes.map((f) => <Hero key={f.id} f={f} today={d.today} onPress={() => openMatch(f)} />)}
+                {heroes.map((f) => <Hero key={f.id} f={f} today={d.today} note={notes.get(f.id)} onPress={() => openMatch(f)} />)}
               </View>
               {!heroes.length && <Empty>Takip ettiklerinin yaklaşan maçı yok.</Empty>}
               {rest.length > 0 && (
-                <MatchList title="Fikstür" fixtures={rest} onMatch={openMatch} showLeague today={d.today} />
+                <MatchList title="Fikstür" fixtures={rest} onMatch={openMatch} showLeague today={d.today} notes={notes} />
               )}
               {results.length > 0 && (
                 <MatchList title="Son sonuçlar" fixtures={results} onMatch={openMatch} showLeague today={d.today} />
@@ -73,7 +149,7 @@ function countdown(date: string, today: string): string {
   return n <= 0 ? 'Bugün' : n === 1 ? 'Yarın' : `${n} gün sonra`;
 }
 
-function Hero({ f, today, onPress }: { f: Fixture; today: string; onPress: () => void }) {
+function Hero({ f, today, note, onPress }: { f: Fixture; today: string; note?: RowNote; onPress: () => void }) {
   const t = useTheme();
   const league = useStore().league(f.lg);
   const live = f.st === 'live';
@@ -99,6 +175,7 @@ function Hero({ f, today, onPress }: { f: Fixture; today: string; onPress: () =>
           {side(f.a)}
         </View>
         <Text style={{ textAlign: 'center', fontSize: 13, color: t.muted }}>{[league?.name ?? f.lgName, f.round, league?.tv && `Yayın: ${league.tv}`].filter(Boolean).join(' · ')}</Text>
+        {note ? <Text numberOfLines={1} style={{ textAlign: 'center', fontSize: 12.5, marginTop: -8, fontWeight: note.wait ? '700' : '500', color: note.wait ? t.accent : t.muted }}>{note.text}</Text> : null}
       </Card>
     </Pressable>
   );

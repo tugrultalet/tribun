@@ -183,6 +183,10 @@ export function createApiFootball({ key, baseUrl, fetchImpl = fetch, sleepImpl =
     async seasonFixtures(lg, season) {
       return (await request(`fixtures?league=${lg}&season=${season}&timezone=${TZ}`)).map(fx);
     },
+    // Bir günün dünya genelindeki tüm maçları tek istekte (katalogdaki liglere çekirdek süzer).
+    async day(date) {
+      return (await request(`fixtures?date=${date}&timezone=${TZ}`)).map(fx);
+    },
     // Tek istekte en çok 20 maç sorulabilir; kaç lig olursa olsun canlı maçlar birlikte gelir.
     async refresh(fixtures) {
       const ids = [...new Set(fixtures.map((f) => f.id))];

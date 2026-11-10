@@ -35,16 +35,14 @@ export default function Leagues() {
         <Text style={{ fontWeight: '600', fontSize: 15, color: t.fg }}>{l.name}</Text>
         <Text style={{ fontSize: 12.5, color: t.muted }}>{l.country}</Text>
       </View>
-      <StarButton on={store.followsLeague(l.id)} onPress={() => store.toggleLeague(l.id)} label={`${l.name} takip et`} />
+      <Icon.chevron color={t.muted} />
     </Pressable>
   );
   const group = (title: string, list: League[]) => list.length > 0 && <Section eyebrow={title}><Card>{list.map(row)}</Card></Section>;
   return (
     <Screen tab title="Turnuvalar">
       <SearchBox value={q} onChange={setQ} placeholder="Lig, kupa veya ülke ara" />
-      {group('Takip ettiklerin', all.filter((l) => store.followsLeague(l.id)))}
-      {/* Takip edilenler yalnızca üstteki tabloda durur; aşağıdaki listelerden çıkar. */}
-      {LEAGUE_GROUPS.map(([type, title]) => <React.Fragment key={type}>{group(title, all.filter((l) => l.type === type && !store.followsLeague(l.id)))}</React.Fragment>)}
+      {LEAGUE_GROUPS.map(([type, title]) => <React.Fragment key={type}>{group(title, all.filter((l) => l.type === type))}</React.Fragment>)}
       {!all.length && <Empty>Eşleşen lig yok.</Empty>}
     </Screen>
   );
