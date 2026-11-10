@@ -63,6 +63,15 @@ export const providerName = (p?: string | null) => (p === 'apple' ? 'Apple' : p 
 // ---------- E-posta ile giriş ----------
 // Supabase Auth e-postaya hem 6 haneli kod hem de uygulamayı açan bağlantı (tribunapp.io/giris?h=…) gönderir.
 // Kod her cihazda çalışır (e-posta bilgisayarda açılsa da); bağlantı telefonda tek dokunuşla girer.
+// Sık yazım hataları (gamil.com, hotmial.com…): "Bunu mu demek istedin?" önerisi için doğru adres, yoksa null.
+const DOMAINS = ['gmail.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'yahoo.com', 'yandex.com', 'live.com', 'msn.com', 'me.com', 'hotmail.com.tr', 'yahoo.com.tr'];
+const TYPOS: Record<string, string> = { 'gamil.com': 'gmail.com', 'gmial.com': 'gmail.com', 'gmai.com': 'gmail.com', 'gmail.co': 'gmail.com', 'gmal.com': 'gmail.com', 'gnail.com': 'gmail.com', 'gmail.con': 'gmail.com', 'gmaill.com': 'gmail.com', 'hotmial.com': 'hotmail.com', 'hotmal.com': 'hotmail.com', 'hotmail.co': 'hotmail.com', 'hotmai.com': 'hotmail.com', 'outlok.com': 'outlook.com', 'iclod.com': 'icloud.com', 'icloud.co': 'icloud.com', 'yaho.com': 'yahoo.com' };
+export function emailTypo(email: string): string | null {
+  const m = /^([^\s@]+)@([^\s@]+)$/.exec(email.trim().toLowerCase());
+  if (!m || DOMAINS.includes(m[2])) return null;
+  const fix = TYPOS[m[2]];
+  return fix ? `${m[1]}@${fix}` : null;
+}
 export const validEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim());
 
 async function authPost(path: string, body: object): Promise<any> {
