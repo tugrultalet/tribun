@@ -57,7 +57,9 @@ export async function get<T>(path: string): Promise<T> {
 const memory = new Map<string, unknown>();
 
 // Önce bellekteki son yanıtı gösterir, arkada yeniler. `refreshMs` verilirse ekran odaktayken periyodik yeniler.
-export function useApi<T>(path: string | null, refreshMs?: number) {
+// `keepPrevious`: adres değişince (ör. ana ekranda grup bilgisi sonradan gelince) yeni yanıt gelene kadar eski veri kalır;
+// ekran boşalıp yeniden dolmaz. Yalnızca aynı ekranı besleyen sorgularda kullanılır.
+export function useApi<T>(path: string | null, refreshMs?: number, keepPrevious = false) {
   const focused = useIsFocused();
   const [data, setData] = useState<T | undefined>(() => (path ? (memory.get(path) as T | undefined) : undefined));
   const [error, setError] = useState<ApiError | null>(null);
@@ -80,7 +82,8 @@ export function useApi<T>(path: string | null, refreshMs?: number) {
 
   useEffect(() => {
     current.current = path;
-    setData(path ? (memory.get(path) as T | undefined) : undefined);
+    const cached = path ? (memory.get(path) as T | undefined) : undefined;
+    if (cached !== undefined || !keepPrevious || !path) setData(cached);
     setError(null);
   }, [path]);
 
