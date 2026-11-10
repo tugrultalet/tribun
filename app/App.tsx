@@ -52,7 +52,7 @@ const BAR_BLUR = IOS && !isLiquidGlassAvailable() ? ('systemChromeMaterial' as c
 
 const TABS = [
   { name: 'Home', title: 'Maçlarım', component: Home, symbol: 'soccerball', icon: Icon.tabHome },
-  { name: 'Groups', title: 'Gruplar', component: Groups, symbol: 'person.3.fill', icon: Icon.tabGroups },
+  { name: 'Groups', title: 'Arkadaşlar', component: Groups, symbol: 'person.3.fill', icon: Icon.tabGroups },
   { name: 'Leagues', title: 'Ligler', component: Leagues, symbol: 'trophy.fill', icon: Icon.tabLeagues },
   { name: 'Profile', title: 'Profil', component: Profile, symbol: 'person.crop.circle.fill', icon: Icon.tabProfile },
 ] as const;
