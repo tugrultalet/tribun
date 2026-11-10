@@ -29,7 +29,8 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
   const secret = store.me?.secret ?? '';
   const id = route.params.id;
   const [tab, setTab] = useState<'predict' | 'table'>('predict');
-  const [inviting, setInviting] = useState(false);
+  // Maç grubu yeni kurulduysa davet ekranı hemen açılır.
+  const [inviting, setInviting] = useState(!!route.params.invite);
   // Grup sohbeti uzak ayarla kapatılabilir (ör. bir sorun olursa).
   const chatOn = useRemote().feature_group_chat !== 'false';
   // Grup ayrıntısı önce maç listesi olmadan (son 60 günün tahminleri) gelir; grubun maçları bilinince yalnızca o maçların
@@ -57,6 +58,7 @@ export default function Group({ route }: NativeStackScreenProps<RootParams, 'Gro
               <Crest uri={d.group.team.logo} size={56} />
               <Text style={{ fontSize: 24, fontWeight: '700', letterSpacing: -0.3, color: t.fg, textAlign: 'center' }}>{d.group.name}{d.group.verified ? ' ✓' : ''}</Text>
               <Text style={{ fontSize: 13, color: t.muted }}>{open ? `Açık lig · ${d.group.members} üye` : `${d.members.length} üye`} · Davet kodu {d.group.code}</Text>
+              {d.group.expires_at ? <Text style={{ fontSize: 12.5, color: t.accent, textAlign: 'center' }}>Bu maça özel grup · {new Date(d.group.expires_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} tarihinde silinir</Text> : null}
               {d.group.verified && <Text style={{ fontSize: 12, color: t.accent }}>Doğrulanmış kurucu</Text>}
               {d.owner && d.arrivals != null && open && <Text style={{ fontSize: 13, color: t.fg }}>Bu linkle gelen: {d.arrivals} kişi</Text>}
             </View>

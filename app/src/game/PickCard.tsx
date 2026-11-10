@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import type { ApiError, Fixture } from '../api';
 import { hasStarted, points } from '../groups/standings';
-import { rpc, useRpc } from '../social';
+import { rpc, useRpc, type Group } from '../social';
+import { inScope } from '../groups/scopeRules';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { Button, Panel } from '../ui';
@@ -73,6 +74,14 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
   };
   // "Arkadaşlarına sor" bağlantısıyla gelindiyse ve bu maça tahmin kaydedildiyse: gönderenle arkadaş olunur.
   const store = useStore();
+  // Tahmin kaydedilince, bu maçı kapsayan arkadaş gruplarına kendiliğinden bildirim (maç başına bir kez; skor yazmaz).
+  const groupsRaw = useRpc<Group[]>('my_groups', { p_secret: secret }, 120000).data;
+  const notifyGroups = () => {
+    const ids = (Array.isArray(groupsRaw) ? groupsRaw : []).filter((g) => g.kind !== 'open' && inScope(g, f)).map((g) => g.id);
+    if (!ids.length) return;
+    rpc<{ notified?: number }>('notify_groups', { p_secret: secret, p_match: f.id, p_groups: ids, p_home: f.h.name, p_away: f.a.name })
+      .then((r) => { if (r?.notified) track('groups_notified', { n: r.notified }); }).catch(() => {});
+  };
   const [friendMsg, setFriendMsg] = useState('');
   const connectAsk = () => {
     const ask = store.ask;
@@ -83,7 +92,7 @@ function Card({ f, secret }: { f: Fixture; secret: string }) {
   };
   const confirm = async () => {
     setState('saving'); setError('');
-    try { await setPick(secret, f.id, h, a, f.ts); setState('saved'); setEditing(false); connectAsk(); picks.reload(); friends.reload(); community.reload(); track('pick_saved', { source: 'match' }); notePickSaved(); }
+    try { await setPick(secret, f.id, h, a, f.ts); setState('saved'); setEditing(false); connectAsk(); notifyGroups(); picks.reload(); friends.reload(); community.reload(); track('pick_saved', { source: 'match' }); notePickSaved(); }
     catch (e) { setState('error'); setError((e as { message?: string }).message ?? 'Kaydedilemedi.'); }
   };
   const pred = saved ? { profile_id: '', match_id: f.id, h: saved.h, a: saved.a, updated_at: saved.updated_at } : null;

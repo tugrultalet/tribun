@@ -7,8 +7,8 @@ import { useAppActive } from '../appState';
 import { ApiError, Fixture, LeagueFixtures, TeamData, get } from '../api';
 import type { Group } from '../social';
 
-export { MAX_SCOPE_LEAGUES, MAX_SCOPE_TEAMS, inScope, isDerby, isDerbyByName, scopeLeagues, scopeTeams } from './scopeRules';
-import { scopeLeagues, scopeTeams } from './scopeRules';
+export { MAX_SCOPE_LEAGUES, MAX_SCOPE_TEAMS, inScope, isDerby, isDerbyByName, scopeLeagues, scopeMatch, scopeTeams } from './scopeRules';
+import { scopeLeagues, scopeMatch, scopeTeams } from './scopeRules';
 
 const byTime = (a: Fixture, b: Fixture) => a.ts - b.ts || a.id - b.id;
 
@@ -51,11 +51,14 @@ export function useGroupFixtures(group: Group | undefined) {
   const appActive = useAppActive();
   const focused = isFocused && appActive;
   // Takım kapsamı: grubun 1–3 takımının fikstürleri birleştirilir (iki takımın birbirine karşı maçı bir kez).
-  const teamKey = group && !leagues ? (scopeTeams(group) ?? []).join(',') : '';
+  const one = group ? scopeMatch(group) : null;
+  const teamKey = !group || leagues ? '' : one != null ? `m${one}` : (scopeTeams(group) ?? []).join(',');
   const load = useCallback(async () => {
     if (!teamKey) return;
     setLoading(true);
     try {
+      // Maça özel grup: yalnızca o maç.
+      if (teamKey.startsWith('m')) { setTeam([(await get<{ fixture: Fixture }>(`/api/match/${teamKey.slice(1)}`)).fixture]); setError(null); return; }
       const lists = await Promise.all(teamKey.split(',').map((id) => get<TeamData>(`/api/team/${id}`)));
       const seen = new Set<number>();
       setTeam(lists.flatMap((l) => l.fixtures).filter((f) => (seen.has(f.id) ? false : (seen.add(f.id), true))).sort(byTime));
