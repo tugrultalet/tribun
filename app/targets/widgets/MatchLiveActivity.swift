@@ -31,6 +31,7 @@ struct MatchLiveActivity: Widget {
         DynamicIslandExpandedRegion(.center) {
           VStack(spacing: 2) {
             Text("\(s.home) – \(s.away)").font(.system(size: 40, weight: .bold)).monospacedDigit()
+              .contentTransition(.numericText(value: Double(s.home * 100 + s.away)))
             StatusLabel(state: s)
           }
         }
@@ -84,7 +85,19 @@ struct NoteRow: View {
   let state: MatchActivityAttributes.ContentState
   var body: some View {
     HStack {
-      if let note = state.note { Text(note).font(.footnote.weight(.semibold)).lineLimit(1) }
+      if let note = state.note {
+        // Gol: satır alttan itilerek girer, top büyüyüp yerine oturur (güncelleme geldiği anda, iOS en çok 2 sn oynatır).
+        HStack(spacing: 5) {
+          if note.hasPrefix("⚽") {
+            Text("⚽").font(.system(size: 17)).transition(.scale(scale: 2.2).combined(with: .opacity))
+            Text(note.replacingOccurrences(of: "⚽ ", with: "")).font(.footnote.weight(.heavy)).lineLimit(1)
+          } else {
+            Text(note).font(.footnote.weight(.semibold)).lineLimit(1)
+          }
+        }
+        .id(note)
+        .transition(.push(from: .bottom))
+      }
       Spacer(minLength: 8)
       if let pick = attributes.pick { Text("Tahminin \(pick)").font(.footnote.weight(.semibold)).foregroundStyle(tribunAccent) }
     }
@@ -115,6 +128,7 @@ struct LockScreenMatchView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         Text("\(state.home) – \(state.away)").font(.system(size: 40, weight: .bold)).monospacedDigit().layoutPriority(1)
+          .contentTransition(.numericText(value: Double(state.home * 100 + state.away)))
         HStack(spacing: 9) {
           Text(attributes.awayAbbr).font(.system(size: 17, weight: .bold)).lineLimit(1)
           TeamLogo(id: attributes.awayId, abbr: attributes.awayAbbr, color: attributes.awayColor, size: 48)

@@ -6,5 +6,6 @@ struct TribunWidgetBundle: WidgetBundle {
   var body: some Widget {
     NextMatchWidget()
     MatchLiveActivity()
+    MultiMatchLiveActivity()
   }
 }
