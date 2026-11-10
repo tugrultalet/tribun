@@ -276,8 +276,14 @@ function Hero({ f, today, note, onPress }: { f: Fixture; today: string; note?: R
       <Crest uri={team.logo} size={56} />
       <Text numberOfLines={2} style={{ fontWeight: '600', fontSize: 15, textAlign: 'center', color: t.fg }}>{team.name}</Text>
       {live && goals(s).length > 0 && (
-        <View style={{ alignItems: 'center', marginTop: -4 }}>
-          {goals(s).slice(0, 5).map((g, i) => <Text key={i} numberOfLines={1} style={{ fontSize: 11.5, lineHeight: 15, color: t.muted }}>{s === 'h' ? `⚽ ${g}` : `${g} ⚽`}</Text>)}
+        // Ev sahibinin golleri sola, deplasmanınkiler sağa dayalı; toplar dış kenarda aynı hizada.
+        <View style={{ alignSelf: 'stretch', alignItems: s === 'h' ? 'flex-start' : 'flex-end', marginTop: -4, gap: 1 }}>
+          {goals(s).slice(0, 5).map((g, i) => (
+            <View key={i} style={{ flexDirection: s === 'h' ? 'row' : 'row-reverse', alignItems: 'center', gap: 4, maxWidth: '100%' }}>
+              <Text style={{ fontSize: 11 }}>⚽</Text>
+              <Text numberOfLines={1} style={{ fontSize: 11.5, lineHeight: 15, color: t.muted, flexShrink: 1, textAlign: s === 'h' ? 'left' : 'right' }}>{g}</Text>
+            </View>
+          ))}
         </View>
       )}
     </View>
