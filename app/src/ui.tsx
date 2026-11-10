@@ -56,10 +56,13 @@ export function Card({ children, style }: { children: React.ReactNode; style?: S
   return <View style={[{ backgroundColor: t.surface, borderRadius: 28, borderCurve: 'continuous', borderWidth: StyleSheet.hairlineWidth, borderColor: t.line, overflow: 'hidden' }, style]}>{children}</View>;
 }
 // Ortalanmış başlıklı büyük panel (ör. "Fikstür", "Tablo").
+// Kartlar/paneller arası standart dikey boşluk: tüm ekranlarda aynı ritim.
+export const GAP = 16;
+
 export function Panel({ title, children, style }: { title?: string; children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const t = useTheme();
   return (
-    <Card style={[{ marginTop: 16, paddingBottom: 6 }, style]}>
+    <Card style={[{ marginTop: GAP, paddingBottom: 6 }, style]}>
       {title ? <Text style={{ textAlign: 'center', fontSize: 15, fontWeight: '600', color: t.fg, paddingTop: 14, paddingBottom: 6 }}>{title}</Text> : null}
       {children}
     </Card>

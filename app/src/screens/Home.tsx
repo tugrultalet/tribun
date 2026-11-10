@@ -10,7 +10,7 @@ import { useNav } from '../nav';
 import { Group, rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { Button, Card, Crest, Empty, Icon, LiveDot, Loader, MatchList, RowNote, Seg, statusText } from '../ui';
+import { Button, Card, Crest, Empty, GAP, Icon, LiveDot, Loader, MatchList, RowNote, Seg, statusText } from '../ui';
 import { resolveTeam } from '../healTeams';
 import { useAppActive } from '../appState';
 import { firebaseAvailable } from '../fb';
@@ -148,12 +148,12 @@ export default function Home() {
   const rc = useRemote();
   const bannerText = rc.maintenance || rc.announcement;
   const banner = bannerText ? (
-    <Card style={{ marginTop: 12, padding: 14, borderColor: rc.maintenance ? t.live : t.line }}>
+    <Card style={{ marginTop: GAP, padding: 14, borderColor: rc.maintenance ? t.live : t.line }}>
       <Text style={{ fontSize: 14, lineHeight: 20, color: t.fg }}>{bannerText}</Text>
     </Card>
   ) : null;
   const askNotify = firebaseAvailable() && store.notify === undefined && store.mainTeam ? (
-    <Card style={{ marginTop: 12, padding: 14, gap: 10 }}>
+    <Card style={{ marginTop: GAP, padding: 14, gap: 10 }}>
       <Text style={{ fontSize: 14, lineHeight: 20, color: t.fg }}>{store.mainTeam.name} maçlarında gol, maç başlangıcı ve maç sonucunu bildirelim mi?</Text>
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <View style={{ flex: 1 }}><Button label="Bildirimleri aç" onPress={() => { store.setNotify(true); }} /></View>
@@ -163,7 +163,7 @@ export default function Home() {
   ) : null;
   const dropped = (store.droppedLeagues ?? []).map((id) => store.league(id)?.name).filter(Boolean) as string[];
   const notice = dropped.length ? (
-    <Card style={{ marginTop: 12, padding: 14, gap: 10 }}>
+    <Card style={{ marginTop: GAP, padding: 14, gap: 10 }}>
       <Text style={{ fontSize: 14, lineHeight: 20, color: t.fg }}>Lig takibi kalktı ({dropped.join(', ')}). Artık takımlarının maçları gösteriliyor; ligleri Keşfet sekmesinde yine bulabilirsin.</Text>
       <Button kind="sec" label="Tamam" onPress={store.dismissNotice} />
     </Card>
@@ -204,7 +204,7 @@ export default function Home() {
           const rest = live.length ? upcoming : upcoming.slice(1);
           return (
             <>
-              <View style={{ gap: 12, marginTop: 4 }}>
+              <View style={{ gap: GAP, marginTop: GAP }}>
                 {heroes.map((f) => <Hero key={f.id} f={f} today={d.today} note={displayNotes.get(f.id)} onPress={() => openMatch(f)} />)}
               </View>
               {!heroes.length && <Empty>Takip ettiklerinin yaklaşan maçı yok.</Empty>}

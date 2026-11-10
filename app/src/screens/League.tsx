@@ -6,7 +6,7 @@ import { dayLabel, seasonLabel } from '../dates';
 import { RootParams, useNav } from '../nav';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
-import { Card, Empty, LeagueBadge, Loader, MatchList, Note, Section, StandingsTable, Tabs } from '../ui';
+import { Card, Empty, GAP, LeagueBadge, Loader, MatchList, Note, Section, StandingsTable, Tabs } from '../ui';
 import { Screen } from './Screen';
 
 export default function League({ route }: NativeStackScreenProps<RootParams, 'League'>) {
@@ -40,7 +40,7 @@ export default function League({ route }: NativeStackScreenProps<RootParams, 'Le
         <Loader state={fixtures}>{(d) => <FixtureDays data={d} today={store.meta.today} onMatch={openMatch} />}</Loader>
       )}
       {/* Gelişmiş: normalde yalnızca takımların maçları görünür. Bu seçenek turnuvanın bütün maçlarını ana ekrana getirir. */}
-      <Card style={{ marginTop: 24, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <Card style={{ marginTop: GAP, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: '600', fontSize: 15, color: t.fg }}>Tüm maçlarını takip et</Text>
           <Text style={{ fontSize: 12.5, lineHeight: 18, color: t.muted, marginTop: 2 }}>Bu turnuvanın yakın tarihli bütün maçları ana ekranında görünür (takımlarından bağımsız).</Text>
