@@ -6,6 +6,8 @@ import WidgetKit
 struct WidgetSnapshot: Codable {
   struct MatchInfo: Codable {
     var id: Int
+    var homeId: Int?
+    var awayId: Int?
     var home: String
     var away: String
     var homeAbbr: String
@@ -60,14 +62,14 @@ struct NextMatchView: View {
       VStack(alignment: .leading, spacing: 6) {
         Text(m.league).font(.caption2.weight(.semibold)).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
         HStack(spacing: 8) {
-          TeamBadge(abbr: m.homeAbbr, color: m.homeColor, size: family == .systemSmall ? 30 : 36)
+          TeamLogo(id: m.homeId ?? 0, abbr: m.homeAbbr, color: m.homeColor, size: family == .systemSmall ? 34 : 40)
           if m.status == "ns" {
             Text(Date(timeIntervalSince1970: m.ts), format: .dateTime.weekday(.abbreviated).hour().minute())
               .font(.caption.weight(.bold)).frame(maxWidth: .infinity)
           } else {
             Text("\(m.homeScore ?? 0) – \(m.awayScore ?? 0)").font(.title3.weight(.bold)).monospacedDigit().frame(maxWidth: .infinity)
           }
-          TeamBadge(abbr: m.awayAbbr, color: m.awayColor, size: family == .systemSmall ? 30 : 36)
+          TeamLogo(id: m.awayId ?? 0, abbr: m.awayAbbr, color: m.awayColor, size: family == .systemSmall ? 34 : 40)
         }
         if family != .systemSmall {
           Text("\(m.home) – \(m.away)").font(.subheadline.weight(.semibold)).lineLimit(1)

@@ -2,19 +2,23 @@
 // Kanal numaraları Supabase'de tutulur (sunucu yeniden başlasa da açık aktiviteler güncellenmeye devam eder).
 
 // Uygulamadaki MatchActivityAttributes.ContentState ile aynı alanlar.
-export function liveState(f) {
+// clock: maçın 0. dakikası sayılan an (unix sn); kilit ekranındaki süre çubuğu buna göre kendiliğinden ilerler.
+export function liveState(f, now = Date.now()) {
   const s = f.s || [0, 0];
   const status = f.st === 'live' ? (f.short === 'HT' ? 'ht' : 'live') : f.st === 'ft' ? 'ft' : 'ns';
-  const minute = status === 'ht' ? 'DA' : status === 'ft' ? 'MS' : status === 'live' ? `${f.min ?? ''}${f.extra ? `+${f.extra}` : ''}'` : (f.time || '');
-  return { home: s[0], away: s[1], minute, status };
+  const minute = status === 'ht' ? 'Devre arası' : status === 'ft' ? 'Maç sonu' : status === 'live' ? `${f.min ?? ''}${f.extra ? `+${f.extra}` : ''}'` : (f.time || '');
+  const clock = status === 'live' && f.min != null ? Math.floor(now / 1000) - f.min * 60 : null;
+  return { home: s[0], away: s[1], minute, status, clock };
 }
 
 // Gönderilecek güncelleme: skor ya da durum değiştiyse hemen (10), yalnızca dakika ilerlediyse en çok dakikada bir (5).
 export function nextUpdate(prev, f, now = Date.now()) {
-  const state = liveState(f);
+  const state = liveState(f, now);
   if (!prev) return { state, priority: 10, kind: 'start' };
   const scored = state.home !== prev.state.home || state.away !== prev.state.away;
-  if (scored || state.status !== prev.state.status) return { state, priority: 10, kind: state.status === 'ft' ? 'end' : scored ? 'goal' : 'status' };
+  // Golü atan taraf: skoru artan (iki taraf birden artmışsa son artan sayılmaz, ev sahibi yazılır).
+  const side = state.home > prev.state.home ? 'h' : state.away > prev.state.away ? 'a' : null;
+  if (scored || state.status !== prev.state.status) return { state, priority: 10, kind: state.status === 'ft' ? 'end' : scored ? 'goal' : 'status', side };
   if (state.minute !== prev.state.minute && now - prev.at >= 60000) return { state, priority: 5, kind: 'tick' };
   return null;
 }
@@ -22,11 +26,12 @@ export function nextUpdate(prev, f, now = Date.now()) {
 export function payloadFor(u, f, now = Date.now()) {
   const aps = { timestamp: Math.floor(now / 1000), event: u.kind === 'end' ? 'end' : 'update', 'content-state': { ...u.state, note: null } };
   if (u.kind === 'goal') {
-    aps['content-state'].note = `GOL! ${u.state.home}–${u.state.away}`;
-    aps.alert = { title: 'GOL!', body: `${f.h.name} ${u.state.home}–${u.state.away} ${f.a.name}` };
+    const team = u.side === 'a' ? f.a.name : u.side === 'h' ? f.h.name : null;
+    aps['content-state'].note = team ? `⚽ GOL! ${team}` : '⚽ GOL!';
+    aps.alert = { title: team ? `GOL! ${team}` : 'GOL!', body: `${f.h.name} ${u.state.home}–${u.state.away} ${f.a.name}` };
   }
   if (u.kind === 'end') {
-    aps['content-state'].note = 'Maç bitti';
+    aps['content-state'].note = null; // "Maç sonu" üstte yazıyor
     aps['dismissal-date'] = Math.floor(now / 1000) + 3600; // maç sonucu kilit ekranında 1 saat kalır
   }
   aps['stale-date'] = Math.floor(now / 1000) + (u.kind === 'end' ? 3600 : 15 * 60);

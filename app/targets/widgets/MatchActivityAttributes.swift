@@ -7,12 +7,15 @@ struct MatchActivityAttributes: ActivityAttributes {
   public struct ContentState: Codable, Hashable {
     var home: Int
     var away: Int
-    var minute: String   // "67'", "DA" (devre arası), "MS" (maç sonu) ya da başlama saati "20:45"
+    var minute: String   // "67'", "Devre arası", "Maç sonu" ya da başlama saati "20:45"
     var status: String   // ns | live | ht | ft
     var note: String?    // son olay, ör. "GOL! Galatasaray"
+    var clock: Double?   // maçın 0. dakikası sayılan an (unix sn); süre çubuğu buna göre kendiliğinden ilerler
   }
 
   var matchId: Int
+  var homeId: Int      // logo dosyası: App Group/logos/<id>.png (uygulama kaydeder)
+  var awayId: Int
   var homeName: String
   var awayName: String
   var homeAbbr: String

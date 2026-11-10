@@ -7,99 +7,129 @@ struct MatchLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: MatchActivityAttributes.self) { context in
       LockScreenMatchView(attributes: context.attributes, state: context.state)
-        .activityBackgroundTint(tribunNavy.opacity(0.92))
+        .activityBackgroundTint(Color(hex: context.attributes.homeColor, dim: 0.45))
         .activitySystemActionForegroundColor(.white)
         .widgetURL(URL(string: "tribun://match/\(context.attributes.matchId)"))
     } dynamicIsland: { context in
-      DynamicIsland {
+      let a = context.attributes
+      let s = context.state
+      return DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
-          VStack(spacing: 4) {
-            TeamBadge(abbr: context.attributes.homeAbbr, color: context.attributes.homeColor, size: 38)
-            Text(context.attributes.homeName).font(.caption2).lineLimit(1)
+          VStack(spacing: 6) {
+            TeamLogo(id: a.homeId, abbr: a.homeAbbr, color: a.homeColor, size: 52)
+            Text(a.homeName).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.7)
           }
+          .padding(.leading, 4)
         }
         DynamicIslandExpandedRegion(.trailing) {
-          VStack(spacing: 4) {
-            TeamBadge(abbr: context.attributes.awayAbbr, color: context.attributes.awayColor, size: 38)
-            Text(context.attributes.awayName).font(.caption2).lineLimit(1)
+          VStack(spacing: 6) {
+            TeamLogo(id: a.awayId, abbr: a.awayAbbr, color: a.awayColor, size: 52)
+            Text(a.awayName).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.7)
           }
+          .padding(.trailing, 4)
         }
         DynamicIslandExpandedRegion(.center) {
           VStack(spacing: 2) {
-            Text("\(context.state.home) – \(context.state.away)").font(.system(size: 30, weight: .bold)).monospacedDigit()
-            StatusLabel(state: context.state)
+            Text("\(s.home) – \(s.away)").font(.system(size: 40, weight: .bold)).monospacedDigit()
+            StatusLabel(state: s)
           }
         }
         DynamicIslandExpandedRegion(.bottom) {
-          HStack {
-            Text(context.state.note ?? context.attributes.league).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-            Spacer()
-            if let pick = context.attributes.pick {
-              Text("Tahminin \(pick)").font(.caption.weight(.semibold)).foregroundStyle(tribunAccent)
-            }
+          VStack(spacing: 8) {
+            if s.status != "ns" { MatchProgress(state: s) }
+            NoteRow(attributes: a, state: s)
           }
+          .padding(.horizontal, 6)
         }
       } compactLeading: {
-        HStack(spacing: 4) {
-          TeamBadge(abbr: context.attributes.homeAbbr, color: context.attributes.homeColor, size: 20)
-          Text("\(context.state.home)").font(.system(size: 15, weight: .bold)).monospacedDigit()
+        // Sıkı tutulur: Dynamic Island kameraya yakın, dar kalır.
+        HStack(spacing: 5) {
+          TeamLogo(id: a.homeId, abbr: a.homeAbbr, color: a.homeColor, size: 22)
+          Text("\(s.home)").font(.system(size: 16, weight: .bold)).monospacedDigit()
         }
       } compactTrailing: {
-        HStack(spacing: 4) {
-          Text("\(context.state.away)").font(.system(size: 15, weight: .bold)).monospacedDigit()
-          TeamBadge(abbr: context.attributes.awayAbbr, color: context.attributes.awayColor, size: 20)
+        HStack(spacing: 5) {
+          Text("\(s.away)").font(.system(size: 16, weight: .bold)).monospacedDigit()
+          TeamLogo(id: a.awayId, abbr: a.awayAbbr, color: a.awayColor, size: 22)
         }
       } minimal: {
-        Text("\(context.state.home)-\(context.state.away)").font(.system(size: 12, weight: .bold)).monospacedDigit()
+        Text("\(s.home)-\(s.away)").font(.system(size: 12, weight: .bold)).monospacedDigit()
       }
-      .widgetURL(URL(string: "tribun://match/\(context.attributes.matchId)"))
+      .widgetURL(URL(string: "tribun://match/\(a.matchId)"))
       .keylineTint(tribunLive)
     }
   }
 }
 
+// Dakika: canlıyken iOS'un kendi sayacıyla (uygulama kapalıyken ve sunucu güncellemesi gelmeden de akar), "67:12" biçiminde.
+// Sayaç maçın 0. dakikası sayılan andan (clock) başlar. Saat bilgisi yoksa sunucunun yazısı ("67'") gösterilir.
 struct StatusLabel: View {
   let state: MatchActivityAttributes.ContentState
   var body: some View {
-    HStack(spacing: 4) {
-      if state.status == "live" { Circle().fill(tribunLive).frame(width: 6, height: 6) }
-      Text(state.minute).font(.caption.weight(.bold)).foregroundStyle(state.status == "live" ? tribunLive : Color.secondary).monospacedDigit()
+    HStack(spacing: 5) {
+      if state.status == "live" { Circle().fill(tribunLive).frame(width: 7, height: 7) }
+      if state.status == "live", let clock = state.clock {
+        Text(timerInterval: Date(timeIntervalSince1970: clock)...Date(timeIntervalSince1970: clock + 3 * 3600), countsDown: false, showsHours: false)
+          .font(.subheadline.weight(.bold)).foregroundStyle(tribunLive).monospacedDigit()
+          .multilineTextAlignment(.trailing).frame(maxWidth: 64, alignment: .trailing)
+      } else {
+        Text(state.minute).font(.subheadline.weight(.bold)).foregroundStyle(state.status == "live" ? tribunLive : Color.white.opacity(0.85)).monospacedDigit()
+      }
     }
   }
 }
 
+struct NoteRow: View {
+  let attributes: MatchActivityAttributes
+  let state: MatchActivityAttributes.ContentState
+  var body: some View {
+    HStack {
+      if let note = state.note { Text(note).font(.footnote.weight(.semibold)).lineLimit(1) }
+      Spacer(minLength: 8)
+      if let pick = attributes.pick { Text("Tahminin \(pick)").font(.footnote.weight(.semibold)).foregroundStyle(tribunAccent) }
+    }
+  }
+}
+
+// Kilit ekranı (seçenek B): takım renklerinde zemin, logolar yanda, kısa adlar, ortada büyük skor; üstte lig ve dakika
+// (devre arası / maç sonu yazıyla), skorun altında süre barı, en altta son olay ve tahmin.
 struct LockScreenMatchView: View {
   let attributes: MatchActivityAttributes
   let state: MatchActivityAttributes.ContentState
   var body: some View {
-    VStack(spacing: 8) {
+    content
+      .background(MatchBackground(homeColor: attributes.homeColor, awayColor: attributes.awayColor))
+  }
+
+  var content: some View {
+    VStack(spacing: 10) {
       HStack {
-        Text(attributes.league).font(.caption2.weight(.semibold)).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+        Text(attributes.league).font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
         Spacer()
         StatusLabel(state: state)
       }
-      HStack(alignment: .center) {
-        HStack(spacing: 8) {
-          TeamBadge(abbr: attributes.homeAbbr, color: attributes.homeColor)
-          Text(attributes.homeName).font(.subheadline.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
+      HStack(spacing: 10) {
+        HStack(spacing: 9) {
+          TeamLogo(id: attributes.homeId, abbr: attributes.homeAbbr, color: attributes.homeColor, size: 48)
+          Text(attributes.homeAbbr).font(.system(size: 17, weight: .bold)).lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        Text("\(state.home) – \(state.away)").font(.system(size: 30, weight: .bold)).monospacedDigit().layoutPriority(1)
-        HStack(spacing: 8) {
-          Text(attributes.awayName).font(.subheadline.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.8)
-          TeamBadge(abbr: attributes.awayAbbr, color: attributes.awayColor)
+        Text("\(state.home) – \(state.away)").font(.system(size: 40, weight: .bold)).monospacedDigit().layoutPriority(1)
+        HStack(spacing: 9) {
+          Text(attributes.awayAbbr).font(.system(size: 17, weight: .bold)).lineLimit(1)
+          TeamLogo(id: attributes.awayId, abbr: attributes.awayAbbr, color: attributes.awayColor, size: 48)
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
       }
+      if state.status != "ns" {
+        MatchProgress(state: state).padding(.horizontal, 2)
+      }
       if state.note != nil || attributes.pick != nil {
-        HStack {
-          if let note = state.note { Text(note).font(.caption.weight(.semibold)) }
-          Spacer()
-          if let pick = attributes.pick { Text("Tahminin \(pick)").font(.caption).foregroundStyle(tribunAccent) }
-        }
+        NoteRow(attributes: attributes, state: state)
       }
     }
     .foregroundStyle(.white)
-    .padding(16)
+    .padding(.horizontal, 16)
+    .padding(.vertical, 14)
   }
 }
