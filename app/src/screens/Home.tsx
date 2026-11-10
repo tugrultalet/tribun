@@ -200,7 +200,7 @@ export default function Home() {
   const dropped = (store.droppedLeagues ?? []).map((id) => store.league(id)?.name).filter(Boolean) as string[];
   const notice = dropped.length ? (
     <Card style={{ marginTop: GAP, padding: 14, gap: 10 }}>
-      <Text style={{ fontSize: 14, lineHeight: 20, color: t.fg }}>Lig takibi kalktı ({dropped.join(', ')}). Artık takımlarının maçları gösteriliyor; ligleri Keşfet sekmesinde yine bulabilirsin.</Text>
+      <Text style={{ fontSize: 14, lineHeight: 20, color: t.fg }}>Lig takibi kalktı ({dropped.join(', ')}). Artık takımlarının maçları gösteriliyor; ligleri Ligler sekmesinde yine bulabilirsin.</Text>
       <Button kind="sec" label="Tamam" onPress={store.dismissNotice} />
     </Card>
   ) : null;
