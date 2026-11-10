@@ -240,7 +240,8 @@ const server = http.createServer(async (req, res) => {
       'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src ${SUPABASE_URL}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
       'x-frame-options': 'DENY',
     });
-    const image = info ? `https://${PUBLIC_HOST}/t/${ask[1].toUpperCase()}/og.png` : null;
+    // Görsel adresinde tahmin de var: tahmin değişince WhatsApp eski görseli kullanmasın.
+    const image = info ? `https://${PUBLIC_HOST}/t/${ask[1].toUpperCase()}/og.png${info.pick ? `?p=${info.pick.h}-${info.pick.a}` : ''}` : null;
     return res.end(askPage({ token: ask[1], info, supabaseUrl: SUPABASE_URL, supabaseKey: SUPABASE_PUBLISHABLE_KEY, storeUrl: process.env.APP_STORE_URL, image }));
   }
   for (const [re, handler] of routes) {
