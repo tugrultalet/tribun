@@ -11,6 +11,7 @@ import { Group, rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
 import { Button, Card, Crest, Empty, Icon, LiveDot, Loader, MatchList, RowNote, Seg, statusText } from '../ui';
+import { resolveTeam } from '../healTeams';
 import { Screen } from './Screen';
 
 // Bir takımın sezon boyunca tüm yarışmalardaki maçları rahatça sığar.
@@ -38,6 +39,23 @@ export default function Home() {
   const state = useApi<Mine>(query, 60000, true);
   const day = useApi<{ date: string; fixtures: Fixture[] }>(scope === 'all' ? `/api/fixtures?date=${store.meta.today}` : null, 60000);
   const openMatch = (f: Fixture) => nav.navigate('Match', { id: f.id });
+
+  // Hiç maçı gelmeyen takip (numarası sunucuyla eşleşmiyor) adından yeniden eşleştirilir; her takım oturumda bir kez denenir.
+  const tried = React.useRef(new Set<number>());
+  useEffect(() => {
+    const data = state.data;
+    if (!data || state.loading) return;
+    const have = new Set(data.fixtures.flatMap((f) => [f.h.id, f.a.id]));
+    const orphans = store.teams.filter((x) => !have.has(x.id) && !tried.current.has(x.id));
+    if (!orphans.length) return;
+    orphans.forEach((x) => tried.current.add(x.id));
+    (async () => {
+      for (const x of orphans) {
+        const found = await resolveTeam(x, store.meta.leagues);
+        if (found && found.id !== x.id) store.replaceTeam(x.id, found);
+      }
+    })();
+  }, [state.data, state.loading]);
 
   // Turnuva kapsamlı gruplar ve "tüm maçlarını takip et" turnuvaları için turnuva fikstürleri (sunucu önbelleğinden).
   const full = store.full ?? [];

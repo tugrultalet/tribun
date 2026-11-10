@@ -29,6 +29,12 @@ export function dedupeTeams(teams: FollowedTeam[], main: number | undefined): { 
   return { teams: out, main: main === undefined ? undefined : (alias.get(main) ?? main) };
 }
 
+// Ada göre eşleştirme (tür dışında büyük/küçük harf ve boşluk önemsiz).
+export function findByName<T extends { name: string }>(list: T[], name: string): T | undefined {
+  const k = name.trim().toLocaleLowerCase('tr');
+  return list.find((x) => x.name.trim().toLocaleLowerCase('tr') === k);
+}
+
 // Avrupa kupaları: katalogdaki UEFA turnuvaları (type 'cup').
 export const euroIds = (leagues: League[]): Set<number> => new Set(leagues.filter((l) => l.type === 'cup').map((l) => l.id));
 

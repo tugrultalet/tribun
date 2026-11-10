@@ -15,3 +15,7 @@ assert.deepEqual(dedupeTeams([T(1, 'Türkiye'), T(2, 'Türkiye', 'national')], 1
 assert.equal(teamKey(T(1, ' GALATASARAY ')), teamKey(T(2, 'galatasaray')));
 assert.deepEqual(dedupeTeams([], undefined), { teams: [], main: undefined });
 console.log('ok');
+import { findByName } from '../src/follow.ts';
+assert.equal(findByName([{ id: 1, name: 'Galatasaray' }, { id: 2, name: 'Fenerbahçe' }], ' galatasaray ')?.id, 1);
+assert.equal(findByName([{ id: 1, name: 'Galatasaray' }], 'Beşiktaş'), undefined);
+console.log('ok2');
