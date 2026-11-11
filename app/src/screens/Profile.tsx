@@ -31,7 +31,7 @@ export default function Profile() {
   );
   const row = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, paddingVertical: 12, paddingHorizontal: 14 };
   return (
-    <Screen tab title="Profil" right={gear} onRefresh={picks.reload}>
+    <Screen tab title="Profilim" right={gear} onRefresh={picks.reload}>
       {store.me ? (
         <Card style={{ marginTop: 4 }}>
           <Pressable onPress={() => nav.navigate('Account')} accessibilityRole="button" accessibilityLabel="Hesap"
@@ -60,7 +60,7 @@ export default function Profile() {
               <Pressable onPress={() => nav.navigate('PickHistory')} accessibilityRole="button"
                 style={({ pressed }) => ({ ...row, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, color: t.fg }}>Geçmiş tahminler</Text>
+                  <Text style={{ fontSize: 15, color: t.fg }}>Geçmiş tahminlerim</Text>
                   <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2 }}>{past.length} tahmin · {exact} tam skor</Text>
                 </View>
                 <Icon.chevron color={t.fg} />

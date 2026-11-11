@@ -24,7 +24,7 @@ export default function PickHistory() {
     </View>
   );
   return (
-    <Screen title="Geçmiş tahminler" onRefresh={picks.reload}>
+    <Screen title="Geçmiş tahminlerim" onRefresh={picks.reload}>
       {past.length ? (
         <>
           <Card style={{ marginTop: 4, paddingVertical: 12, flexDirection: 'row' }}>

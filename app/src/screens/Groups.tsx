@@ -180,7 +180,7 @@ function MyGroups({ secret }: { secret: string }) {
                 );
               })}
             </View>
-          ) : <Text style={{ color: t.muted, fontSize: 13 }}>Önce Profil → Takımlarım'dan takım ekle.</Text>}
+          ) : <Text style={{ color: t.muted, fontSize: 13 }}>Önce Profilim → Takımlarım'dan takım ekle.</Text>}
           <Text style={{ color: t.muted, fontSize: 12.5, lineHeight: 18 }}>
             En fazla {MAX_SCOPE_TEAMS} takım. Örneğin Galatasaray ve Fenerbahçe seçersen ikisinin bütün maçları, derbiler dahil, tribünde tahmin edilir. Tribünün sohbeti maçlara özel: her maçın odası başlamadan 1 saat önce açılır.
           </Text>

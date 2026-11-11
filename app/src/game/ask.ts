@@ -13,3 +13,10 @@ export function claimCodeFrom(text: string | null | undefined): string | null {
   const m = /TRIBUN-([A-HJ-NP-Z2-9]{8})/.exec(String(text ?? '').toUpperCase());
   return m ? m[1] : null;
 }
+
+// "Arkadaş ekle" davet kodu: panodaki "TRIBUN-A-ABCD2345", bağlantı (…/a/ABCD2345) ya da elle yazılan 8 karakter.
+export function friendCodeFrom(text: string | null | undefined): string | null {
+  const t = String(text ?? '').toUpperCase();
+  const m = /TRIBUN-A-([A-HJ-NP-Z2-9]{8})/.exec(t) || /\/A\/([A-HJ-NP-Z2-9]{8})/.exec(t) || /^\s*([A-HJ-NP-Z2-9]{8})\s*$/.exec(t);
+  return m ? m[1] : null;
+}

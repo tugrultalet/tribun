@@ -6,7 +6,8 @@ import { rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { track } from '../telemetry';
 import { useTheme } from '../theme';
-import { Card, HAIR, Icon, Section, Seg, SwipeRow } from '../ui';
+import { Button, Card, Field, HAIR, Icon, Section, Seg, SwipeRow } from '../ui';
+import { friendCodeFrom } from './ask';
 
 type Friend = { id: string; name: string; me: boolean; since: string | null; week: number; season: number };
 
@@ -60,6 +61,7 @@ export function FriendsSection() {
   return (
     <Section eyebrow={`Arkadaşlarım${friends.length ? ` · ${friends.length}` : ''}`}>
       {addButton}
+      <CodeEntry secret={secret} onDone={state.reload} />
       {friends.length ? (
         <>
           <Seg value={period} onChange={setPeriod} options={[['week', 'Bu hafta'], ['season', 'Sezon']]} />
@@ -92,5 +94,40 @@ export function FriendsSection() {
         </Card>
       )}
     </Section>
+  );
+}
+
+// "Davet kodu gir": arkadaşından gelen bağlantı uygulamayı açmadıysa, WhatsApp'taki 8 karakterlik kodu (ya da bağlantıyı)
+// yapıştırarak arkadaş olunur.
+function CodeEntry({ secret, onDone }: { secret: string; onDone: () => void }) {
+  const t = useTheme();
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const parsed = friendCodeFrom(code);
+  const submit = async () => {
+    if (!parsed) return;
+    setBusy(true); setMsg('');
+    try {
+      const r = await rpc<{ ok: boolean; new?: boolean; name?: string; self?: boolean; error?: string }>('accept_friend', { p_secret: secret, p_code: parsed });
+      if (r.self) setMsg('Bu senin kendi davet kodun.');
+      else if (!r.ok) setMsg(r.error ?? 'Kod bulunamadı.');
+      else { setMsg(r.new ? `${r.name} ile artık arkadaşsınız 🤝` : `${r.name} ile zaten arkadaşsınız.`); setCode(''); track('friend_code_entered'); onDone(); }
+    } catch (e) { setMsg((e as Error).message); } finally { setBusy(false); }
+  };
+  if (!open) {
+    return (
+      <Pressable onPress={() => setOpen(true)} accessibilityRole="button" hitSlop={6} style={{ alignSelf: 'center', marginBottom: 10 }}>
+        <Text style={{ fontSize: 13.5, color: t.accent, fontWeight: '600' }}>Davet kodun mu var? Kodu gir</Text>
+      </Pressable>
+    );
+  }
+  return (
+    <Card style={{ padding: 12, gap: 8, marginBottom: 10 }}>
+      <Field value={code} onChange={setCode} placeholder="Davet kodu (ör. ABCD2345)" maxLength={80} autoCapitalize="characters" onSubmit={submit} />
+      <Button label={busy ? 'Ekleniyor…' : 'Arkadaş ol'} disabled={busy || !parsed} onPress={submit} />
+      {!!msg && <Text style={{ fontSize: 13, color: t.fg, textAlign: 'center' }}>{msg}</Text>}
+    </Card>
   );
 }

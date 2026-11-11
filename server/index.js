@@ -260,11 +260,11 @@ const server = http.createServer(async (req, res) => {
     }
     res.writeHead(info ? 200 : 404, {
       'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300', ...SECURITY_HEADERS,
-      'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      'content-security-policy': `default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src ${SUPABASE_URL}; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
       'x-frame-options': 'DENY',
     });
     const image = info ? `https://${PUBLIC_HOST}/a/${fr[1].toUpperCase()}/og.png?d=${OG_DESIGN}` : null;
-    return res.end(friendPage({ code: fr[1], name: info?.name, storeUrl: process.env.APP_STORE_URL, image }));
+    return res.end(friendPage({ code: fr[1], name: info?.name, storeUrl: process.env.APP_STORE_URL, image, supabaseUrl: SUPABASE_URL, supabaseKey: SUPABASE_PUBLISHABLE_KEY }));
   }
   // Grup davetinin önizleme görseli: /j/KOD/og.png
   const gog = /^\/j\/([A-Za-z0-9]{6})\/og\.png$/.exec(url.pathname);
