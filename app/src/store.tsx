@@ -237,7 +237,9 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
           await rpc('link_account', { p_secret: secret, p_provider: pending.provider }, pending.token).then(() => { provider = pending!.provider; }, () => {});
           pending = null;
         }
-        update((s) => ({ ...s, me: { secret, name: profile.name, provider } }));
+        update((s) => ({ ...s, me: { secret, name: profile.name, provider }, friendCode: undefined }));
+        // "Arkadaş ekle" bağlantısıyla gelindiyse: profil oluşur oluşmaz davet edenle arkadaş olunur.
+        if (saved.friendCode) rpc('accept_friend', { p_secret: secret, p_code: saved.friendCode }).catch(() => {});
       },
       linkAccount: async (provider, given) => {
         const token = given ?? (await signIn(provider));

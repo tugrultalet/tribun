@@ -55,7 +55,7 @@ const TABS = [
   { name: 'Home', title: 'Maçlarım', component: Home, symbol: 'soccerball', icon: Icon.tabHome },
   { name: 'Groups', title: 'Tribün', component: Groups, symbol: 'person.3.fill', icon: Icon.tabGroups },
   { name: 'Leagues', title: 'Ligler', component: Leagues, symbol: 'trophy.fill', icon: Icon.tabLeagues },
-  { name: 'Profile', title: 'Profil', component: Profile, symbol: 'person.crop.circle.fill', icon: Icon.tabProfile },
+  { name: 'Profile', title: 'Profilim', component: Profile, symbol: 'person.crop.circle.fill', icon: Icon.tabProfile },
 ] as const;
 
 function TabsScreen() {
@@ -131,7 +131,7 @@ function Root() {
           <Stack.Screen name="Member" component={Member} />
           <Stack.Screen name="Ask" component={AskLink} />
           <Stack.Screen name="Account" component={AccountScreen} options={{ title: 'Hesap' }} />
-          <Stack.Screen name="PickHistory" component={PickHistory} options={{ title: 'Geçmiş tahminler' }} />
+          <Stack.Screen name="PickHistory" component={PickHistory} options={{ title: 'Geçmiş tahminlerim' }} />
           <Stack.Screen name="EmailLink" component={EmailLink} options={{ title: 'E-posta ile giriş' }} />
           <Stack.Screen name="FriendLink" component={FriendLink} options={{ title: 'Arkadaş daveti' }} />
           <Stack.Screen name="Feedback" component={Feedback} options={{ title: 'Geri bildirim' }} />
