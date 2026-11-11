@@ -27,5 +27,6 @@ export type RootParams = {
   EmailLink: { h?: string } | undefined;
 };
 // Groups.code: davet bağlantısından (tribun://join/KOD) gelen kod; katılma formu bununla açılır.
-export type TabParams = { Home: undefined; Groups: { code?: string } | undefined; Leagues: undefined; Profile: undefined };
+// Groups.view: hangi üst sekme açılsın (Profilim'deki arkadaş sayısından gelince 'friends').
+export type TabParams = { Home: undefined; Groups: { code?: string; view?: 'friends' | 'groups'; at?: number } | undefined; Leagues: undefined; Profile: undefined };
 export const useNav = () => useNavigation<NativeStackNavigationProp<RootParams>>();

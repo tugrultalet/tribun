@@ -23,9 +23,11 @@ import { Field } from '../ui';
 export default function Groups() {
   const store = useStore();
   const t = useTheme();
-  const linked = cleanCode(useRoute<RouteProp<TabParams, 'Groups'>>().params?.code);
+  const params = useRoute<RouteProp<TabParams, 'Groups'>>().params;
+  const linked = cleanCode(params?.code);
   const [tab, setTab] = useState<'friends' | 'groups'>(linked ? 'groups' : 'friends');
   useEffect(() => { if (linked) setTab('groups'); }, [linked]);
+  useEffect(() => { if (params?.view) setTab(params.view); }, [params?.view, params?.at]);
   // "Arkadaş ekle" bağlantısıyla gelip yeni takma ad seçtiyse: davet edenle arkadaş olunur.
   const [joined, setJoined] = useState('');
   useEffect(() => {
