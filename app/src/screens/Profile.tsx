@@ -7,7 +7,6 @@ import { summary } from '../game/profile';
 import { useNav } from '../nav';
 import { useRpc } from '../social';
 import { useStore } from '../store';
-import { teamColor } from '../teamColors';
 import { useTheme } from '../theme';
 import { Card, Crest, Empty, HAIR, Icon, Seg } from '../ui';
 import { Screen } from './Screen';
@@ -16,9 +15,9 @@ import { RestoreBlock } from './SignIn';
 type Friend = { id: string; name: string; me: boolean; week: number; season: number };
 const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
-// Profilim (sosyal profil): avatar (ana takımın renginde halka) ve Puan · Tahmin · Arkadaş sayıları; Arkadaş sayısı
-// Tribün → Arkadaşlarım'ı açar. Ad ve kısa bilgi, takımlar, Profili düzenle / Arkadaş ekle, rozetler, arkadaşlar arası
-// sıra ve Aktif | Geçmiş | Takımlarım sekmeleri. Ayarlar sağ üstteki dişliden.
+// Profilim: üstte profil kartı (avatar ve köşesinde ana takımın logosu, ad, kısa bilgi, Puan · Tahmin · Arkadaş, Profili
+// düzenle / Arkadaş ekle); altında ince "Takip ettiğim takımlar" kartı; sonra Aktif | Geçmiş tahminler. Arkadaş sayısı
+// Tribün → Arkadaşlarım'ı açar. Ayarlar sağ üstteki dişliden.
 export default function Profile() {
   const t = useTheme();
   const nav = useNav();
@@ -33,18 +32,12 @@ export default function Profile() {
   const s = useMemo(() => summary(all, results, Date.now(), ledger), [all, results.size, ledger]);
   const friendsRaw = useRpc<Friend[]>('my_friends', secret ? { p_secret: secret } : null, 120000).data;
   const account = useRpc<{ created_at?: string }>('account_info', secret ? { p_secret: secret } : null).data;
-  const [tab, setTab] = useState<'active' | 'past' | 'teams'>('active');
+  const [tab, setTab] = useState<'active' | 'past'>('active');
 
   const friends = Array.isArray(friendsRaw) ? friendsRaw : [];
   const others = friends.filter((f) => !f.me);
-  const ranking = [...friends].sort((a, b) => b.season - a.season || a.name.localeCompare(b.name, 'tr'));
-  const myRank = ranking.findIndex((f) => f.me) + 1;
-  const leader = ranking[0];
-  const mine = ranking.find((f) => f.me);
   const main = store.mainTeam;
-  const ring = teamColor(main?.name) ?? t.accent;
   const since = account?.created_at ? new Date(account.created_at) : null;
-  const jokers = all.filter((p) => p.joker).length;
   const goFriends = () => nav.navigate('Tabs', { screen: 'Groups', params: { view: 'friends', at: Date.now() } });
 
   const gear = (
@@ -68,15 +61,6 @@ export default function Profile() {
       <Text style={{ fontSize: 12, color: onPress ? t.accent : t.muted, fontWeight: onPress ? '700' : '400' }}>{label}{onPress ? ' ›' : ''}</Text>
     </Pressable>
   );
-  const badge = (icon: string, line1: string, line2: string, on: boolean) => (
-    <View key={icon} style={{ width: 64, alignItems: 'center', gap: 4 }} accessibilityLabel={`${line1} ${line2}${on ? '' : ' (henüz yok)'}`}>
-      <View style={{ width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', borderWidth: 2,
-        borderColor: on ? '#FDB912' : t.line, backgroundColor: on ? 'rgba(253,185,18,0.14)' : t.surface, opacity: on ? 1 : 0.55 }}>
-        <Text style={{ fontSize: 23 }}>{icon}</Text>
-      </View>
-      <Text style={{ fontSize: 10.5, lineHeight: 13, color: t.muted, textAlign: 'center' }}>{line1}{'\n'}{line2}</Text>
-    </View>
-  );
   const button = (label: string, onPress: () => void, green?: boolean) => (
     <Pressable onPress={onPress} accessibilityRole="button"
       style={({ pressed }) => ({ flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10,
@@ -87,93 +71,62 @@ export default function Profile() {
 
   return (
     <Screen tab title="Profilim" right={gear} onRefresh={picks.reload}>
-      {/* Üst: avatar ve sayılar */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 4 }}>
-        <Pressable onPress={() => nav.navigate('Account')} accessibilityRole="button" accessibilityLabel="Hesap"
-          style={{ width: 84, height: 84, borderRadius: 42, padding: 3, backgroundColor: ring }}>
-          <View style={{ flex: 1, borderRadius: 40, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bg, borderWidth: 3, borderColor: t.bg }}>
-            <Text style={{ fontSize: 32, fontWeight: '800', color: t.fg }}>{store.me.name.slice(0, 1).toLocaleUpperCase('tr')}</Text>
+      {/* Profil kartı: avatar (köşesinde ana takımın logosu), ad, kısa bilgi, Puan · Tahmin · Arkadaş, iki buton */}
+      <Card style={{ marginTop: 4, padding: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <Pressable onPress={() => nav.navigate('Account')} accessibilityRole="button" accessibilityLabel="Hesap" style={{ width: 72, height: 72 }}>
+            <View style={{ width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', backgroundColor: t.accentSoft }}>
+              <Text style={{ fontSize: 30, fontWeight: '800', color: t.fg }}>{store.me.name.slice(0, 1).toLocaleUpperCase('tr')}</Text>
+            </View>
+            {main ? (
+              <View style={{ position: 'absolute', right: -4, bottom: -4, width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bg, borderWidth: 2, borderColor: t.line }}>
+                <Crest uri={main.logo} size={20} />
+              </View>
+            ) : null}
+          </Pressable>
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text numberOfLines={1} style={{ fontSize: 19, fontWeight: '800', color: t.fg }}>{store.me.name}</Text>
+            {main ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Crest uri={main.logo} size={15} />
+                <Text numberOfLines={1} style={{ fontSize: 12.5, color: t.muted }}>{main.name} taraftarı</Text>
+              </View>
+            ) : null}
+            {since ? <Text style={{ fontSize: 12.5, color: t.muted }}>{MONTHS[since.getMonth()]} {since.getFullYear()}'dan beri Tribün'de</Text> : null}
           </View>
-        </Pressable>
-        <View style={{ flex: 1, flexDirection: 'row' }}>
+        </View>
+        <View style={{ flexDirection: 'row', marginTop: 14, paddingVertical: 10, borderTopWidth: HAIR, borderBottomWidth: HAIR, borderColor: t.line }}>
           {stat(s.total, 'Puan')}
+          <View style={{ width: HAIR, backgroundColor: t.line }} />
           {stat(all.length, 'Tahmin')}
+          <View style={{ width: HAIR, backgroundColor: t.line }} />
           {stat(others.length, 'Arkadaş', goFriends)}
         </View>
-      </View>
-
-      <Text style={{ fontSize: 16, fontWeight: '800', color: t.fg, marginTop: 12 }}>{store.me.name}</Text>
-      <Text style={{ fontSize: 13, color: t.muted, marginTop: 2, lineHeight: 18 }}>
-        {[main ? `${main.name} taraftarı` : null, since ? `${MONTHS[since.getMonth()]} ${since.getFullYear()}'dan beri Tribün'de` : null].filter(Boolean).join(' · ')}
-      </Text>
-      {store.teams.length > 0 && (
-        <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
-          {store.teams.slice(0, 8).map((x) => (
-            <Pressable key={x.id} onPress={() => nav.navigate('Team', { team: x })} accessibilityRole="button" accessibilityLabel={x.name}
-              style={{ padding: 3, borderRadius: 7, backgroundColor: t.surface2 }}>
-              <Crest uri={x.logo} size={20} />
-            </Pressable>
-          ))}
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+          {button('Profili düzenle', () => nav.navigate('Account'))}
+          {button('➕ Arkadaş ekle', () => secret && inviteFriend(secret), true)}
         </View>
-      )}
+      </Card>
 
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
-        {button('Profili düzenle', () => nav.navigate('Account'))}
-        {button('➕ Arkadaş ekle', () => secret && inviteFriend(secret), true)}
-      </View>
-
-      {/* Rozetler */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
-        {badge('🔥', s.streak ? `${s.streak} maç` : 'Seri', 'seri', s.streak >= 3)}
-        {badge('🎯', s.played ? `%${Math.round(s.rate * 100)}` : '–', 'isabet', s.played >= 5 && s.rate >= 0.5)}
-        {badge('⚽', `${s.exact} tam`, 'skor', s.exact > 0)}
-        {badge('🃏', jokers ? `${jokers} joker` : 'Joker', 'kullandın', jokers > 0)}
-        {badge('🏆', 'Arkadaşlar', 'lideri', myRank === 1 && others.length > 0)}
-      </View>
-
-      {/* Arkadaşlar arası sıra */}
-      {others.length > 0 && mine && leader && (
-        <Pressable onPress={goFriends} accessibilityRole="button"
-          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, padding: 14, borderRadius: 16, backgroundColor: pressed ? t.surface2 : t.surface })}>
-          <Text style={{ fontSize: 28, fontWeight: '800', color: '#FDB912', fontVariant: ['tabular-nums'] }}>{myRank}.</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: t.fg }}>Arkadaşlar arasında {myRank}.</Text>
-            <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2 }}>
-              Bu sezon · {myRank === 1 ? 'zirvedesin 👑' : `${leader.name}'in ${leader.season - mine.season} puan gerisindesin`}
-            </Text>
+      {/* İnce kart: takip edilen takımlar */}
+      <Card style={{ marginTop: 10 }}>
+        <Pressable onPress={() => nav.navigate('MyTeams')} accessibilityRole="button" accessibilityLabel="Takip ettiğim takımlar"
+          style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11, paddingHorizontal: 14, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: t.fg }}>Takip ettiğim takımlar</Text>
+          <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+            {store.teams.length ? store.teams.slice(0, 5).map((x) => <Crest key={x.id} uri={x.logo} size={24} />) : <Text style={{ fontSize: 13, color: t.accent, fontWeight: '600' }}>Takım ekle</Text>}
           </View>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: t.accent }}>Sıralama ›</Text>
+          <Icon.chevron color={t.fg} />
         </Pressable>
-      )}
+      </Card>
 
-      {/* Aktif | Geçmiş | Takımlarım */}
-      <View style={{ marginTop: 16 }}>
-        <Seg value={tab} onChange={setTab} options={[['active', `Aktif${active.length ? ` · ${active.length}` : ''}`], ['past', 'Geçmiş'], ['teams', 'Takımlarım']]} />
+      {/* Aktif | Geçmiş */}
+      <View style={{ marginTop: 14 }}>
+        <Seg value={tab} onChange={setTab} options={[['active', `Aktif${active.length ? ` · ${active.length}` : ''}`], ['past', 'Geçmiş']]} />
       </View>
       <View style={{ marginTop: 10 }}>
-        {tab === 'active' && <ActivePicks picks={active} open={open} onDeleted={picks.reload} />}
-        {tab === 'past' && (past.length ? <PicksList picks={past} title="Geçmiş tahminlerim" /> : <Empty>Henüz biten maçta tahminin yok.</Empty>)}
-        {tab === 'teams' && (
-          <Card>
-            {[...store.teams].sort((a, b) => Number(b.id === store.main) - Number(a.id === store.main)).map((team, i) => (
-              <Pressable key={team.id} onPress={() => nav.navigate('Team', { team })} accessibilityRole="button"
-                style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 14, borderTopWidth: i ? HAIR : 0, borderColor: t.line, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
-                <Crest uri={team.logo} size={28} />
-                <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, color: t.fg }}>{team.name}</Text>
-                {team.id === store.main && <Text style={{ color: t.accent, fontSize: 15 }}>★</Text>}
-                <Icon.chevron color={t.fg} />
-              </Pressable>
-            ))}
-            <View style={{ flexDirection: 'row', borderTopWidth: store.teams.length ? HAIR : 0, borderColor: t.line }}>
-              <Pressable onPress={() => nav.navigate('Picker')} accessibilityRole="button" style={{ flex: 1, padding: 13 }}>
-                <Text style={{ fontSize: 15, color: t.accent, fontWeight: '600' }}>+ Takım ekle</Text>
-              </Pressable>
-              <Pressable onPress={() => nav.navigate('MyTeams')} accessibilityRole="button" style={{ padding: 13 }}>
-                <Text style={{ fontSize: 15, color: t.accent, fontWeight: '600' }}>Düzenle</Text>
-              </Pressable>
-            </View>
-          </Card>
-        )}
+        {tab === 'active' ? <ActivePicks picks={active} open={open} onDeleted={picks.reload} />
+          : past.length ? <PicksList picks={past} title="Geçmiş tahminlerim" /> : <Empty>Henüz biten maçta tahminin yok.</Empty>}
       </View>
     </Screen>
   );
