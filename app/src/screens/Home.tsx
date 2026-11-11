@@ -30,7 +30,7 @@ type Status = { group_id: string; match_id: number; entered: number; h: number |
 
 // Ana ekranın tek kuralı: "takımlarımın seçili turnuvalardaki maçları + gruplarımın tahmin maçları".
 // Grup maçlarının üstünde küçük bir etiket durur ("Hoppa · 3/5 girdi · tahminin 2–1" ya da "Hoppa · tahmin bekliyor").
-// "Tüm ligler" filtresi o günün bütün maçlarını gösterir.
+// "Tüm maçlar" filtresi o günün bütün maçlarını gösterir.
 export default function Home() {
   const t = useTheme();
   const nav = useNav();
@@ -179,7 +179,7 @@ export default function Home() {
       <Icon.plus color={t.accent} />
     </Pressable>
   );
-  const filter = <View style={{ marginTop: 4 }}><Seg value={scope} onChange={setScope} options={[['mine', 'Takımlarım'], ['all', 'Tüm ligler']]} /></View>;
+  const filter = <View style={{ marginTop: 4 }}><Seg value={scope} onChange={setScope} options={[['mine', 'Takımlarım'], ['all', 'Tüm maçlar']]} /></View>;
   // Uzak ayarlardan gelen bakım/duyuru bandı ve (bir kez) ana takım bildirim izni kartı.
   const rc = useRemote();
   const bannerText = rc.maintenance || rc.announcement;
