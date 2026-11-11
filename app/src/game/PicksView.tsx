@@ -45,7 +45,8 @@ export function SummaryCard({ picks, profile }: { picks: MyPick[]; profile?: str
 }
 
 // Tahminler: haftalara bölünmüş liste; Tümü / Tam skor / Kaçanlar. Satıra dokununca maç açılır.
-export function PicksList({ picks, title = 'Tahminlerim', profile }: { picks: MyPick[]; title?: string; profile?: string }) {
+// bare: Profilim'in Geçmiş sekmesi için başlıksız ve filtresiz (Tümü / Tam skor / Kaçanlar yok), doğrudan tüm haftalar.
+export function PicksList({ picks, title = 'Tahminlerim', profile, bare }: { picks: MyPick[]; title?: string; profile?: string; bare?: boolean }) {
   const [filter, setFilter] = useState<Filter>('all');
   const [shown, setShown] = useState(6);
   const results = useResults(picks);
@@ -54,11 +55,11 @@ export function PicksList({ picks, title = 'Tahminlerim', profile }: { picks: My
   const weeks = useMemo(() => byWeek(picks, results, filter, ledger), [picks, results.size, filter, ledger]);
   const t = useTheme();
   if (!picks.length) return null;
-  return (
-    <Section eyebrow={title}>
-      <Seg value={filter} onChange={(f) => { setFilter(f); setShown(6); }} options={[['all', 'Tümü'], ['exact', 'Tam skor'], ['miss', 'Kaçanlar']]} />
-      {weeks.length ? weeks.slice(0, shown).map((w) => (
-        <View key={w.start} style={{ marginTop: GAP }}>
+  const body = (
+    <>
+      {!bare && <Seg value={filter} onChange={(f) => { setFilter(f); setShown(6); }} options={[['all', 'Tümü'], ['exact', 'Tam skor'], ['miss', 'Kaçanlar']]} />}
+      {weeks.length ? weeks.slice(0, shown).map((w, i) => (
+        <View key={w.start} style={{ marginTop: bare && i === 0 ? 0 : GAP }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 6 }}>
             <Text style={{ fontSize: 12.5, fontWeight: '600', color: t.muted }}>{weekLabel(w.start)}</Text>
             <Text style={{ fontSize: 12.5, fontWeight: '600', color: t.muted }}>{w.points} puan</Text>
@@ -71,8 +72,9 @@ export function PicksList({ picks, title = 'Tahminlerim', profile }: { picks: My
           <Text style={{ color: t.accent, fontWeight: '600' }}>Daha eski haftalar</Text>
         </Pressable>
       )}
-    </Section>
+    </>
   );
+  return bare ? <View>{body}</View> : <Section eyebrow={title}>{body}</Section>;
 }
 
 type Teams = { h: { name: string; logo?: string }; a: { name: string; logo?: string } };
