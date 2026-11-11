@@ -8,8 +8,9 @@ import { track } from '../telemetry';
 import { useTheme } from '../theme';
 import { Button, Card, Field, HAIR, Icon, Section, Seg, SwipeRow } from '../ui';
 import { friendCodeFrom } from './ask';
+import { inviteFriend } from './friendInvite';
 
-type Friend = { id: string; name: string; me: boolean; since: string | null; week: number; season: number };
+type Friend = { id: string; name: string; me: boolean; since: string | null; week: number; season: number; won?: number; lost?: number };
 
 // Profil'de arkadaşlar: "Arkadaşlarına sor" bağlantısıyla gelip tahmin yapan herkes (ve sen) hafta / sezon puanına göre.
 // Dokununca arkadaşın profili; sola kaydırınca "Çıkar" (arkadaşlıktan çıkarır). Arkadaşlar birbirinin tahminini maç
@@ -38,17 +39,7 @@ export function FriendsSection() {
     Alert.alert('Arkadaşlıktan çıkar', msg, [{ text: 'Vazgeç', style: 'cancel' }, { text: 'Çıkar', style: 'destructive', onPress: go }]);
   };
 
-  // Arkadaş ekle: kişiye özel bağlantı WhatsApp'tan (kartlı önizleme); açan kişi uygulamada arkadaşın olur.
-  const invite = async () => {
-    try {
-      const r = await rpc<{ code: string }>('my_friend_code', { p_secret: secret });
-      const link = `${PUBLIC_URL}/a/${r.code}?s=${Date.now().toString(36)}`;
-      const text = `Tribün'de arkadaş olalım ⚽ Skor tahminlerimizi karşılaştıralım.\n${link}`;
-      track('friend_invite_sent');
-      try { await Linking.openURL(Platform.OS === 'web' ? `https://wa.me/?text=${encodeURIComponent(text)}` : `whatsapp://send?text=${encodeURIComponent(text)}`); }
-      catch { await Share.share({ message: text }).catch(() => {}); }
-    } catch (e) { Alert.alert('Davet hazırlanamadı', (e as Error).message); }
-  };
+  const invite = () => inviteFriend(secret);
   const addButton = (
     <Pressable onPress={invite} accessibilityRole="button" accessibilityLabel="Arkadaş ekle"
       style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, borderRadius: 14, marginBottom: 10,
@@ -76,7 +67,11 @@ export function FriendsSection() {
                     <Text style={{ fontSize: 14, fontWeight: '800', color: t.fg }}>{f.name.slice(0, 1).toLocaleUpperCase('tr')}</Text>
                   </View>
                   <Text numberOfLines={1} style={{ flex: 1, fontSize: 15, fontWeight: f.me ? '700' : '500', color: t.fg }}>{f.me ? `${f.name} (sen)` : f.name}</Text>
-                  <Text style={{ fontSize: 15, fontWeight: '700', color: t.fg, fontVariant: ['tabular-nums'] }}>{f.pts}</Text>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: t.fg, fontVariant: ['tabular-nums'] }}>{f.pts}</Text>
+                    {/* Kafa kafaya: ikinizin de tahmin yaptığı biten maçlarda kazandığın – kaybettiğin. */}
+                    {!f.me && (f.won || f.lost) ? <Text style={{ fontSize: 11.5, fontWeight: '700', color: t.accent, fontVariant: ['tabular-nums'] }}>Sen {f.won}–{f.lost}</Text> : null}
+                  </View>
                   {!f.me && <Icon.chevron color={t.fg} />}
                 </Pressable>
               );
