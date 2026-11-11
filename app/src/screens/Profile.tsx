@@ -126,7 +126,7 @@ export default function Profile() {
       </View>
       <View style={{ marginTop: 10 }}>
         {tab === 'active' ? <ActivePicks picks={active} open={open} onDeleted={picks.reload} />
-          : past.length ? <PicksList picks={past} title="Geçmiş tahminlerim" /> : <Empty>Henüz biten maçta tahminin yok.</Empty>}
+          : past.length ? <PicksList picks={past} bare /> : <Empty>Henüz biten maçta tahminin yok.</Empty>}
       </View>
     </Screen>
   );
