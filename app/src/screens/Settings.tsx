@@ -58,7 +58,7 @@ export default function Settings() {
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 15, color: t.fg }}>Kilit ekranında canlı skor</Text>
               <Text style={{ fontSize: 12.5, color: t.muted, marginTop: 2, lineHeight: 18 }}>
-                {liveSupported() ? "Takımlarının maçı başlayınca kilit ekranında ve Dynamic Island'da kendiliğinden açılır" : 'iOS 18 ve üzeri gerekir (iPhone Ayarlar → Tribün → Canlı Etkinlikler açık olmalı).'}
+                {liveSupported() ? "Takımlarının maçı 1 saat kala kilit ekranında ve Dynamic Island'da kendiliğinden açılır (uygulama kapalı olsa da)" : 'iOS 18 ve üzeri gerekir (iPhone Ayarlar → Tribün → Canlı Etkinlikler açık olmalı).'}
               </Text>
             </View>
             <Switch value={liveSupported() && store.liveOn !== false} disabled={!liveSupported()} onValueChange={store.setLiveOn} accessibilityLabel="Kilit ekranında canlı skor" />

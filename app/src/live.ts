@@ -1,8 +1,9 @@
 // Kilit ekranı / Dynamic Island canlı skor (Live Activity, iOS 18+) ve ana ekran widget'ı verisi.
 import { Platform } from 'react-native';
-import { endLive, liveMatches, liveSupported, saveLogos, startLive, updateLive } from '../modules/tribun-live';
+import { endLive, liveMatches, liveStartToken, liveSupported, onStartToken, saveLogos, startLive, updateLive } from '../modules/tribun-live';
 import { Fixture, get } from './api';
 import { abbr } from './chat/timeline';
+import { rpc } from './social';
 import { gradientFor } from './teamColors';
 
 export { liveSupported, liveMatches };
@@ -22,10 +23,8 @@ export async function followOnLockScreen(f: Fixture, league: string, pick?: { h:
   const channel = await get<{ channel: string; env: string }>(`/api/live/${f.id}/channel`).then((r) => r.channel, () => null);
   // Logolar önce kaydedilir: kilit ekranı ve Dynamic Island ağdan resim yükleyemez.
   await saveLogos(logosOf(f));
-  const attrs = {
-    matchId: f.id, homeId: f.h.id, awayId: f.a.id, homeName: f.h.name, awayName: f.a.name, homeAbbr: abbr(f.h.name), awayAbbr: abbr(f.a.name),
-    homeColor: color(f.h.name), awayColor: color(f.a.name), league, pick: pick ? `${pick.h}–${pick.a}` : null,
-  };
+  const attrs = attrsOf(f, league, pick);
+  dropAutoStart(f.id); // elle açıldı: sunucu 1 saat kala ikinci bir kart açmasın
   if (!channel) {
     await startLive(attrs, liveStateOf(f), null);
     await wait(2000);
@@ -39,6 +38,55 @@ export async function followOnLockScreen(f: Fixture, league: string, pick?: { h:
   return liveMatches().includes(f.id) ? 'local' : 'closed';
 }
 export const stopFollowing = (id: number) => endLive(id);
+
+// Live Activity'nin sabit bilgileri (uygulamadaki MatchActivityAttributes ile aynı alanlar).
+export function attrsOf(f: Fixture, league: string, pick?: { h: number; a: number } | null) {
+  return {
+    matchId: f.id, homeId: f.h.id, awayId: f.a.id, homeName: f.h.name, awayName: f.a.name, homeAbbr: abbr(f.h.name), awayAbbr: abbr(f.a.name),
+    homeColor: color(f.h.name), awayColor: color(f.a.name), league, pick: pick ? `${pick.h}–${pick.a}` : null,
+  };
+}
+
+/* ---------- Kapalı uygulamada otomatik açılma (push-to-start) ---------- */
+// Takip edilen takımların önümüzdeki maçları ve telefonun başlatma anahtarı sunucuya kaydedilir; sunucu maçı 1 saat kala
+// kilit ekranında açar (uygulama kapalı olsa da). Logolar önceden kaydedilir (kilit ekranı ağdan resim yükleyemez).
+export type AutoItem = { matchId: number; ts: number; attrs: ReturnType<typeof attrsOf> };
+let lastSent = '';
+let lastItems: AutoItem[] = [];
+let lastToken: string | null = null;
+async function sendAuto(token: string, items: AutoItem[]) {
+  const key = token + JSON.stringify(items);
+  if (key === lastSent) return;
+  lastSent = key;
+  await rpc('set_live_autostart', { p_token: token, p_items: items }).catch(() => { lastSent = ''; });
+}
+// Başlatma anahtarı yoksa (eski iOS/derleme) false döner; o zaman uygulama açıkken başlatma yolu kullanılır.
+export function autoStartAvailable(): boolean { return !!(lastToken ?? liveStartToken()); }
+export function syncAutoStart(fixtures: Fixture[], leagueName: (lg: number) => string): void {
+  if (Platform.OS !== 'ios') return;
+  const token = lastToken ?? liveStartToken();
+  if (!token) return;
+  lastToken = token;
+  const now = Date.now();
+  const active = liveMatches();
+  const items = fixtures
+    .filter((f) => f.st === 'ns' && f.ts * 1000 > now && f.ts * 1000 - now < 8 * 86400000 && !active.includes(f.id))
+    .sort((a, b) => a.ts - b.ts).slice(0, 20)
+    .map((f) => ({ matchId: f.id, ts: f.ts, attrs: attrsOf(f, leagueName(f.lg), null) }));
+  lastItems = items;
+  saveLogos(Object.assign({}, ...fixtures.filter((f) => items.some((i) => i.matchId === f.id)).map(logosOf))).catch(() => 0);
+  sendAuto(token, items).catch(() => {});
+}
+function dropAutoStart(matchId: number) {
+  if (!lastToken || !lastItems.some((i) => i.matchId === matchId)) return;
+  lastItems = lastItems.filter((i) => i.matchId !== matchId);
+  sendAuto(lastToken, lastItems).catch(() => {});
+}
+// Anahtar yenilenince (iOS zaman zaman değiştirir) son liste yeni anahtarla tekrar kaydedilir.
+onStartToken((token) => {
+  lastToken = token;
+  if (lastItems.length) sendAuto(token, lastItems).catch(() => {});
+});
 
 // Kanalsız (yerel) açılmış etkinliği uygulama açıkken günceller; kanallı etkinliği sunucu zaten günceller, aynı içerik
 // gönderilmesinin zararı yok. Maç bitince etkinlik kapanır.

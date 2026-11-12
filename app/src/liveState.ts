@@ -3,10 +3,13 @@ import type { Fixture } from './api';
 export type LiveState = { home: number; away: number; minute: string; status: 'ns' | 'live' | 'ht' | 'ft'; clock: number | null };
 
 // Sunucudaki lib/live.js ile aynı kural (ilk durum uygulamadan, sonrakiler sunucudan gelir).
-export function liveStateOf(f: Pick<Fixture, 'st' | 's' | 'min' | 'extra' | 'short' | 'time'>, now = Date.now()): LiveState {
+export function liveStateOf(f: Pick<Fixture, 'st' | 's' | 'min' | 'extra' | 'short' | 'time'> & { ts?: number }, now = Date.now()): LiveState {
   const s = f.s ?? [0, 0];
   const status = f.st === 'live' ? (f.short === 'HT' ? 'ht' : 'live') : f.st === 'ft' ? 'ft' : 'ns';
-  const minute = status === 'ht' ? 'Devre arası' : status === 'ft' ? 'Maç sonu' : status === 'live' ? `${f.min ?? ''}${f.extra ? `+${f.extra}` : ''}'` : (f.time || '');
+  // Başlamamış maçta son 1 saat başlama saatinin yanında geri sayım ("20:00 · 25 dk").
+  const left = status === 'ns' && f.ts ? f.ts * 1000 - now : null;
+  const countdown = left != null && left > 0 && left <= 3600000 ? [f.time, `${Math.ceil(left / 60000)} dk`].filter(Boolean).join(' · ') : null;
+  const minute = status === 'ht' ? 'Devre arası' : status === 'ft' ? 'Maç sonu' : status === 'live' ? `${f.min ?? ''}${f.extra ? `+${f.extra}` : ''}'` : (countdown || f.time || '');
   // clock: maçın 0. dakikası sayılan an (unix sn); süre çubuğu buna göre kendiliğinden ilerler.
   const clock = status === 'live' && f.min != null ? Math.floor(now / 1000) - f.min * 60 : null;
   return { home: s[0], away: s[1], minute, status, clock };
