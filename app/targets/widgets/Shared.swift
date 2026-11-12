@@ -62,7 +62,9 @@ struct TeamLogo: View {
   }
 }
 
-// Kart zemini: ev sahibinin renginden deplasmanın rengine, koyulaştırılmış geçiş.
+// Kart zemini: ev sahibinin renginden deplasmanın rengine, koyulaştırılmış geçiş. %30 saydam: arkadaki duvar kağıdı
+// hafifçe görünür (sistem zemini saydam bırakılır, bkz. activityBackgroundTint).
+let matchBackgroundOpacity = 0.7
 struct MatchBackground: View {
   let homeColor: String
   let awayColor: String
@@ -70,6 +72,7 @@ struct MatchBackground: View {
     LinearGradient(colors: [Color(hex: homeColor, dim: 0.3), Color(hex: homeColor, dim: 0.55), Color(hex: awayColor, dim: 0.6), Color(hex: awayColor, dim: 0.4)],
                    startPoint: .leading, endPoint: .trailing)
       .overlay(Color.black.opacity(0.15))
+      .opacity(matchBackgroundOpacity)
   }
 }
 
