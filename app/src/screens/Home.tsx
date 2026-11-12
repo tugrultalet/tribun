@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Fixture, Match, Mine, useApi } from '../api';
-import { followOnLockScreen, liveMatches, liveSupported, saveWidget, stopFollowing, widgetSnapshot, type WidgetRank } from '../live';
+import { autoStartAvailable, followOnLockScreen, liveMatches, liveSupported, saveWidget, stopFollowing, syncAutoStart, widgetSnapshot, type WidgetRank } from '../live';
 import { dayLabel, daysBetween } from '../dates';
 import { euroIds, followedFixtures } from '../follow';
 import { useMyPicks } from '../game/hooks';
@@ -77,12 +77,16 @@ export default function Home() {
     const own = state.data.fixtures.filter((f) => f.h.id === main || f.a.id === main).sort((a, b) => a.ts - b.ts);
     const next = own.find((f) => f.st === 'live') ?? own.find((f) => f.st === 'ns');
     saveWidget(widgetSnapshot(next, next ? store.league(next.lg)?.name ?? '' : '', Array.isArray(ranks) ? ranks[0] : undefined));
-    // Kilit ekranında otomatik canlı skor: takip edilen ve Ayarlar'da kapatılmamış takımların canlı ya da 30 dk içinde
+    // Kilit ekranında otomatik canlı skor: takip edilen ve Ayarlar'da kapatılmamış takımların canlı ya da 1 saat içinde
     // başlayacak maçları (aynı anda en çok 2; iOS'ta açık etkinlik sayısı sınırlı).
     if (!liveSupported()) return;
     const followed = new Set(store.teams.map((x) => x.id));
+    // Uygulama kapalıyken de açılsın: maçlar sunucuya kaydedilir, sunucu 1 saat kala başlatır (push-to-start).
+    const mineFx = state.data.fixtures.filter((f) => [f.h.id, f.a.id].some((id) => followed.has(id) && store.liveFor(id)));
+    syncAutoStart(store.liveOn === false ? [] : mineFx, (lg) => store.league(lg)?.name ?? '');
     const wanted = state.data.fixtures
-      .filter((f) => (f.st === 'live' || (f.st === 'ns' && f.ts * 1000 - Date.now() < 30 * 60000 && f.ts * 1000 > Date.now() - 3 * 3600000)))
+      // Sunucu 1 saat kala başlatıyorsa uygulama ilk 5 dakikayı ona bırakır (aynı maç için iki kart açılmasın).
+      .filter((f) => (f.st === 'live' || (f.st === 'ns' && f.ts * 1000 - Date.now() < (autoStartAvailable() ? 55 : 60) * 60000 && f.ts * 1000 > Date.now() - 3 * 3600000)))
       .filter((f) => [f.h.id, f.a.id].some((id) => followed.has(id) && store.liveFor(id)))
       .sort((a, b) => a.ts - b.ts);
     // Ayarlar'dan kapatılan takımın kendiliğinden açılmış kartı kapanır.

@@ -4,6 +4,7 @@
 // Uygulamadaki MatchActivityAttributes.ContentState ile aynı alanlar.
 // clock: maçın 0. dakikası sayılan an (unix sn); kilit ekranındaki süre çubuğu buna göre kendiliğinden ilerler.
 const COUNTDOWN_MS = 60 * 60000;
+const AUTO_MS = 60 * 60000; // takip edilen takımın maçı bu kadar kala kilit ekranında kendiliğinden açılır
 export function liveState(f, now = Date.now()) {
   const s = f.s || [0, 0];
   const status = f.st === 'live' ? (f.short === 'HT' ? 'ht' : 'live') : f.st === 'ft' ? 'ft' : 'ns';
@@ -78,12 +79,28 @@ export function multiPayload(matchIds, states, notes, kind, now = Date.now()) {
   return { aps };
 }
 
+// Kapalı uygulamada maçı başlatan bildirim (push-to-start, iOS 18): kart maçın yayın kanalına bağlı açılır, sonraki
+// güncellemeler kanaldan gelir. attrs uygulamanın kaydettiği sabit bilgiler (MatchActivityAttributes alanları).
+export function startPayload(attrs, f, channel, now = Date.now()) {
+  const ts = Math.floor(now / 1000);
+  const aps = {
+    timestamp: ts, event: 'start', 'content-state': liveState(f, now),
+    'attributes-type': 'MatchActivityAttributes', attributes: attrs,
+    alert: { title: `${f.h.name} – ${f.a.name}`, body: f.st === 'ns' ? `${f.time || 'Birazdan'} · kilit ekranında takip ediliyor` : 'Kilit ekranında takip ediliyor' },
+    'stale-date': ts + 4 * 3600,
+  };
+  if (channel) aps['input-push-channel'] = channel;
+  return { aps };
+}
+
 export function createLive({ apns, supa, log = console, watch = null }) {
   const channels = new Map(); // matchId -> { channel, env }
   const sent = new Map();     // matchId -> { state, at }
   const states = new Map();   // matchId -> son durum (çoklu kart için)
   const notes = new Map();    // matchId -> son olay ("⚽ GOL! …")
   const fixtures = new Map(); // matchId -> son bilinen maç bilgisi (geri sayım için)
+  const startedKeys = new Set(); // "anahtar:maç" — otomatik açılması gönderilenler
+  let autoAt = 0;
   let tokens = [], tokensAt = 0;
   async function loadTokens(now) {
     if (now - tokensAt < 60000) return;
@@ -147,6 +164,40 @@ export function createLive({ apns, supa, log = console, watch = null }) {
         if (f && f.st === 'ns' && f.ts && f.ts * 1000 - now > 0 && f.ts * 1000 - now <= COUNTDOWN_MS + 60000) due.push(f);
       }
       if (due.length) await this.onFixtures(due, now);
+      await this.autoStart(now);
+    },
+    // Takip edilen takımın maçı 1 saat kala (ya da sunucu o an kapalıydıysa maç sürerken) uygulama kapalıyken açılır.
+    async autoStart(now = Date.now()) {
+      if (now - autoAt < 60000) return;
+      autoAt = now;
+      let rows = [];
+      try { rows = (await supa.rpc('server_live_autostart')) || []; } catch { return; }
+      for (const row of rows) {
+        for (const it of row.items || []) {
+          const id = Number(it.matchId);
+          const key = `${row.token}:${id}`;
+          if (!id || !it.attrs || startedKeys.has(key)) continue;
+          const left = Number(it.ts) * 1000 - now;
+          if (left > AUTO_MS || left < -100 * 60000) {
+            if (left < -100 * 60000) supa.rpc('server_live_autostart_done', { p_token: row.token, p_match: id }).catch(() => {});
+            continue;
+          }
+          let f = fixtures.get(id);
+          if (!f && watch) { f = await Promise.resolve(watch(id)).catch(() => null); if (f) fixtures.set(id, f); }
+          if (!f) continue;
+          startedKeys.add(key);
+          if (f.st !== 'ft') {
+            try {
+              const channel = await this.channelFor(id, f).catch(() => null);
+              await apns.toToken(row.token, startPayload({ ...it.attrs, matchId: id }, f, channel, now), 10);
+            } catch (e) {
+              if (e.status === 410) { supa.rpc('server_drop_live_autostart', { p_token: row.token }).catch(() => {}); break; }
+              log.warn?.(`Kilit ekranı otomatik açılamadı (${id}): ${e.message}`);
+            }
+          }
+          supa.rpc('server_live_autostart_done', { p_token: row.token, p_match: id }).catch(() => {});
+        }
+      }
     },
     async onFixtures(list, now = Date.now()) {
       for (const f of list) fixtures.set(f.id, f);

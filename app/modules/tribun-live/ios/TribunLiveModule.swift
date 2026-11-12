@@ -16,23 +16,51 @@ extension TribunLiveModule {
   }
 }
 
+// Kapalı uygulamada kilit ekranını açabilmek için (push-to-start): sunucu bu anahtarla maçı 1 saat kala başlatır.
+@available(iOS 18.0, *)
+extension TribunLiveModule {
+  func observeStartToken() {
+    Task { [weak self] in
+      for await data in Activity<MatchActivityAttributes>.pushToStartTokenUpdates {
+        let token = data.map { String(format: "%02x", $0) }.joined()
+        TribunLiveModule.startToken = token
+        self?.sendEvent("onStartToken", ["token": token])
+      }
+    }
+  }
+}
+
 final class LiveUnsupportedException: Exception {
   override var reason: String { "Canlı skor kilit ekranında yalnızca iOS 18 ve üzerinde, Live Activity izni açıkken gösterilir." }
 }
 
 // Maç Live Activity'si: uygulama başlatır (APNs yayın kanalına bağlı), güncellemeleri sunucu gönderir.
 public class TribunLiveModule: Module {
+  static var startToken: String?
+
   public func definition() -> ModuleDefinition {
     Name("TribunLive")
 
     // Çoklu maç kartının cihaza özel güncelleme anahtarı: { token, matches } (sunucuya kaydedilir).
-    Events("onLiveToken")
+    // onStartToken: uygulama kapalıyken maçı başlatma anahtarı (push-to-start).
+    Events("onLiveToken", "onStartToken")
 
     OnCreate {
       // Uygulama yeniden açıldığında açık çoklu kartların anahtarları tekrar dinlenir.
       if #available(iOS 18.0, *) {
         for activity in Activity<MultiMatchAttributes>.activities { self.observeToken(activity) }
+        self.observeStartToken()
       }
+    }
+
+    // Son bilinen başlatma anahtarı (olay JS dinleyicisinden önce geldiyse buradan okunur).
+    Function("startToken") { () -> String? in
+      if #available(iOS 18.0, *) {
+        if let data = Activity<MatchActivityAttributes>.pushToStartToken {
+          return data.map { String(format: "%02x", $0) }.joined()
+        }
+      }
+      return TribunLiveModule.startToken
     }
 
     Function("isSupported") { () -> Bool in

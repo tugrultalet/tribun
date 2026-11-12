@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { apnsJwt, createApns } from '../lib/apns.js';
-import { createLive, liveState, multiPayload, nextUpdate, payloadFor } from '../lib/live.js';
+import { createLive, liveState, multiPayload, nextUpdate, payloadFor, startPayload } from '../lib/live.js';
 
 const f = (o = {}) => ({ id: 7, st: 'live', s: [1, 0], min: 67, extra: null, short: '2H', time: '20:45', h: { name: 'GS' }, a: { name: 'FB' }, ...o });
 
@@ -144,4 +144,37 @@ test('countdown: takip edilen ve başlamasına 1 saatten az kalan maça gönderi
   sent.length = 0;
   await far.countdown(now);
   assert.equal(sent.length, 0);
+});
+
+test('autoStart: takip edilen maçı 1 saat kala push-to-start ile açar, bir kez', async () => {
+  const now = Date.now();
+  const pushed = [], done = [];
+  const attrs = { matchId: 7, homeId: 1, awayId: 2, homeName: 'GS', awayName: 'FB', homeAbbr: 'GS', awayAbbr: 'FB', homeColor: '#a', awayColor: '#b', league: 'Süper Lig', pick: null };
+  const near = { matchId: 7, ts: Math.floor((now + 50 * 60000) / 1000), attrs };
+  const far = { matchId: 8, ts: Math.floor((now + 3 * 3600000) / 1000), attrs: { ...attrs, matchId: 8 } };
+  const apns = { env: 'production', createChannel: async () => 'CH7', broadcast: async () => {}, toToken: async (tok, p) => pushed.push({ tok, p }) };
+  const supa = { rpc: async (name, a) => {
+    if (name === 'server_live_autostart') return [{ token: 'T'.repeat(64), items: [near, far] }];
+    if (name === 'server_live_autostart_done') done.push(a.p_match);
+    return [];
+  } };
+  const fx = f({ st: 'ns', s: null, min: null, ts: near.ts });
+  const live = createLive({ apns, supa, log: {}, watch: async () => fx });
+  await live.autoStart(now);
+  assert.equal(pushed.length, 1);
+  const aps = pushed[0].p.aps;
+  assert.equal(aps.event, 'start');
+  assert.equal(aps['attributes-type'], 'MatchActivityAttributes');
+  assert.equal(aps['input-push-channel'], 'CH7');
+  assert.equal(aps.attributes.matchId, 7);
+  assert.equal(aps['content-state'].minute, '20:45 · 50 dk');
+  assert.deepEqual(done, [7]);
+  await live.autoStart(now + 61000);
+  assert.equal(pushed.length, 1); // ikinci kez açılmaz
+});
+
+test('startPayload kanalsız da çalışır', () => {
+  const p = startPayload({ matchId: 7 }, f(), null, 1_000_000_000);
+  assert.equal(p.aps['input-push-channel'], undefined);
+  assert.equal(p.aps['content-state'].minute, "67'");
 });

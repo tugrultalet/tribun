@@ -12,7 +12,8 @@ type Native = {
   startMulti(attributesJson: string, stateJson: string): Promise<string>;
   updateMulti(stateJson: string): Promise<void>;
   endMulti(): Promise<void>;
-  addListener?(event: 'onLiveToken', cb: (e: { token: string; matches: number[] }) => void): { remove(): void };
+  startToken?(): string | null;
+  addListener?(event: 'onLiveToken' | 'onStartToken', cb: (e: { token: string; matches?: number[] }) => void): { remove(): void };
 };
 
 const native = requireOptionalNativeModule<Native>('TribunLive');
@@ -55,5 +56,12 @@ export const updateMulti = (slots: MultiSlot[]): Promise<void> =>
 export const endMulti = (): Promise<void> => (has('endMulti') ? native!.endMulti().catch(() => {}) : Promise.resolve());
 // Kartın güncelleme anahtarı geldiğinde (sunucuya kaydedilir).
 export function onLiveToken(cb: (e: { token: string; matches: number[] }) => void): () => void {
-  try { const sub = native?.addListener?.('onLiveToken', cb); return () => sub?.remove(); } catch { return () => {}; }
+  try { const sub = native?.addListener?.('onLiveToken', (e) => cb({ token: e.token, matches: e.matches ?? [] })); return () => sub?.remove(); } catch { return () => {}; }
+}
+
+/* ---------- Kapalı uygulamada başlatma (push-to-start) ---------- */
+// Sunucu bu anahtarla takip edilen takımın maçını 1 saat kala kilit ekranında açar. Eski derlemede yoksa null.
+export const liveStartToken = (): string | null => { try { return has('startToken') ? native!.startToken!() ?? null : null; } catch { return null; } };
+export function onStartToken(cb: (token: string) => void): () => void {
+  try { const sub = native?.addListener?.('onStartToken', (e) => cb(e.token)); return () => sub?.remove(); } catch { return () => {}; }
 }
