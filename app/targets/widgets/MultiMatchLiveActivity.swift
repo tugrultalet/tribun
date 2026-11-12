@@ -7,7 +7,7 @@ struct MultiMatchLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: MultiMatchAttributes.self) { context in
       MultiLockScreenView(attributes: context.attributes, state: context.state)
-        .activityBackgroundTint(tribunNavy.opacity(0.95))
+        .activityBackgroundTint(Color.black.opacity(0.0001)) // zemin saydam; renk MatchBackground'dan (%70)
         .activitySystemActionForegroundColor(.white)
         .widgetURL(URL(string: "tribun://match/\(context.attributes.matches.first?.id ?? 0)"))
     } dynamicIsland: { context in

@@ -7,7 +7,7 @@ struct MatchLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: MatchActivityAttributes.self) { context in
       LockScreenMatchView(attributes: context.attributes, state: context.state)
-        .activityBackgroundTint(Color(hex: context.attributes.homeColor, dim: 0.45))
+        .activityBackgroundTint(Color.black.opacity(0.0001)) // zemin saydam; renk MatchBackground'dan (%70)
         .activitySystemActionForegroundColor(.white)
         .widgetURL(URL(string: "tribun://match/\(context.attributes.matchId)"))
     } dynamicIsland: { context in
