@@ -3,10 +3,14 @@
 
 // Uygulamadaki MatchActivityAttributes.ContentState ile aynı alanlar.
 // clock: maçın 0. dakikası sayılan an (unix sn); kilit ekranındaki süre çubuğu buna göre kendiliğinden ilerler.
+const COUNTDOWN_MS = 30 * 60000;
 export function liveState(f, now = Date.now()) {
   const s = f.s || [0, 0];
   const status = f.st === 'live' ? (f.short === 'HT' ? 'ht' : 'live') : f.st === 'ft' ? 'ft' : 'ns';
-  const minute = status === 'ht' ? 'Devre arası' : status === 'ft' ? 'Maç sonu' : status === 'live' ? `${f.min ?? ''}${f.extra ? `+${f.extra}` : ''}'` : (f.time || '');
+  // Başlamamış maçta son 30 dakika geri sayım ("25 dk"); öncesinde başlama saati.
+  const left = status === 'ns' && f.ts ? f.ts * 1000 - now : null;
+  const countdown = left != null && left > 0 && left <= COUNTDOWN_MS ? `${Math.ceil(left / 60000)} dk` : null;
+  const minute = status === 'ht' ? 'Devre arası' : status === 'ft' ? 'Maç sonu' : status === 'live' ? `${f.min ?? ''}${f.extra ? `+${f.extra}` : ''}'` : (countdown || f.time || '');
   const clock = status === 'live' && f.min != null ? Math.floor(now / 1000) - f.min * 60 : null;
   return { home: s[0], away: s[1], minute, status, clock };
 }
@@ -79,6 +83,7 @@ export function createLive({ apns, supa, log = console, watch = null }) {
   const sent = new Map();     // matchId -> { state, at }
   const states = new Map();   // matchId -> son durum (çoklu kart için)
   const notes = new Map();    // matchId -> son olay ("⚽ GOL! …")
+  const fixtures = new Map(); // matchId -> son bilinen maç bilgisi (geri sayım için)
   let tokens = [], tokensAt = 0;
   async function loadTokens(now) {
     if (now - tokensAt < 60000) return;
@@ -119,7 +124,8 @@ export function createLive({ apns, supa, log = console, watch = null }) {
   }
   return {
     // Uygulama "kilit ekranında takip et" deyince: maçın kanalı (yoksa oluşturulur).
-    async channelFor(matchId) {
+    async channelFor(matchId, f = null) {
+      if (f) fixtures.set(matchId, f);
       await load();
       if (channels.has(matchId)) return channels.get(matchId);
       const channel = await apns.createChannel();
@@ -128,12 +134,28 @@ export function createLive({ apns, supa, log = console, watch = null }) {
       return channel;
     },
     // Canlı yenilemeden sonra: kanalı olan maçlara güncelleme.
-    async onFixtures(fixtures, now = Date.now()) {
+    // Dakikada bir: başlamasına 30 dakikadan az kalan, takip edilen maçlara geri sayım ("25 dk"). Canlı yenileme yalnızca
+    // başlamasına 5 dakika kalan maçları kapsadığı için bu ayrı çalışır.
+    async countdown(now = Date.now()) {
+      await load();
+      await loadTokens(now);
+      const ids = new Set([...channels.keys(), ...tokens.flatMap((x) => x.matches)]);
+      const due = [];
+      for (const id of ids) {
+        let f = fixtures.get(id);
+        if (!f && watch) { f = await Promise.resolve(watch(id)).catch(() => null); if (f) fixtures.set(id, f); }
+        if (f && f.st === 'ns' && f.ts && f.ts * 1000 - now > 0 && f.ts * 1000 - now <= COUNTDOWN_MS + 60000) due.push(f);
+      }
+      if (due.length) await this.onFixtures(due, now);
+    },
+    async onFixtures(list, now = Date.now()) {
+      for (const f of list) fixtures.set(f.id, f);
+      const fixturesNow = list;
       await load();
       await loadTokens(now);
       const multiIds = new Set(tokens.flatMap((x) => x.matches));
       const changed = new Map(); // matchId -> güncelleme (çoklu kartlar için)
-      for (const f of fixtures) {
+      for (const f of fixturesNow) {
         const channel = channels.get(f.id);
         if (!channel && !multiIds.has(f.id)) continue;
         const u = nextUpdate(sent.get(f.id), f, now);

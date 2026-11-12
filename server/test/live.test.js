@@ -116,3 +116,32 @@ test('gol satırı golü atan oyuncuyu ve tarafını yazar', () => {
   const old = payloadFor({ kind: 'goal', side: 'a', state: st }, { ...fx, goal: { ...fx.goal, n: 4 } }, 1_000_000_000);
   assert.equal(old.aps['content-state'].note, '⚽ GOL! Valencia');
 });
+
+test('maç öncesi son 30 dakika geri sayım', () => {
+  const now = 1_000_000_000_000;
+  const ns = (min) => f({ st: 'ns', s: null, min: null, ts: (now + min * 60000) / 1000 });
+  assert.equal(liveState(ns(45), now).minute, '20:45');
+  assert.equal(liveState(ns(30), now).minute, '30 dk');
+  assert.equal(liveState(ns(24.5), now).minute, '25 dk');
+  assert.equal(liveState(ns(0.2), now).minute, '1 dk');
+  // Geri sayım dakikada bir güncellenir.
+  const prev = { state: liveState(ns(25), now), at: now };
+  assert.equal(nextUpdate(prev, ns(25), now + 30000), null);
+  assert.equal(nextUpdate(prev, ns(25), now + 60000).kind, 'tick');
+});
+
+test('countdown: takip edilen ve başlamasına 30 dk kalan maça gönderir', async () => {
+  const now = Date.now();
+  const sent = [];
+  const apns = { env: 'production', createChannel: async () => 'CH', broadcast: async (ch, p) => sent.push(p), toToken: async () => {} };
+  const supa = { rpc: async (name) => (name === 'server_live_channels' ? [{ match_id: 7, channel: 'CH', env: 'production' }] : []) };
+  const fx = f({ st: 'ns', s: null, min: null, ts: Math.floor((now + 20 * 60000) / 1000) });
+  const live = createLive({ apns, supa, log: {}, watch: async () => fx });
+  await live.countdown(now);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].aps['content-state'].minute, '20 dk');
+  const far = createLive({ apns, supa, log: {}, watch: async () => ({ ...fx, ts: Math.floor((now + 90 * 60000) / 1000) }) });
+  sent.length = 0;
+  await far.countdown(now);
+  assert.equal(sent.length, 0);
+});
