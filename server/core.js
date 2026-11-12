@@ -316,7 +316,8 @@ export function createCore({ provider, cacheDir, notify = null, onRefresh = null
       const f = d.fixture, age = Date.now() - f.ts * 1000;
       if (f.st === 'live') return liveTtl();
       if (f.st === 'ft') return age > 6 * HOUR ? 30 * DAY : 30 * MIN;
-      return age > -90 * MIN ? Math.max(liveTtl(), 5 * MIN) : 6 * HOUR;
+      // Maça 90 dakikadan fazla varken alınan bilgi en geç maça 90 dakika kala yenilenir (kadro, saat değişikliği).
+      return age > -90 * MIN ? Math.max(liveTtl(), 5 * MIN) : Math.max(5 * MIN, Math.min(6 * HOUR, -age - 90 * MIN));
     };
     if (load(`missing:${id}`)?.exp > Date.now()) return Promise.reject(fail('notfound', 'Maç bulunamadı.'));
     return cached(`match:${id}`, ttl, async () => {
@@ -337,10 +338,16 @@ export function createCore({ provider, cacheDir, notify = null, onRefresh = null
     const match = await getMatch(id);
     const f = match.fixture;
     if (f.st === 'off' || (f.st === 'ns' && f.ts * 1000 - Date.now() > 75 * MIN)) return { lineups: [] };
-    if (match.lineups) return { lineups: match.lineups };
-    return cached(`lineups:${id}`, (d) => (d.lineups.length ? (f.st === 'ft' ? 30 * DAY : HOUR) : 10 * MIN), async () => (spendGuard(), {
-      updated: Date.now(), lineups: await provider.lineups(id),
-    }));
+    if (match.lineups?.length) return { lineups: match.lineups };
+    // Maç bilgisi kadrolar açıklanmadan önce alındıysa (boş liste) kadro ayrıca sorulur: açıklanana kadar 5 dakikada bir.
+    // Kaynak kadroyu maçla birlikte veriyorsa (API-Football) maç yeniden sorulur ve önbellekteki maça da işlenir.
+    return cached(`lineups:${id}`, (d) => (d.lineups.length ? (f.st === 'ft' ? 30 * DAY : HOUR) : 5 * MIN), async () => {
+      spendGuard();
+      const lineups = provider.lineups ? await provider.lineups(id) : ((await provider.match(id)).lineups || []);
+      const entry = lineups.length && load(`match:${id}`);
+      if (entry) persist(`match:${id}`, { exp: entry.exp, data: { ...entry.data, lineups } });
+      return { updated: Date.now(), lineups };
+    });
   }
 
   // Maç öncesi oranlar: yalnızca başlamamış maçlarda ve maça 14 günden az kala sorulur; 3 saat saklanır.
