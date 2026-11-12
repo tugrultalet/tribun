@@ -103,7 +103,7 @@ const routes = [
     const id = Number(m[1]);
     const f = await core.watchMatch(id, ctx);
     if (!(f.st === 'live' || (f.st === 'ns' && f.ts * 1000 - Date.now() < 6 * 3600000))) throw fail('bad', 'Bu maç için canlı takip henüz açılmadı.');
-    return { channel: await live.channelFor(id), env: apnsCfg.env };
+    return { channel: await live.channelFor(id, f), env: apnsCfg.env };
   }],
 ];
 const STATUS = { quota: 429, busy: 429, bad: 400, notfound: 404, config: 500, plan: 403, blocked: 503, upstream: 502 };
@@ -183,6 +183,8 @@ const supa = createSupa({ url: SUPABASE_URL });
 let apnsCfg = null;
 try { apnsCfg = loadApnsConfig(process.env); } catch (e) { console.warn(`UYARI: APNs anahtarı okunamadı: ${e.message}`); }
 if (apnsCfg && supa) live = createLive({ apns: createApns(apnsCfg), supa, watch: (id) => core.watchMatch(id) });
+// Maç öncesi geri sayım (kilit ekranında "25 dk"): 30 saniyede bir bakılır, yazı dakikada bir değişir.
+if (live) setInterval(() => live.countdown().catch(() => {}), 30000).unref();
 async function publicRpc(fn, args) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: 'POST', headers: { apikey: SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`, 'content-type': 'application/json' },
