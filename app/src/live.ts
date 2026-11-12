@@ -17,14 +17,20 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Başlatır ve 2 sn sonra etkinliğin gerçekten açık kaldığını doğrular. iPhone kanala bağlı etkinliği hemen kapatırsa
 // kanalsız (yerel) dener; sonuç teşhis için döner: 'channel' | 'local' | 'closed'.
-export async function followOnLockScreen(f: Fixture, league: string, pick?: { h: number; a: number } | null): Promise<'channel' | 'local' | 'closed'> {
-  const { channel } = await get<{ channel: string; env: string }>(`/api/live/${f.id}/channel`);
+export async function followOnLockScreen(f: Fixture, league: string, pick?: { h: number; a: number } | null): Promise<'channel' | 'local' | 'nochannel' | 'closed'> {
+  // Sunucu kanal açamazsa (ör. Apple tarafında yayın kapalı) hata göstermek yerine kanalsız açılır: skor uygulama açıkken güncellenir.
+  const channel = await get<{ channel: string; env: string }>(`/api/live/${f.id}/channel`).then((r) => r.channel, () => null);
   // Logolar önce kaydedilir: kilit ekranı ve Dynamic Island ağdan resim yükleyemez.
   await saveLogos(logosOf(f));
   const attrs = {
     matchId: f.id, homeId: f.h.id, awayId: f.a.id, homeName: f.h.name, awayName: f.a.name, homeAbbr: abbr(f.h.name), awayAbbr: abbr(f.a.name),
     homeColor: color(f.h.name), awayColor: color(f.a.name), league, pick: pick ? `${pick.h}–${pick.a}` : null,
   };
+  if (!channel) {
+    await startLive(attrs, liveStateOf(f), null);
+    await wait(2000);
+    return liveMatches().includes(f.id) ? 'nochannel' : 'closed';
+  }
   await startLive(attrs, liveStateOf(f), channel);
   await wait(2000);
   if (liveMatches().includes(f.id)) return 'channel';
