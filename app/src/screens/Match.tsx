@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { pollMs } from '../poll';
 import { FollowLive } from './FollowLive';
-import { Pressable, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Fixture, Lineup, Lineups as LineupData, Match as MatchData, MatchEvent, Standings, Team, useApi } from '../api';
 import { dayLabel } from '../dates';
@@ -158,9 +158,7 @@ function Lineups({ m }: { m: MatchData }) {
           <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
             {row.map((p, j) => (
               <View key={j} style={{ width: 70, alignItems: 'center', gap: 4 }}>
-                <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: color, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)' }}>
-                  <Text style={{ fontWeight: '700', fontSize: 16, lineHeight: 18, color: ink }}>{p.no ?? ''}</Text>
-                </View>
+                <PlayerFace id={p.id} no={p.no} size={44} color={color} ink={ink} />
                 <Text numberOfLines={2} style={{ fontSize: 11.5, fontWeight: '600', color: '#fff', textAlign: 'center' }}>{p.name}</Text>
               </View>
             ))}
@@ -172,7 +170,7 @@ function Lineups({ m }: { m: MatchData }) {
           <View>
             {lu.subs.map((p, i) => (
               <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: HAIR, borderColor: t.line }}>
-                <Text style={{ width: 26, textAlign: 'center', fontWeight: '600', fontSize: 17, color: t.muted }}>{p.no ?? ''}</Text>
+                <PlayerFace id={p.id} no={p.no} size={34} color={color} ink={ink} />
                 <Text style={{ flex: 1, fontSize: 14, color: t.fg }}>{p.name}</Text>
                 <Text style={{ fontSize: 12, color: t.muted }}>{POS[p.pos ?? ''] ?? ''}</Text>
               </View>
@@ -184,6 +182,31 @@ function Lineups({ m }: { m: MatchData }) {
   );
 }
 const POS: Record<string, string> = { G: 'Kaleci', D: 'Defans', M: 'Orta saha', F: 'Forvet' };
+
+// Oyuncu fotoğrafı (API-Football'un görsel sunucusu; istek kotasına sayılmaz) ve köşede forma numarası. Fotoğraf yoksa
+// ya da yüklenmezse takım renginde numaralı daire kalır.
+function PlayerFace({ id, no, size, color, ink }: { id?: number | null; no?: number | null; size: number; color: string; ink: string }) {
+  const [failed, setFailed] = useState(false);
+  const badge = Math.round(size * 0.42);
+  if (!id || failed) {
+    return (
+      <View style={{ width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center', backgroundColor: color, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)' }}>
+        <Text style={{ fontWeight: '700', fontSize: size * 0.45, color: ink }}>{no ?? ''}</Text>
+      </View>
+    );
+  }
+  return (
+    <View style={{ width: size, height: size }}>
+      <Image source={{ uri: `https://media.api-sports.io/football/players/${id}.png` }} onError={() => setFailed(true)} accessibilityIgnoresInvertColors
+        style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#E9EDF2', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)' }} />
+      {no != null ? (
+        <View style={{ position: 'absolute', right: -4, bottom: -2, minWidth: badge, height: badge, paddingHorizontal: 3, borderRadius: badge / 2, alignItems: 'center', justifyContent: 'center', backgroundColor: color, borderWidth: 1, borderColor: 'rgba(255,255,255,0.8)' }}>
+          <Text style={{ fontSize: badge * 0.6, fontWeight: '800', color: ink }}>{no}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
 
 function Stats({ m }: { m: MatchData }) {
   const t = useTheme();
