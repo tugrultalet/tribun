@@ -341,7 +341,9 @@ export function createCore({ provider, cacheDir, notify = null, onRefresh = null
     if (match.lineups?.length) return { lineups: match.lineups };
     // Maç bilgisi kadrolar açıklanmadan önce alındıysa (boş liste) kadro ayrıca sorulur: açıklanana kadar 5 dakikada bir.
     // Kaynak kadroyu maçla birlikte veriyorsa (API-Football) maç yeniden sorulur ve önbellekteki maça da işlenir.
-    return cached(`lineups:${id}`, (d) => (d.lineups.length ? (f.st === 'ft' ? 30 * DAY : HOUR) : 5 * MIN), async () => {
+    // Maça 45 dakikadan az kala ya da maç sürerken (kadrolar çoğunlukla bu arada gelir) her dakika sorulur.
+    const soon = f.st === 'live' || (f.st === 'ns' && f.ts * 1000 - Date.now() < 45 * MIN);
+    return cached(`lineups:${id}`, (d) => (d.lineups.length ? (f.st === 'ft' ? 30 * DAY : HOUR) : soon ? MIN : 5 * MIN), async () => {
       spendGuard();
       const lineups = provider.lineups ? await provider.lineups(id) : ((await provider.match(id)).lineups || []);
       const entry = lineups.length && load(`match:${id}`);
