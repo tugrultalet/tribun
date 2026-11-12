@@ -3,13 +3,13 @@
 
 // Uygulamadaki MatchActivityAttributes.ContentState ile aynı alanlar.
 // clock: maçın 0. dakikası sayılan an (unix sn); kilit ekranındaki süre çubuğu buna göre kendiliğinden ilerler.
-const COUNTDOWN_MS = 30 * 60000;
+const COUNTDOWN_MS = 60 * 60000;
 export function liveState(f, now = Date.now()) {
   const s = f.s || [0, 0];
   const status = f.st === 'live' ? (f.short === 'HT' ? 'ht' : 'live') : f.st === 'ft' ? 'ft' : 'ns';
-  // Başlamamış maçta son 30 dakika geri sayım ("25 dk"); öncesinde başlama saati.
+  // Başlamamış maçta son 1 saat başlama saatinin yanında geri sayım ("20:00 · 25 dk"); öncesinde yalnızca saat.
   const left = status === 'ns' && f.ts ? f.ts * 1000 - now : null;
-  const countdown = left != null && left > 0 && left <= COUNTDOWN_MS ? `${Math.ceil(left / 60000)} dk` : null;
+  const countdown = left != null && left > 0 && left <= COUNTDOWN_MS ? [f.time, `${Math.ceil(left / 60000)} dk`].filter(Boolean).join(' · ') : null;
   const minute = status === 'ht' ? 'Devre arası' : status === 'ft' ? 'Maç sonu' : status === 'live' ? `${f.min ?? ''}${f.extra ? `+${f.extra}` : ''}'` : (countdown || f.time || '');
   const clock = status === 'live' && f.min != null ? Math.floor(now / 1000) - f.min * 60 : null;
   return { home: s[0], away: s[1], minute, status, clock };
@@ -134,7 +134,7 @@ export function createLive({ apns, supa, log = console, watch = null }) {
       return channel;
     },
     // Canlı yenilemeden sonra: kanalı olan maçlara güncelleme.
-    // Dakikada bir: başlamasına 30 dakikadan az kalan, takip edilen maçlara geri sayım ("25 dk"). Canlı yenileme yalnızca
+    // Dakikada bir: başlamasına 1 saatten az kalan, takip edilen maçlara geri sayım ("20:00 · 25 dk"). Canlı yenileme yalnızca
     // başlamasına 5 dakika kalan maçları kapsadığı için bu ayrı çalışır.
     async countdown(now = Date.now()) {
       await load();

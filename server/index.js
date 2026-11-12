@@ -183,7 +183,7 @@ const supa = createSupa({ url: SUPABASE_URL });
 let apnsCfg = null;
 try { apnsCfg = loadApnsConfig(process.env); } catch (e) { console.warn(`UYARI: APNs anahtarı okunamadı: ${e.message}`); }
 if (apnsCfg && supa) live = createLive({ apns: createApns(apnsCfg), supa, watch: (id) => core.watchMatch(id) });
-// Maç öncesi geri sayım (kilit ekranında "25 dk"): 30 saniyede bir bakılır, yazı dakikada bir değişir.
+// Maç öncesi geri sayım (kilit ekranında "20:00 · 25 dk", son 1 saat): 30 saniyede bir bakılır, yazı dakikada bir değişir.
 if (live) setInterval(() => live.countdown().catch(() => {}), 30000).unref();
 async function publicRpc(fn, args) {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
