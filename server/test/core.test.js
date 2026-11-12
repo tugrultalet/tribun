@@ -207,3 +207,15 @@ test('bildirim: canlı yenilemede gol bir kez bildirilir', async () => {
   await new Promise((r) => setTimeout(r, 20));
   assert.deepEqual(sent, [['goal', '1-0']], 'ikinci yenilemede aynı gol tekrar gönderilmez');
 });
+
+test('kadro maç bilgisiyle boş geldiyse maç saatine yakın yeniden sorulur', async () => {
+  const m = fx({ h: GS, a: FB, ts: Math.floor((Date.now() + 50 * 60000) / 1000) });
+  const xi = [{ team: GS, formation: '4-2-3-1', start: [], subs: [] }];
+  let n = 0;
+  const { core } = makeCore({ match: async () => ({ fixture: m, events: [], stats: [], lineups: n++ === 0 ? [] : xi }) });
+  await core.match(m.id, { trusted: true });
+  const r = await core.lineups(m.id, { trusted: true });
+  assert.deepEqual(r.lineups, xi);
+  assert.deepEqual((await core.lineups(m.id, { trusted: true })).lineups, xi); // önbellekten
+  assert.equal(n, 2);
+});
