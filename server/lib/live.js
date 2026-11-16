@@ -13,7 +13,9 @@ export function liveState(f, now = Date.now()) {
   const countdown = left != null && left > 0 && left <= COUNTDOWN_MS ? [f.time, `${Math.ceil(left / 60000)} dk`].filter(Boolean).join(' · ') : null;
   const minute = status === 'ht' ? 'Devre arası' : status === 'ft' ? 'Maç sonu' : status === 'live' ? `${f.min ?? ''}${f.extra ? `+${f.extra}` : ''}'` : (countdown || f.time || '');
   const clock = status === 'live' && f.min != null ? Math.floor(now / 1000) - f.min * 60 : null;
-  return { home: s[0], away: s[1], minute, status, clock };
+  // Topla oynama yüzdesi (yoksa null; kart barı eşit ve soluk gösterir). Eski uygulama sürümleri bu alanı yok sayar.
+  const poss = status !== 'ns' && Array.isArray(f.poss) ? f.poss : null;
+  return { home: s[0], away: s[1], minute, status, clock, poss };
 }
 
 // Gönderilecek güncelleme: skor ya da durum değiştiyse hemen (10), yalnızca dakika ilerlediyse en çok dakikada bir (5).

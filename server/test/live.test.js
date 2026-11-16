@@ -7,10 +7,12 @@ import { createLive, liveState, multiPayload, nextUpdate, payloadFor, startPaylo
 const f = (o = {}) => ({ id: 7, st: 'live', s: [1, 0], min: 67, extra: null, short: '2H', time: '20:45', h: { name: 'GS' }, a: { name: 'FB' }, ...o });
 
 test('liveState', () => {
-  assert.deepEqual(liveState(f(), 1_000_000_000), { home: 1, away: 0, minute: "67'", status: 'live', clock: 1_000_000 - 67 * 60 });
+  assert.deepEqual(liveState(f(), 1_000_000_000), { home: 1, away: 0, minute: "67'", status: 'live', clock: 1_000_000 - 67 * 60, poss: null });
+  assert.deepEqual(liveState(f({ poss: [58, 42] }), 1_000_000_000).poss, [58, 42]);
+  assert.equal(liveState(f({ st: 'ns', s: null, poss: [50, 50] })).poss, null);
   assert.deepEqual(liveState(f({ short: 'HT' })).minute, 'Devre arası');
-  assert.deepEqual(liveState(f({ st: 'ft' })), { home: 1, away: 0, minute: 'Maç sonu', status: 'ft', clock: null });
-  assert.deepEqual(liveState(f({ st: 'ns', s: null })), { home: 0, away: 0, minute: '20:45', status: 'ns', clock: null });
+  assert.deepEqual(liveState(f({ st: 'ft' })), { home: 1, away: 0, minute: 'Maç sonu', status: 'ft', clock: null, poss: null });
+  assert.deepEqual(liveState(f({ st: 'ns', s: null })), { home: 0, away: 0, minute: '20:45', status: 'ns', clock: null, poss: null });
 });
 
 test('nextUpdate: gol hemen, dakika en çok dakikada bir', () => {
