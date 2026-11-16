@@ -124,7 +124,11 @@ export function saveWidget(snap: ReturnType<typeof widgetSnapshot>): void {
   lastWidget = text;
   if (!storage || !Ext) return;
   const m = snap.match;
-  // Logolar kaydedildikten sonra widget yenilenir (ilk kayıtta renkli rozet yerine logo görünsün).
+  // Önce hemen yazılır (widget boş kalmasın), logolar kaydedildikten sonra bir kez daha (rozet yerine logo görünsün).
+  try {
+    storage.set('widget', JSON.stringify({ ...snap, updated: Date.now() / 1000 }));
+    Ext.reloadWidget();
+  } catch { /* widget hedefi yoksa sessiz geç */ }
   (m ? saveLogos({ [String(m.homeId)]: m.homeLogo, [String(m.awayId)]: m.awayLogo }) : Promise.resolve(0)).finally(() => {
     try {
       storage.set('widget', JSON.stringify({ ...snap, updated: Date.now() / 1000 }));
