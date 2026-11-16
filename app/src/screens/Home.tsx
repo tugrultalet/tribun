@@ -19,7 +19,8 @@ import { useRemote } from '../remoteConfig';
 import { Screen } from './Screen';
 
 // Bir takımın sezon boyunca tüm yarışmalardaki maçları rahatça sığar.
-const UPCOMING_LIMIT = 100;
+// Ana ekranda en çok 10 yaklaşan maç; takımın tüm fikstürü takım ekranında.
+const UPCOMING_LIMIT = 10;
 const RESULTS_LIMIT = 10;
 const GROUP_WINDOW_DAYS = 7;
 // Yenileme aralığı: canlı ya da 2 saat içinde başlayacak maç varken 1 dk, yoksa 5 dk.
@@ -251,6 +252,20 @@ export default function Home() {
               {!heroes.length && <Empty>Takip ettiklerinin yaklaşan maçı yok.</Empty>}
               {rest.length > 0 && (
                 <MatchList title="Fikstür" fixtures={rest} onMatch={openMatch} showLeague today={d.today} notes={displayNotes} />
+              )}
+              {store.teams.length > 0 && (
+                <Card style={{ marginTop: GAP }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: t.muted, paddingTop: 12, paddingHorizontal: 14 }}>Tüm fikstür için takıma dokun</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12 }}>
+                    {store.teams.map((team) => (
+                      <Pressable key={team.id} onPress={() => nav.navigate('Team', { team })} accessibilityRole="button" accessibilityLabel={`${team.name} fikstürü`}
+                        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 99, backgroundColor: pressed ? t.line : t.surface2 })}>
+                        <Crest uri={team.logo} size={18} />
+                        <Text style={{ fontSize: 13.5, fontWeight: '600', color: t.fg }}>{team.name}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </Card>
               )}
               {results.length > 0 && (
                 <MatchList title="Son sonuçlar" fixtures={results} onMatch={openMatch} showLeague today={d.today} />
