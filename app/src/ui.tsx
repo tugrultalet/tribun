@@ -224,7 +224,8 @@ export function RedCard({ n, size = 1 }: { n?: number; size?: number }) {
   );
 }
 
-export function MatchRow({ f, onPress, showLeague, note }: { f: Fixture; onPress: () => void; showLeague?: boolean; note?: RowNote }) {
+// compact: tek satır, küçük logo ve yazı (tam fikstür ekranı); gün başlığı ayrıca yazıldığı için tarih tekrarlanmaz.
+export function MatchRow({ f, onPress, showLeague, note, compact }: { f: Fixture; onPress: () => void; showLeague?: boolean; note?: RowNote; compact?: boolean }) {
   const t = useTheme();
   const { followsTeam, league } = useStore();
   const done = f.st === 'ft';
@@ -233,15 +234,15 @@ export function MatchRow({ f, onPress, showLeague, note }: { f: Fixture; onPress
   const lgName = league(f.lg)?.name ?? f.lgName;
   const nameStyle = (i: 0 | 1, mine: boolean) => {
     const won = done && f.s && f.s[i] > f.s[1 - i], lost = done && f.s && f.s[i] < f.s[1 - i];
-    return { fontSize: 14, fontWeight: (won || (mine && !done) ? '700' : '500') as '700' | '500', color: lost ? t.muted : t.fg, flexShrink: 1, minWidth: 0 };
+    return { fontSize: compact ? 13.5 : 14, fontWeight: (won || (mine && !done) ? '700' : '500') as '700' | '500', color: lost ? t.muted : t.fg, flexShrink: 1, minWidth: 0 };
   };
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${f.h.name} ${f.a.name}, ${statusText(f)}`}
-      style={({ pressed }) => ({ paddingTop: showLeague && lgName ? 4 : 8, paddingBottom: 8, paddingHorizontal: 14, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
-      {showLeague && lgName ? <Text numberOfLines={1} style={{ textAlign: 'center', fontSize: 10.5, color: t.muted, marginBottom: 3 }}>{lgName}{f.round ? ` · ${f.round}` : ''}</Text> : null}
+      style={({ pressed }) => ({ paddingTop: compact ? 6 : showLeague && lgName ? 4 : 8, paddingBottom: compact ? 6 : 8, paddingHorizontal: 14, backgroundColor: pressed ? t.surface2 : 'transparent' })}>
+      {showLeague && lgName && !compact ? <Text numberOfLines={1} style={{ textAlign: 'center', fontSize: 10.5, color: t.muted, marginBottom: 3 }}>{lgName}{f.round ? ` · ${f.round}` : ''}</Text> : null}
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 }}>
-          <Crest uri={f.h.logo} size={26} />
+          <Crest uri={f.h.logo} size={compact ? 20 : 26} />
           <Text numberOfLines={1} style={nameStyle(0, homeMine)}>{shortName(f.h.name)}</Text>
           <RedCard n={f.rc?.[0]} />
         </View>
@@ -256,7 +257,7 @@ export function MatchRow({ f, onPress, showLeague, note }: { f: Fixture; onPress
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, minWidth: 0 }}>
           <RedCard n={f.rc?.[1]} />
           <Text numberOfLines={1} style={[nameStyle(1, awayMine), { textAlign: 'right' }]}>{shortName(f.a.name)}</Text>
-          <Crest uri={f.a.logo} size={26} />
+          <Crest uri={f.a.logo} size={compact ? 20 : 26} />
         </View>
       </View>
       {note ? <Text numberOfLines={1} style={{ fontSize: 11, marginTop: 3, textAlign: 'center', fontWeight: note.wait ? '700' : '500', color: note.wait ? t.accent : t.muted }}>{note.text}</Text> : null}
@@ -264,8 +265,22 @@ export function MatchRow({ f, onPress, showLeague, note }: { f: Fixture; onPress
   );
 }
 // `today` verilirse maçlar günlere ayrılır ve her günün başlığı bir kez yazılır (satırlarda tarih tekrarlanmaz).
-export function MatchList({ fixtures, onMatch, showLeague, today, title, notes }: { fixtures: Fixture[]; onMatch: (f: Fixture) => void; showLeague?: boolean; today?: string; title?: string; notes?: Map<number, RowNote> }) {
+// action: başlığın sağında bağlantı ("Tüm fikstür ›"); verilirse başlık sola yaslı küçük başlık olur.
+export function MatchList({ fixtures, onMatch, showLeague, today, title, notes, action, compact }: { fixtures: Fixture[]; onMatch: (f: Fixture) => void; showLeague?: boolean; today?: string; title?: string; notes?: Map<number, RowNote>; action?: { label: string; onPress: () => void }; compact?: boolean }) {
   const t = useTheme();
+  if (action) {
+    return (
+      <View style={{ marginTop: GAP + 4 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 6 }}>
+          <Text style={{ fontSize: 12, fontWeight: '700', letterSpacing: 0.5, color: t.muted }}>{(title ?? '').toLocaleUpperCase('tr')}</Text>
+          <Pressable onPress={action.onPress} accessibilityRole="button" hitSlop={8}><Text style={{ fontSize: 13.5, fontWeight: '600', color: t.accent }}>{action.label}</Text></Pressable>
+        </View>
+        <Card style={{ paddingVertical: 4 }}>
+          {fixtures.map((f) => <MatchRow key={f.id} f={f} showLeague={showLeague} compact={compact} note={notes?.get(f.id)} onPress={() => onMatch(f)} />)}
+        </Card>
+      </View>
+    );
+  }
   return (
     <Panel title={title} style={title ? undefined : { marginTop: 0, paddingVertical: 6 }}>
       {fixtures.map((f, i) => (
@@ -273,7 +288,7 @@ export function MatchList({ fixtures, onMatch, showLeague, today, title, notes }
           {today && (i === 0 || fixtures[i - 1].date !== f.date) ? (
             <Text style={{ fontSize: 11.5, fontWeight: '700', letterSpacing: 0.4, color: t.muted, paddingHorizontal: 16, paddingTop: i === 0 ? 4 : 12, paddingBottom: 2 }}>{dayLabel(f.date, today).toLocaleUpperCase('tr')}</Text>
           ) : null}
-          <MatchRow f={f} showLeague={showLeague} note={notes?.get(f.id)} onPress={() => onMatch(f)} />
+          <MatchRow f={f} showLeague={showLeague} compact={compact} note={notes?.get(f.id)} onPress={() => onMatch(f)} />
         </React.Fragment>
       ))}
     </Panel>

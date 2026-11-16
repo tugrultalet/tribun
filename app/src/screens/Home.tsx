@@ -16,12 +16,13 @@ import { resolveTeam } from '../healTeams';
 import { useAppActive } from '../appState';
 import { firebaseAvailable } from '../fb';
 import { useRemote } from '../remoteConfig';
+import { shortName } from '../names';
 import { Screen } from './Screen';
 
 // Bir takımın sezon boyunca tüm yarışmalardaki maçları rahatça sığar.
-// Ana ekranda en çok 10 yaklaşan maç; takımın tüm fikstürü takım ekranında.
-const UPCOMING_LIMIT = 10;
-const RESULTS_LIMIT = 10;
+// Ana ekranda sıradaki maç kartı + 5 yaklaşan maç ve son 5 sonuç; hepsi "Tüm fikstür" ekranında.
+const UPCOMING_LIMIT = 6;
+const RESULTS_LIMIT = 5;
 const GROUP_WINDOW_DAYS = 7;
 // Yenileme aralığı: canlı ya da 2 saat içinde başlayacak maç varken 1 dk, yoksa 5 dk.
 const FAST_MS = 60000, SLOW_MS = 5 * 60000;
@@ -251,24 +252,12 @@ export default function Home() {
               </View>
               {!heroes.length && <Empty>Takip ettiklerinin yaklaşan maçı yok.</Empty>}
               {rest.length > 0 && (
-                <MatchList title="Fikstür" fixtures={rest} onMatch={openMatch} showLeague today={d.today} notes={displayNotes} />
-              )}
-              {store.teams.length > 0 && (
-                <Card style={{ marginTop: GAP }}>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: t.muted, paddingTop: 12, paddingHorizontal: 14 }}>Tüm fikstür için takıma dokun</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 12 }}>
-                    {store.teams.map((team) => (
-                      <Pressable key={team.id} onPress={() => nav.navigate('Team', { team })} accessibilityRole="button" accessibilityLabel={`${team.name} fikstürü`}
-                        style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 10, borderRadius: 99, backgroundColor: pressed ? t.line : t.surface2 })}>
-                        <Crest uri={team.logo} size={18} />
-                        <Text style={{ fontSize: 13.5, fontWeight: '600', color: t.fg }}>{team.name}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </Card>
+                <MatchList title="Sıradaki 5 maç" fixtures={rest.slice(0, 5)} onMatch={openMatch} showLeague notes={displayNotes}
+                  action={{ label: 'Tüm fikstür ›', onPress: () => nav.navigate('Fixtures', { tab: 'next' }) }} />
               )}
               {results.length > 0 && (
-                <MatchList title="Son sonuçlar" fixtures={results} onMatch={openMatch} showLeague today={d.today} />
+                <MatchList title="Son 5 maç" fixtures={results} onMatch={openMatch} showLeague
+                  action={{ label: 'Tüm sonuçlar ›', onPress: () => nav.navigate('Fixtures', { tab: 'past' }) }} />
               )}
             </>
           );
@@ -311,6 +300,31 @@ function Hero({ f, today, note, onPress }: { f: Fixture; today: string; note?: R
       )}
     </View>
   );
+  // Sıradaki (başlamamış) maç: küçük kart. Canlı maçta büyük kart (skor ve goller).
+  if (!live) {
+    return (
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${f.h.name} ${f.a.name}, ${dayLabel(f.date, today)} ${f.time}`}>
+        <Card style={{ paddingHorizontal: 14, paddingVertical: 12, gap: 8 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
+            <Text numberOfLines={1} style={{ fontSize: 12.5, fontWeight: '600', color: t.muted }}>{countdown(f.date, today)} · {dayLabel(f.date, today)}</Text>
+            <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 12.5, color: t.muted, textAlign: 'right' }}>{[league?.name ?? f.lgName, f.round].filter(Boolean).join(' · ')}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <Crest uri={f.h.logo} size={30} />
+              <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, fontWeight: '700', color: t.fg }}>{shortName(f.h.name)}</Text>
+            </View>
+            <Text style={{ fontSize: 22, fontWeight: '800', color: t.fg, fontVariant: ['tabular-nums'] }}>{f.time}</Text>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, minWidth: 0 }}>
+              <Text numberOfLines={1} style={{ flexShrink: 1, fontSize: 15, fontWeight: '700', color: t.fg, textAlign: 'right' }}>{shortName(f.a.name)}</Text>
+              <Crest uri={f.a.logo} size={30} />
+            </View>
+          </View>
+          {note ? <Text numberOfLines={1} style={{ textAlign: 'center', fontSize: 12.5, fontWeight: note.wait ? '700' : '500', color: note.wait ? t.accent : t.muted }}>{note.text}</Text> : null}
+        </Card>
+      </Pressable>
+    );
+  }
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${f.h.name} ${f.a.name}${live ? ' canlı' : ''}`}>
       <Card style={{ paddingHorizontal: 16, paddingTop: 18, paddingBottom: 20, gap: 18 }}>
