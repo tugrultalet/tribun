@@ -152,17 +152,18 @@ export default function Home() {
     return out;
   }, [candidates, groups, status]);
 
-  // Gösterilecekler: takip edilen takımların seçili turnuva maçları + "tüm maçlarını takip et" turnuvalarının yakın maçları
-  // + takip edilmeyen ama grubun tahmin edeceği maçlar.
+  // Gösterilecekler: yalnızca takip edilen takımların seçili turnuva maçları + "tüm maçlarını takip et" turnuvalarının yakın
+  // maçları. Tribünlerin kapsamındaki diğer maçlar burada görünmez (tribün ekranında görünür); takip edilen maçlarda
+  // tribün etiketi yine gösterilir.
   const shown = useMemo(() => {
     const mine = followedFixtures(teamFx, store.teams, store.main, euro);
     const from = store.meta.today, soon = (f: Fixture) => daysBetween(from, f.date) >= -3 && daysBetween(from, f.date) <= 14;
     const fullFx = (leagueFx.data ?? []).filter((f) => full.includes(f.lg) && soon(f));
     const ids = new Set<number>();
     const out: Fixture[] = [];
-    for (const f of [...mine, ...fullFx, ...candidates]) if (!ids.has(f.id)) { ids.add(f.id); out.push(f); }
+    for (const f of [...mine, ...fullFx]) if (!ids.has(f.id)) { ids.add(f.id); out.push(f); }
     return out.sort((x, y) => x.ts - y.ts);
-  }, [teamFx, leagueFx.data, store.teams, store.main, store.meta.today, euro, candidates, full]);
+  }, [teamFx, leagueFx.data, store.teams, store.main, store.meta.today, euro, full]);
 
   // Grup etiketi olmayan maçlarda kendi tahminim gösterilir (takip edilmeyen takım olsa da, her maça tahmin girilebilir).
   const myPicksRaw = useMyPicks(SLOW_MS).data;
