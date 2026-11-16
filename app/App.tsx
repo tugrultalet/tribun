@@ -37,6 +37,7 @@ import Member from './src/screens/Member';
 import AskLink from './src/screens/AskLink';
 import AccountScreen from './src/screens/Account';
 import PickHistory from './src/screens/PickHistory';
+import Fixtures from './src/screens/Fixtures';
 import EmailLink from './src/screens/EmailLink';
 import FriendLink from './src/screens/FriendLink';
 import Team from './src/screens/Team';
@@ -132,6 +133,7 @@ function Root() {
           <Stack.Screen name="Ask" component={AskLink} />
           <Stack.Screen name="Account" component={AccountScreen} options={{ title: 'Hesap' }} />
           <Stack.Screen name="PickHistory" component={PickHistory} options={{ title: 'Geçmiş tahminlerim' }} />
+          <Stack.Screen name="Fixtures" component={Fixtures} options={{ title: 'Fikstür' }} />
           <Stack.Screen name="EmailLink" component={EmailLink} options={{ title: 'E-posta ile giriş' }} />
           <Stack.Screen name="FriendLink" component={FriendLink} options={{ title: 'Arkadaş daveti' }} />
           <Stack.Screen name="Feedback" component={Feedback} options={{ title: 'Geri bildirim' }} />

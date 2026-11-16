@@ -28,7 +28,16 @@ struct WidgetSnapshot: Codable {
   }
   var match: MatchInfo?
   var rank: RankInfo?
-  var updated: Double
+  var updated: Double?
+
+  // Hoşgörülü okuma: sıra bilgisi ya da başka bir alan beklenmedik gelirse maç yine gösterilir.
+  enum CodingKeys: String, CodingKey { case match, rank, updated }
+  init(from decoder: Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    match = try? c.decodeIfPresent(MatchInfo.self, forKey: .match)
+    rank = try? c.decodeIfPresent(RankInfo.self, forKey: .rank)
+    updated = try? c.decodeIfPresent(Double.self, forKey: .updated)
+  }
 }
 
 struct NextMatchEntry: TimelineEntry {
