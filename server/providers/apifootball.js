@@ -49,7 +49,20 @@ export function fx(f) {
     pen: pen && pen.home != null ? [pen.home, pen.away] : null,
     ...redCards(f),
     ...lastGoal(f),
+    ...possession(f),
   };
+}
+
+// Topla oynama (yüzde, ev sahibi/deplasman): canlı maç sorgusunda istatistikler geldiyse. Kilit ekranındaki bar için.
+function possession(f) {
+  const list = Array.isArray(f.statistics) ? f.statistics : [];
+  const pick = (team) => {
+    const v = list.find((x) => x.team?.id === team)?.statistics?.find((x) => x.type === 'Ball Possession')?.value;
+    const n = v == null ? NaN : Number.parseFloat(v);
+    return Number.isFinite(n) ? Math.round(n) : null;
+  };
+  const h = pick(f.teams?.home?.id), a = pick(f.teams?.away?.id);
+  return h != null && a != null && h + a > 0 ? { poss: [h, a] } : {};
 }
 
 // Son gol (kaçan penaltı hariç): atan oyuncu, taraf ve dakika. Live Activity'de "GOL! <oyuncu>" yazmak için.

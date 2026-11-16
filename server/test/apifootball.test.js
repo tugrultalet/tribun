@@ -159,3 +159,19 @@ test('oranlar şirketler arası ortalanır, ihtimaller toplam 100', () => {
   assert.ok(r.pct[0] > r.pct[2]);
   assert.equal(averageOdds([]), null);
 });
+
+test('canlı maçta topla oynama yüzdesi', async () => {
+  const { fx } = await import('../providers/apifootball.js');
+  const raw = {
+    fixture: { id: 9, timestamp: 1_800_000_000, status: { short: '2H', elapsed: 60, extra: null } },
+    league: { id: 203, name: 'Süper Lig', logo: 'x', round: 'Regular Season - 12' },
+    teams: { home: { id: 645, name: 'Galatasaray', logo: 'g' }, away: { id: 611, name: 'Fenerbahce', logo: 'f' } },
+    goals: { home: 1, away: 0 }, score: {},
+    statistics: [
+      { team: { id: 611 }, statistics: [{ type: 'Ball Possession', value: '42%' }] },
+      { team: { id: 645 }, statistics: [{ type: 'Ball Possession', value: '58%' }] },
+    ],
+  };
+  assert.deepEqual(fx(raw).poss, [58, 42]);
+  assert.equal(fx({ ...raw, statistics: [] }).poss, undefined);
+});

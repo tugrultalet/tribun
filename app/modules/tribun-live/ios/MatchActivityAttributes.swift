@@ -12,6 +12,7 @@ struct MatchActivityAttributes: ActivityAttributes {
     var note: String?
     var side: String?    // notun tarafı: "h" sola, "a" sağa (golü atan takımın tarafı)
     var clock: Double?   // maçın 0. dakikası sayılan an (unix sn); süre çubuğu buna göre kendiliğinden ilerler
+    var poss: [Int]?     // topla oynama yüzdesi [ev, deplasman]; yoksa bar eşit ve soluk
   }
 
   var matchId: Int

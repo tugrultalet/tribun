@@ -76,41 +76,29 @@ struct MatchBackground: View {
   }
 }
 
-// Süre barı (A): kartın içinde, skorun altında yuvarlak bar; ortada devre arası çizgisi, ucunda parlayan nokta.
-// Konum maçın 0. dakikası sayılan andan (clock) hesaplanır; görünüm her güncellemede (yaklaşık dakikada bir) yeniden çizilir.
-struct MatchProgress: View {
-  let state: MatchActivityAttributes.ContentState
-
-  var fraction: Double {
-    switch state.status {
-    case "ft": return 1
-    case "ht": return 0.5
-    case "live":
-      guard let clock = state.clock else { return 0 }
-      return min(max((Date().timeIntervalSince1970 - clock) / (90 * 60), 0), 1)
-    default: return 0
-    }
-  }
-
+// Topla oynama barı: skorun altında, yüzdeler iki uçta, ortada "Topla oynama". Renkler nötr (takım rengi yok): ev sahibi
+// parlak beyaz, deplasman soluk beyaz. Oran henüz yoksa (maçın ilk dakikaları) iki eşit soluk parça ve "–".
+struct PossessionBar: View {
+  let poss: [Int]?
   var body: some View {
-    GeometryReader { g in
-      let w = g.size.width
-      let x = w * fraction
-      let mid = g.size.height / 2
-      ZStack {
-        Capsule().fill(Color.white.opacity(0.18)).frame(width: w, height: 6).position(x: w / 2, y: mid)
-        if x > 0 {
-          Capsule().fill(Color.white).frame(width: max(6, x), height: 6).position(x: max(6, x) / 2, y: mid)
-        }
-        Rectangle().fill(Color.white.opacity(0.55)).frame(width: 2, height: 12).position(x: w / 2, y: mid)
-        if state.status == "live" || state.status == "ht" {
-          Circle().fill(Color.white).frame(width: 13, height: 13)
-            .overlay(Circle().stroke(tribunLive.opacity(0.6), lineWidth: 3))
-            .shadow(color: tribunLive.opacity(0.9), radius: 5)
-            .position(x: min(max(x, 6.5), w - 6.5), y: mid)
+    let ok = (poss?.count ?? 0) == 2 && (poss![0] + poss![1]) > 0
+    let h = ok ? Double(poss![0]) : 50, a = ok ? Double(poss![1]) : 50
+    VStack(spacing: 5) {
+      HStack {
+        Text(ok ? "%\(Int(h))" : "–").font(.caption.weight(.bold)).monospacedDigit()
+        Spacer()
+        Text("Topla oynama").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.65))
+        Spacer()
+        Text(ok ? "%\(Int(a))" : "–").font(.caption.weight(.bold)).monospacedDigit()
+      }
+      GeometryReader { g in
+        let w = max(g.size.width - 2, 0)
+        HStack(spacing: 2) {
+          Capsule().fill(Color.white.opacity(ok ? 0.92 : 0.32)).frame(width: w * h / (h + a))
+          Capsule().fill(Color.white.opacity(0.32)).frame(width: w * a / (h + a))
         }
       }
+      .frame(height: 6)
     }
-    .frame(height: 14)
   }
 }

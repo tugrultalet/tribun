@@ -1,6 +1,6 @@
 // Live Activity durumunun saf kuralları (testli).
 import type { Fixture } from './api';
-export type LiveState = { home: number; away: number; minute: string; status: 'ns' | 'live' | 'ht' | 'ft'; clock: number | null };
+export type LiveState = { home: number; away: number; minute: string; status: 'ns' | 'live' | 'ht' | 'ft'; clock: number | null; poss?: [number, number] | null };
 
 // Sunucudaki lib/live.js ile aynı kural (ilk durum uygulamadan, sonrakiler sunucudan gelir).
 export function liveStateOf(f: Pick<Fixture, 'st' | 's' | 'min' | 'extra' | 'short' | 'time'> & { ts?: number }, now = Date.now()): LiveState {

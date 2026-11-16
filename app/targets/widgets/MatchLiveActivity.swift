@@ -40,7 +40,7 @@ struct MatchLiveActivity: Widget {
         DynamicIslandExpandedRegion(.bottom) {
           // Köşeler yuvarlak olduğu için içerik kenardan içeride.
           VStack(spacing: 8) {
-            if s.status != "ns" { MatchProgress(state: s) }
+            if s.status != "ns" { PossessionBar(poss: s.poss) }
             NoteRow(attributes: a, state: s)
           }
           .padding(.horizontal, 14)
@@ -118,7 +118,7 @@ struct NoteRow: View {
 }
 
 // Kilit ekranı (seçenek B): takım renklerinde zemin, logolar yanda, kısa adlar, ortada büyük skor; üstte lig ve dakika
-// (devre arası / maç sonu yazıyla), skorun altında süre barı, en altta son olay ve tahmin.
+// (devre arası / maç sonu yazıyla), skorun altında topla oynama barı, en altta son olay ve tahmin.
 struct LockScreenMatchView: View {
   let attributes: MatchActivityAttributes
   let state: MatchActivityAttributes.ContentState
@@ -149,7 +149,7 @@ struct LockScreenMatchView: View {
         .frame(maxWidth: .infinity, alignment: .trailing)
       }
       if state.status != "ns" {
-        MatchProgress(state: state).padding(.horizontal, 2)
+        PossessionBar(poss: state.poss).padding(.horizontal, 2)
       }
       if state.note != nil || attributes.pick != nil {
         NoteRow(attributes: attributes, state: state)

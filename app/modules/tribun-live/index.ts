@@ -22,7 +22,7 @@ export type LiveAttributes = {
   matchId: number; homeId: number; awayId: number; homeName: string; awayName: string; homeAbbr: string; awayAbbr: string;
   homeColor: string; awayColor: string; league: string; pick?: string | null;
 };
-export type LiveState = { home: number; away: number; minute: string; status: 'ns' | 'live' | 'ht' | 'ft'; note?: string | null; clock?: number | null };
+export type LiveState = { home: number; away: number; minute: string; status: 'ns' | 'live' | 'ht' | 'ft'; note?: string | null; clock?: number | null; poss?: [number, number] | null };
 
 // Her fonksiyon ayrı denetlenir: telefondaki derleme daha eskiyse (ör. saveLogos yok) uygulama çökmez, o özellik atlanır.
 const has = <K extends keyof Native>(k: K): boolean => typeof native?.[k] === 'function';
