@@ -192,6 +192,8 @@ export function createLive({ apns, supa, log = console, watch = null }) {
             try {
               const channel = await this.channelFor(id, f).catch(() => null);
               await apns.toToken(row.token, startPayload({ ...it.attrs, matchId: id }, f, channel, now), 10);
+              // Bu cihaza o maçın ayrı bildirimleri gitmesin (kilit ekranı haber veriyor).
+              supa.rpc('server_mark_live', { p_la_token: row.token, p_match: id }).catch(() => {});
             } catch (e) {
               if (e.status === 410) { supa.rpc('server_drop_live_autostart', { p_token: row.token }).catch(() => {}); break; }
               log.warn?.(`Kilit ekranı otomatik açılamadı (${id}): ${e.message}`);

@@ -32,6 +32,18 @@ export function reminderFor(f, now = Date.now()) {
   };
 }
 
+// Bildirimin konuları: maç olayları takımın konusuna, hatırlatma pre_ konusuna (cihaz bazlı gönderimde de aynı konular).
+export function topicsFor(kind, f) {
+  const pre = kind === 'pre' ? 'pre_' : '';
+  return [`${pre}${topicOf(f.h.id)}`, `${pre}${topicOf(f.a.id)}`];
+}
+
+// Konu koşulu yerine tek cihaza giden aynı mesaj.
+export function forToken(message, token) {
+  const { condition, topic, ...rest } = message;
+  return { ...rest, token };
+}
+
 export function messageFor(kind, f) {
   if (kind === 'pre') return reminderFor(f);
   const minute = f.min ? ` (${f.min}${f.extra ? `+${f.extra}` : ''}')` : '';

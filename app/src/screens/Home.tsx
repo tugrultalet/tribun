@@ -8,6 +8,7 @@ import { useMyPicks } from '../game/hooks';
 import { inScope, scopeLeagues, scopeTeams, useLeagueFixtures } from '../groups/scope';
 import { sameWeek } from '../groups/standings';
 import { useNav } from '../nav';
+import { syncPushDevice } from '../pushDevice';
 import { Group, rpc, useRpc } from '../social';
 import { useStore } from '../store';
 import { useTheme } from '../theme';
@@ -85,6 +86,8 @@ export default function Home() {
     const followed = new Set(store.teams.map((x) => x.id));
     // Uygulama kapalıyken de açılsın: maçlar sunucuya kaydedilir, sunucu 1 saat kala başlatır (push-to-start).
     const mineFx = state.data.fixtures.filter((f) => [f.h.id, f.a.id].some((id) => followed.has(id) && store.liveFor(id)));
+    // Kilit ekranında açık maçlar (sunucunun otomatik açtıkları dahil) sunucuya bildirilir: o maçın ayrı bildirimi gelmez.
+    syncPushDevice().catch(() => false);
     syncAutoStart(store.liveOn === false ? [] : mineFx, (lg) => store.league(lg)?.name ?? '');
     const wanted = state.data.fixtures
       // Sunucu 1 saat kala başlatıyorsa uygulama ilk 5 dakikayı ona bırakır (aynı maç için iki kart açılmasın).
