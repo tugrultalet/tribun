@@ -13,7 +13,7 @@ import { invitePage, validCode } from './lib/invite.js';
 import { privacyPage } from './lib/privacy.js';
 import { landingPage, LANDING_CSP } from './lib/landing.js';
 import { createFcm, loadServiceAccount } from './lib/fcm.js';
-import { messageFor } from './lib/notify.js';
+import { forToken, messageFor, topicsFor } from './lib/notify.js';
 import { Buckets, clientIp, dateInWindow } from './lib/limits.js';
 import { createSupa, syncMatches } from './lib/supa.js';
 import { askPage, validAskToken } from './lib/ask.js';
@@ -58,7 +58,20 @@ try {
   const sa = loadServiceAccount(process.env);
   if (sa) fcm = createFcm({ sa });
 } catch (e) { console.warn(`UYARI: Firebase hizmet hesabı okunamadı (${e.message}); bildirimler kapalı.`); }
-const notify = fcm ? (kind, f) => fcm.send(messageFor(kind, f)).catch((e) => console.warn(`Bildirim gönderilemedi: ${e.message}`)) : null;
+// Maç bildirimi iki yoldan: konuya (yalnızca eski uygulama sürümleri hâlâ abone) ve kayıtlı cihazlara tek tek. Kilit
+// ekranında o maçı takip eden cihaza gönderilmez (Live Activity zaten haber verir). Silinmiş uygulamanın anahtarı atılır.
+const notify = fcm ? async (kind, f) => {
+  const message = messageFor(kind, f);
+  fcm.send(message).catch((e) => console.warn(`Bildirim gönderilemedi: ${e.message}`));
+  if (!supa) return;
+  let tokens = [];
+  try { tokens = (await supa.rpc('server_push_targets', { p_topics: topicsFor(kind, f), p_match: f.id })) || []; } catch (e) { console.warn(`Bildirim cihazları okunamadı: ${e.message}`); }
+  for (let i = 0; i < tokens.length; i += 10) {
+    await Promise.all(tokens.slice(i, i + 10).map((token) => fcm.send(forToken(message, token)).catch((e) => {
+      if (e.status === 404 || e.code === 'UNREGISTERED') supa.rpc('server_drop_push_device', { p_token: token }).catch(() => {});
+    })));
+  }
+} : null;
 // Live Activity (iOS 18+): APNs yayın kanalları. APNS_KEY / APNS_KEY_ID / APNS_TEAM_ID tanımlı değilse kapalı.
 let live = null;
 const onRefresh = (fixtures) => live?.onFixtures(fixtures);

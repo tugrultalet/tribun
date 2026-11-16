@@ -8,6 +8,7 @@ import { dedupeTeams, teamKey, type FollowedTeam } from './follow';
 import { legacyToCommon } from './ids';
 import { fbPushPermission, fbSubscribe, fbToken } from './fb';
 import { pushTopics } from './version';
+import { syncPushDevice } from './pushDevice';
 import { rpc } from './social';
 import { signIn, type Provider } from './auth';
 
@@ -276,14 +277,24 @@ export function StoreProvider({ children, fallback }: { children: React.ReactNod
     };
   }, [saved, meta, startTab, update, reloadMeta]);
 
-  // Bildirim konularını (ana takım) istenen duruma eşitle: ana takım değişince ya da bildirim açılıp kapanınca.
+  // Bildirimler: istenen konular (ana takım, hatırlatma) cihaz kaydıyla sunucuya bildirilir; sunucu maç bildirimini cihaza
+  // tek tek gönderir (kilit ekranında o maçı takip ediyorsa göndermez). Kayıt başarılıysa cihaz konu aboneliklerinden
+  // çıkar (bildirim iki kez gelmesin); kayıt olmazsa eskisi gibi konulara abone olunur.
   const wanted = saved ? pushTopics(saved).join(',') : '';
-  const current = saved?.topics?.join(',') ?? '';
+  const loaded = !!saved;
   useEffect(() => {
-    if (!saved || wanted === current) return;
+    if (!loaded) return;
     const next = wanted ? wanted.split(',') : [];
-    fbSubscribe(next, saved.topics ?? []).then((ok) => { if (ok) update((s) => ({ ...s, topics: next })); });
-  }, [wanted, current]);
+    let alive = true;
+    syncPushDevice(next).then((direct) => {
+      if (!alive) return;
+      const target = direct ? [] : next;
+      const prev = saved?.topics ?? [];
+      if (target.join(',') === prev.join(',')) return;
+      fbSubscribe(target, prev).then((ok) => { if (ok) update((s) => ({ ...s, topics: target })); });
+    });
+    return () => { alive = false; };
+  }, [wanted, loaded]);
 
   // Kişiye özel bildirimler (tahmin istekleri) için bu cihazın anahtarı profile kaydedilir (oturum başına bir kez).
   const mySecret = saved?.me?.secret;

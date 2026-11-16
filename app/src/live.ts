@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { endLive, liveMatches, liveStartToken, liveSupported, onStartToken, saveLogos, startLive, updateLive } from '../modules/tribun-live';
 import { Fixture, get } from './api';
 import { abbr } from './chat/timeline';
+import { syncPushDevice } from './pushDevice';
 import { rpc } from './social';
 import { gradientFor } from './teamColors';
 
@@ -28,16 +29,19 @@ export async function followOnLockScreen(f: Fixture, league: string, pick?: { h:
   if (!channel) {
     await startLive(attrs, liveStateOf(f), null);
     await wait(2000);
+    syncPushDevice().catch(() => false);
     return liveMatches().includes(f.id) ? 'nochannel' : 'closed';
   }
   await startLive(attrs, liveStateOf(f), channel);
   await wait(2000);
+  syncPushDevice().catch(() => false);
   if (liveMatches().includes(f.id)) return 'channel';
   await startLive(attrs, liveStateOf(f), null);
   await wait(2000);
   return liveMatches().includes(f.id) ? 'local' : 'closed';
 }
-export const stopFollowing = (id: number) => endLive(id);
+// Kilit ekranı takibi değişince sunucuya bildirilir (takip edilen maçın ayrı bildirimleri gelmesin / yeniden gelsin).
+export const stopFollowing = (id: number) => endLive(id).finally(() => { syncPushDevice().catch(() => false); });
 
 // Live Activity'nin sabit bilgileri (uygulamadaki MatchActivityAttributes ile aynı alanlar).
 export function attrsOf(f: Fixture, league: string, pick?: { h: number; a: number } | null) {

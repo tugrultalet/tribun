@@ -56,3 +56,14 @@ test('tahmin hatırlatması: iki takımın hatırlatma konusuna, maç ekranını
   assert.deepEqual(m.data, { matchId: '9', kind: 'pre' });
   assert.match(reminderFor({ ...f, ts: now / 1000 + 25 * 60 }, now).notification.body, /25 dakika sonra/);
 });
+
+test('cihaz bazlı bildirim: konular ve tek cihaza mesaj', async () => {
+  const { forToken, messageFor, topicsFor } = await import('../lib/notify.js');
+  const f = { id: 5, h: { id: 645, name: 'Galatasaray' }, a: { id: 611, name: 'Fenerbahçe' }, s: [1, 0], st: 'live', min: 10, ts: 1_800_000_000 };
+  assert.deepEqual(topicsFor('goal', f), ['team_645', 'team_611']);
+  assert.deepEqual(topicsFor('pre', f), ['pre_team_645', 'pre_team_611']);
+  const m = forToken(messageFor('goal', f), 'TOKEN');
+  assert.equal(m.token, 'TOKEN');
+  assert.equal(m.condition, undefined);
+  assert.equal(m.notification.title, '⚽ GOL!');
+});
